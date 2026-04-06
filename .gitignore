@@ -9,6 +9,7 @@
 *.vcxproj.user
 imgui*.ini
 *.tmp
+libs/libvlc/runtime/
 # Generated Visual Studio project files
 ofxVlc4MidiExample/icon.rc
 ofxVlc4MidiExample/ofxVlc4MidiExample.sln

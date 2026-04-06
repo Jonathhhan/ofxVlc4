@@ -98,8 +98,11 @@ This installs:
 
 - headers into `libs/libvlc/include`
 - import library into `libs/libvlc/lib/vs`
-- runtime DLLs/plugins into the example `bin` folders
-- runtime DLLs/plugins into the example `dll/x64` staging folders used by the Visual Studio post-build copy step
+- one shared runtime into `libs/libvlc/runtime/vs/x64`
+- linked file-tree runtime views into the example `bin` folders
+- linked file-tree `dll/x64` staging folders used by the Visual Studio post-build copy step
+
+For normal addon development, keep the shared Windows runtime in `libs/libvlc/runtime/vs/x64` and let the examples link to it locally. Only copy the VLC runtime into your app output if you want a truly standalone distribution.
 
 The installer works in a temporary directory outside the addon tree, which is helpful when the addon lives in a synced or otherwise path-sensitive folder.
 

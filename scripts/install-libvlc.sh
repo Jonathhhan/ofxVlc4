@@ -475,6 +475,94 @@ function Copy-RuntimeToExampleTargets([string]$LibvlcDll, [string]$LibvlccoreDll
 	}
 }
 
+function Remove-PathIfExists([string]$Path) {
+	if (-not (Test-Path -LiteralPath $Path)) {
+		return
+	}
+
+	$Item = Get-Item -LiteralPath $Path -Force
+	$IsReparsePoint = ($Item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0
+	if ($IsReparsePoint) {
+		Remove-Item -LiteralPath $Path -Force
+		return
+	}
+	if ($Item.PSIsContainer) {
+		Remove-Item -LiteralPath $Path -Recurse -Force
+		return
+	}
+	Remove-Item -LiteralPath $Path -Force
+}
+
+function Install-SharedRuntime([string]$LibvlcDll, [string]$LibvlccoreDll, [string]$PluginsSourceRoot, [string]$LuaSourceRoot, [string]$SharedRuntimeDirectory) {
+	Reset-Directory $SharedRuntimeDirectory
+	Copy-OptionalFile $LibvlcDll $SharedRuntimeDirectory
+	Copy-OptionalFile $LibvlccoreDll $SharedRuntimeDirectory
+	Copy-DirectoryContents $PluginsSourceRoot (Join-Path $SharedRuntimeDirectory 'plugins')
+	Copy-DirectoryContents $LuaSourceRoot (Join-Path $SharedRuntimeDirectory 'lua')
+}
+
+function New-HardLinkOrCopyFile([string]$Source, [string]$DestinationPath) {
+	if ([string]::IsNullOrWhiteSpace($Source) -or -not (Test-Path -LiteralPath $Source)) {
+		return
+	}
+
+	Ensure-Directory (Split-Path -Parent $DestinationPath)
+	Remove-PathIfExists $DestinationPath
+	try {
+		New-Item -ItemType HardLink -Path $DestinationPath -Target $Source -ErrorAction Stop | Out-Null
+	} catch {
+		Copy-Item -LiteralPath $Source -Destination $DestinationPath -Force
+	}
+}
+
+function New-HardLinkedDirectoryTreeOrCopy([string]$SourceDirectory, [string]$DestinationPath) {
+	if ([string]::IsNullOrWhiteSpace($SourceDirectory) -or -not (Test-Path -LiteralPath $SourceDirectory)) {
+		return
+	}
+
+	Ensure-Directory (Split-Path -Parent $DestinationPath)
+	Remove-PathIfExists $DestinationPath
+
+	try {
+		$ResolvedSource = (Resolve-Path -LiteralPath $SourceDirectory).Path
+		Ensure-Directory $DestinationPath
+		Get-ChildItem -LiteralPath $ResolvedSource -Recurse -Force | Sort-Object FullName | ForEach-Object {
+			$RelativePath = $_.FullName.Substring($ResolvedSource.Length).TrimStart('\')
+			if ([string]::IsNullOrWhiteSpace($RelativePath)) {
+				return
+			}
+
+			$TargetPath = Join-Path $DestinationPath $RelativePath
+			if ($_.PSIsContainer) {
+				Ensure-Directory $TargetPath
+			} else {
+				New-HardLinkOrCopyFile $_.FullName $TargetPath
+			}
+		}
+	} catch {
+		Remove-PathIfExists $DestinationPath
+		Copy-DirectoryContents $SourceDirectory $DestinationPath
+	}
+}
+
+function Link-SharedRuntimeToExampleTargets([string]$SharedRuntimeDirectory, [object[]]$ExampleRuntimeTargets) {
+	$SharedLibvlcDll = Join-Path $SharedRuntimeDirectory 'libvlc.dll'
+	$SharedLibvlccoreDll = Join-Path $SharedRuntimeDirectory 'libvlccore.dll'
+	$SharedPluginsDirectory = Join-Path $SharedRuntimeDirectory 'plugins'
+	$SharedLuaDirectory = Join-Path $SharedRuntimeDirectory 'lua'
+
+	foreach ($Target in $ExampleRuntimeTargets) {
+		Ensure-Directory $Target.BinDirectory
+		Ensure-Directory (Split-Path -Parent $Target.DllDirectory)
+
+		New-HardLinkedDirectoryTreeOrCopy $SharedRuntimeDirectory $Target.DllDirectory
+		New-HardLinkOrCopyFile $SharedLibvlcDll (Join-Path $Target.BinDirectory 'libvlc.dll')
+		New-HardLinkOrCopyFile $SharedLibvlccoreDll (Join-Path $Target.BinDirectory 'libvlccore.dll')
+		New-HardLinkedDirectoryTreeOrCopy $SharedPluginsDirectory (Join-Path $Target.BinDirectory 'plugins')
+		New-HardLinkedDirectoryTreeOrCopy $SharedLuaDirectory (Join-Path $Target.BinDirectory 'lua')
+	}
+}
+
 function Resolve-LatestNightlyZipUrl([string]$IndexUrl) {
 	$IndexResponse = Invoke-WebRequest -UseBasicParsing -Uri $IndexUrl
 	$NightlyMatches = [regex]::Matches($IndexResponse.Content, 'href="(\d{8}-\d{4}/)"')
@@ -597,6 +685,7 @@ Write-Step 'Preparing install paths'
 $LibVlcRoot = Join-Path $AddonRoot 'libs\libvlc'
 $TargetIncludeDirectory = Join-Path $LibVlcRoot 'include'
 $TargetLibraryDirectory = Join-Path $LibVlcRoot 'lib\vs'
+$TargetRuntimeDirectory = Join-Path $LibVlcRoot 'runtime\vs\x64'
 $ExampleRuntimeTargets = Get-ExampleRuntimeTargets $AddonRoot
 
 $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('ofxVlc4-libvlc-' + [guid]::NewGuid().ToString('N'))
@@ -657,9 +746,10 @@ Ensure-Directory $TargetLibraryDirectory
 Copy-HeadersFromIncludeRoot $IncludeRoot $TargetIncludeDirectory
 Copy-Item -LiteralPath $LibvlcImportLibrary -Destination (Join-Path $TargetLibraryDirectory 'libvlc.lib') -Force
 Remove-StaleRuntimeFromLibraryDirectory $TargetLibraryDirectory
+Install-SharedRuntime $LibvlcDll $LibvlccoreDll $PluginsSourceRoot $LuaSourceRoot $TargetRuntimeDirectory
 
-Write-Step 'Copying VLC runtime into example bin folders'
-Copy-RuntimeToExampleTargets $LibvlcDll $LibvlccoreDll $PluginsSourceRoot $LuaSourceRoot $ExampleRuntimeTargets
+Write-Step 'Linking shared VLC runtime into example folders'
+Link-SharedRuntimeToExampleTargets $TargetRuntimeDirectory $ExampleRuntimeTargets
 
 if (-not $KeepArchive) {
 	if (Test-Path -LiteralPath $ArchivePath) { Remove-Item -LiteralPath $ArchivePath -Force }
@@ -675,8 +765,9 @@ Write-Host ''
 Write-Host 'Installed libvlc into:' -ForegroundColor Green
 Write-Host "  headers: $TargetIncludeDirectory"
 Write-Host "  import lib: $TargetLibraryDirectory"
+Write-Host "  shared runtime: $TargetRuntimeDirectory"
 if ($ExampleRuntimeTargets.Count -gt 0) {
-	Write-Host '  runtime copied to example folders:'
+	Write-Host '  runtime linked into example folders:'
 	foreach ($ExampleRuntimeTarget in $ExampleRuntimeTargets) {
 		Write-Host "    bin: $($ExampleRuntimeTarget.BinDirectory)"
 		Write-Host "    dll: $($ExampleRuntimeTarget.DllDirectory)"
