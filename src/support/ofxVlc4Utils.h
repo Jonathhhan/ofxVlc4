@@ -1,0 +1,158 @@
+#pragma once
+
+#include "ofMain.h"
+#include "GLFW/glfw3.h"
+
+#include <cmath>
+#include <functional>
+#include <iomanip>
+#include <sstream>
+#include <string>
+
+namespace ofxVlc4Utils {
+inline std::string trimWhitespace(const std::string & value) {
+	const auto first = value.find_first_not_of(" \t\r\n");
+	if (first == std::string::npos) {
+		return "";
+	}
+
+	const auto last = value.find_last_not_of(" \t\r\n");
+	return value.substr(first, last - first + 1);
+}
+
+inline bool isUri(const std::string & value) {
+	return ofStringTimesInString(value, "://") == 1;
+}
+
+inline std::string fileNameFromUri(const std::string & uri) {
+	const size_t queryPos = uri.find_first_of("?#");
+	const std::string withoutQuery = uri.substr(0, queryPos);
+	const size_t slashPos = withoutQuery.find_last_of('/');
+	if (slashPos == std::string::npos || slashPos + 1 >= withoutQuery.size()) {
+		return withoutQuery;
+	}
+	return withoutQuery.substr(slashPos + 1);
+}
+
+inline std::string mediaLabelForPath(const std::string & path) {
+	if (path.empty()) {
+		return "";
+	}
+
+	if (isUri(path)) {
+		const std::string label = fileNameFromUri(path);
+		return label.empty() ? path : label;
+	}
+
+	return ofFilePath::getFileName(path);
+}
+
+inline std::string sanitizeFileStem(std::string value) {
+	if (value.empty()) {
+		return "snapshot";
+	}
+
+	for (char & ch : value) {
+		switch (ch) {
+		case '<':
+		case '>':
+		case ':':
+		case '"':
+		case '/':
+		case '\\':
+		case '|':
+		case '?':
+		case '*':
+			ch = '_';
+			break;
+		default:
+			break;
+		}
+	}
+
+	value = trimWhitespace(value);
+	return value.empty() ? "snapshot" : value;
+}
+
+inline std::string fallbackIndexedLabel(const std::string & prefix, int index, const std::string & name) {
+	const std::string trimmedName = trimWhitespace(name);
+	if (!trimmedName.empty()) {
+		return trimmedName;
+	}
+
+	return prefix + " " + ofToString(index + 1);
+}
+
+inline std::string formatProgramName(int programId, const std::string & name) {
+	const std::string trimmedName = trimWhitespace(name);
+	if (!trimmedName.empty()) {
+		return trimmedName;
+	}
+
+	return "Program " + ofToString(programId);
+}
+
+inline std::string normalizeOptionalPath(const std::string & value) {
+	const std::string trimmed = trimWhitespace(value);
+	if (trimmed.empty() || isUri(trimmed)) {
+		return trimmed;
+	}
+
+	return ofFilePath::getAbsolutePath(trimmed);
+}
+
+inline bool hasCurrentGlContext() {
+	return glfwGetCurrentContext() != nullptr;
+}
+
+inline void clearAllocatedFbo(ofFbo & fbo) {
+	if (!fbo.isAllocated() || !hasCurrentGlContext()) {
+		return;
+	}
+
+	fbo.begin();
+	ofClear(0, 0, 0, 0);
+	fbo.end();
+}
+
+inline bool isStoppedOrIdleState(libvlc_state_t state) {
+	return state == libvlc_Stopped ||
+		state == libvlc_NothingSpecial;
+}
+
+inline bool isTransientPlaybackState(libvlc_state_t state) {
+	return state == libvlc_Opening || state == libvlc_Buffering || state == libvlc_Stopping;
+}
+
+inline bool setInputHandlingEnabled(
+	libvlc_media_player_t * mediaPlayer,
+	bool & currentValue,
+	bool enabled,
+	const char * enabledMessage,
+	void (*apply)(libvlc_media_player_t *, unsigned),
+	const std::function<void(const std::string &)> & logVerbose) {
+	if (currentValue == enabled) {
+		return false;
+	}
+
+	currentValue = enabled;
+	if (mediaPlayer) {
+		apply(mediaPlayer, enabled ? 1u : 0u);
+	}
+	logVerbose(std::string(enabledMessage) + (enabled ? "enabled." : "disabled."));
+	return true;
+}
+
+inline bool nearlyEqual(float a, float b, float epsilon = 0.0001f) {
+	return std::abs(a - b) <= epsilon;
+}
+
+inline std::string formatAdjustmentValue(float value, int precision = 1, const char * suffix = nullptr) {
+	std::ostringstream stream;
+	stream << std::fixed << std::setprecision(precision) << value;
+	if (suffix && *suffix) {
+		stream << suffix;
+	}
+	return stream.str();
+}
+} // namespace ofxVlc4Utils

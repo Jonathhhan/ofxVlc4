@@ -1,0 +1,133 @@
+#pragma once
+
+#include <complex>
+#include <cstdint>
+#include <vector>
+
+class ofxVlc4::AudioComponent {
+public:
+	explicit AudioComponent(ofxVlc4 & owner);
+
+	void prepareStartupAudioResources();
+	const char * getStartupAudioCaptureSampleFormatCode() const;
+	unsigned int getStartupAudioCaptureSampleRate() const;
+	unsigned int getStartupAudioCaptureChannelCount() const;
+	void prepareRingBuffer();
+	void resetBuffer();
+	void applyCurrentPlayerSettings();
+	void applyCurrentVolumeToPlayer();
+	void applyAudioOutputModule();
+	void applyAudioOutputDevice();
+	void applyAudioStereoMode();
+	void applyAudioMixMode();
+	void applyEqualizerSettings();
+	bool shouldApplyEqualizerImmediately() const;
+	void applyOrQueueEqualizerSettings();
+	void applyPendingEqualizerOnPlay();
+	void setPendingEqualizerApplyOnPlay(bool pending);
+	void clearPendingEqualizerApplyOnPlay();
+	bool hasPendingEqualizerApplyOnPlay() const;
+	void applyPlaybackRate();
+	void applyAudioDelay();
+	std::vector<ofxVlc4::AudioOutputModuleInfo> getAudioOutputModules() const;
+	std::vector<ofxVlc4::AudioFilterInfo> getAudioFilters() const;
+	const std::string & getAudioFilterChain() const;
+	void setAudioFilterChain(const std::string & filterChain);
+	const std::string & getSelectedAudioOutputModuleName() const;
+	bool selectAudioOutputModule(const std::string & moduleName);
+	std::vector<ofxVlc4::AudioOutputDeviceInfo> getAudioOutputDevices() const;
+	std::string getSelectedAudioOutputDeviceId() const;
+	bool selectAudioOutputDevice(const std::string & deviceId);
+	int getVolume() const;
+	void setVolume(int volume);
+	bool isMuted() const;
+	void toggleMute();
+	bool isEqualizerEnabled() const;
+	void setEqualizerEnabled(bool enabled);
+	float getEqualizerPreamp() const;
+	void setEqualizerPreamp(float preamp);
+	int getEqualizerBandCount() const;
+	float getEqualizerBandFrequency(int index) const;
+	float getEqualizerBandAmp(int index) const;
+	int getEqualizerPresetCount() const;
+	std::vector<std::string> getEqualizerPresetNames() const;
+	ofxVlc4::EqualizerPresetInfo getEqualizerPresetInfo(int index) const;
+	std::vector<ofxVlc4::EqualizerPresetInfo> getEqualizerPresetInfos() const;
+	int getCurrentEqualizerPresetIndex() const;
+	int findMatchingEqualizerPresetIndex(float toleranceDb) const;
+	std::string exportCurrentEqualizerPreset() const;
+	bool importEqualizerPreset(const std::string & serializedPreset);
+	bool applyEqualizerPreset(int index);
+	void setEqualizerBandAmp(int index, float amp);
+	void resetEqualizer();
+	std::vector<float> getEqualizerSpectrumLevels(size_t pointCount) const;
+	ofxVlc4::AudioMixMode getAudioMixMode() const;
+	void setAudioMixMode(ofxVlc4::AudioMixMode mode);
+	ofxVlc4::AudioStereoMode getAudioStereoMode() const;
+	void setAudioStereoMode(ofxVlc4::AudioStereoMode mode);
+	float getPlaybackRate() const;
+	void setPlaybackRate(float rate);
+	int getAudioDelayMs() const;
+	void setAudioDelayMs(int delayMs);
+	void setAudioCaptureEnabled(bool enabled);
+	bool isAudioCaptureEnabled() const;
+	ofxVlc4::AudioCaptureSampleFormat getAudioCaptureSampleFormat() const;
+	void setAudioCaptureSampleFormat(ofxVlc4::AudioCaptureSampleFormat format);
+	int getAudioCaptureSampleRate() const;
+	void setAudioCaptureSampleRate(int rate);
+	int getAudioCaptureChannelCount() const;
+	void setAudioCaptureChannelCount(int channelCount);
+	double getAudioCaptureBufferSeconds() const;
+	void setAudioCaptureBufferSeconds(double seconds);
+	void resetAudioStateInfo();
+	void updateAudioStateFromVolumeEvent(int volume);
+	void updateAudioStateFromMutedEvent(bool muted);
+	void updateAudioStateFromDeviceEvent(const std::string & deviceId);
+	void updateAudioStateFromAudioPts(int64_t ptsUs, int64_t systemUs);
+	void clearAudioPtsState();
+	ofxVlc4::AudioStateInfo getAudioStateInfo() const;
+	void applySubtitleDelay();
+	void applySubtitleTextScale();
+	int getSubtitleDelayMs() const;
+	void setSubtitleDelayMs(int delayMs);
+	float getSubtitleTextScale() const;
+	void setSubtitleTextScale(float scale);
+	bool audioIsReady() const;
+	uint64_t getAudioOverrunCount() const;
+	uint64_t getAudioUnderrunCount() const;
+	size_t peekLatestAudioSamples(float * dst, size_t sampleCount) const;
+	void readAudioIntoBuffer(ofSoundBuffer & buffer, float gain);
+	void submitRecordedAudioSamples(const float * samples, size_t sampleCount);
+	void audioPlay(const void * samples, unsigned int count, int64_t pts);
+	void audioSetVolume(float volume, bool mute);
+	void audioPause(int64_t pts);
+	void audioResume(int64_t pts);
+	void audioFlush(int64_t pts);
+	void audioDrain();
+
+private:
+	ofxVlc4::MediaComponent & media() const;
+	PlaybackController & playback() const;
+	ofxVlc4Recorder & recorder() const;
+	void prepareRecorderAudioBuffer(int sampleRate, int channelCount);
+	void captureRecorderAudioSamples(const float * samples, size_t sampleCount);
+	void resetRecorderCapturedAudio();
+	void clearSpectrumAnalysisCache() const;
+	void ensureSpectrumWindowPrepared() const;
+
+	ofxVlc4 & owner;
+	mutable uint64_t spectrumCacheVersion = 0;
+	mutable int spectrumCacheSampleRate = 0;
+	mutable int spectrumCacheChannelCount = 0;
+	mutable size_t spectrumCachePointCount = 0;
+	mutable uint64_t spectrumLastUpdateMicros = 0;
+	mutable bool spectrumCacheValid = false;
+	mutable float spectrumWindowSum = 0.0f;
+	mutable std::vector<float> spectrumWindow;
+	mutable std::vector<float> cachedSpectrumLevels;
+	mutable std::vector<float> spectrumInterleavedSamples;
+	mutable std::vector<std::complex<float>> spectrumFftInput;
+	mutable std::vector<float> spectrumMagnitudes;
+	mutable std::vector<float> spectrumPointDecibels;
+	mutable std::vector<float> spectrumSmoothedDecibels;
+};

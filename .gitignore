@@ -1,0 +1,11 @@
+.vs/
+**/bin/
+**/dll/
+**/obj/
+**/build/
+*.user
+*.suo
+*.opensdf
+*.vcxproj.user
+imgui*.ini
+*.tmp
