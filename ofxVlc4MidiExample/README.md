@@ -2,6 +2,8 @@
 
 Focused MIDI-and-media example for `ofxVlc4`.
 
+This example also expects the `ofxMidi` addon, which provides the `ofxMidiOut` device routing used here.
+
 It shows two paths side by side:
 
 - regular audio/video playback through `libVLC`

@@ -1106,7 +1106,7 @@ std::string ofxVlc4::getVlcModuleHelpText(const std::string & moduleName) const 
 		return output.str();
 	}
 
-	const std::string bundledHelp = loadBundledVlcHelpText();
+	const std::string bundledHelp = loadBundledVlcHelpText("vlc-full-help.txt");
 	if (!bundledHelp.empty() && ofIsStringInString(ofToLower(bundledHelp), ofToLower(trimmedName))) {
 		std::ostringstream output;
 		output << "No dedicated runtime module entry was found for '" << trimmedName << "'.\n";

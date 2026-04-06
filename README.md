@@ -175,6 +175,7 @@ git clone --branch develop https://github.com/jvcleave/ofxImGui.git
   - includes a helper download script for free 360 sample media
 - `ofxVlc4MidiExample`
   - smaller ImGui-based MIDI/media example with local MIDI transport, sync, export, and `ofxMidiOut` routing
+  - expects the `ofxMidi` addon for device output
 - `ofxVlc4RecorderExample`
   - focused recording example with an ImGui recorder panel, native record, session-based texture/window capture, muxing, and recorder readback metrics
 
