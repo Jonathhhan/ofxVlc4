@@ -609,6 +609,7 @@ void ofApp::cycleVideoRecordingCodec() {
 
 	const ofxVlc4RecordingVideoCodecPreset presets[] = {
 		ofxVlc4RecordingVideoCodecPreset::H264,
+		ofxVlc4RecordingVideoCodecPreset::H265,
 		ofxVlc4RecordingVideoCodecPreset::Mp4v,
 		ofxVlc4RecordingVideoCodecPreset::Mjpg
 	};
@@ -631,10 +632,14 @@ void ofApp::cycleBenchmarkMuxProfile() {
 	const ofxVlc4RecordingMuxProfile muxProfile = player->getRecordingMuxProfile();
 	player->setRecordingMuxProfile(
 		muxProfile == ofxVlc4RecordingMuxProfile::Mp4Aac
-			? ofxVlc4RecordingMuxProfile::MkvFlac
-			: muxProfile == ofxVlc4RecordingMuxProfile::MkvFlac
-				? ofxVlc4RecordingMuxProfile::OggVorbis
-				: ofxVlc4RecordingMuxProfile::Mp4Aac);
+			? ofxVlc4RecordingMuxProfile::MkvOpus
+			: muxProfile == ofxVlc4RecordingMuxProfile::MkvOpus
+				? ofxVlc4RecordingMuxProfile::MkvFlac
+				: muxProfile == ofxVlc4RecordingMuxProfile::MkvFlac
+					? ofxVlc4RecordingMuxProfile::MkvLpcm
+					: muxProfile == ofxVlc4RecordingMuxProfile::MkvLpcm
+						? ofxVlc4RecordingMuxProfile::OggVorbis
+						: ofxVlc4RecordingMuxProfile::Mp4Aac);
 }
 
 void ofApp::toggleBenchmarkMuxSourceCleanup() {
@@ -958,6 +963,7 @@ void ofApp::drawControlPanel() {
 
 		const ofxVlc4RecordingVideoCodecPreset codecPresets[] = {
 			ofxVlc4RecordingVideoCodecPreset::H264,
+			ofxVlc4RecordingVideoCodecPreset::H265,
 			ofxVlc4RecordingVideoCodecPreset::Mp4v,
 			ofxVlc4RecordingVideoCodecPreset::Mjpg
 		};
@@ -984,20 +990,30 @@ void ofApp::drawControlPanel() {
 
 		const char * muxProfileItems[] = {
 			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::Mp4Aac),
+			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::MkvOpus),
 			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::MkvFlac),
+			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::MkvLpcm),
 			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::OggVorbis)
 		};
 		int muxProfileIndex = recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::Mp4Aac
 			? 0
-			: recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::MkvFlac
+			: recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::MkvOpus
 				? 1
-				: 2;
+				: recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::MkvFlac
+					? 2
+					: recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::MkvLpcm
+						? 3
+						: 4;
 		if (ImGui::Combo("Mux profile", &muxProfileIndex, muxProfileItems, IM_ARRAYSIZE(muxProfileItems))) {
 			recordingPreset.muxProfile = muxProfileIndex == 0
 				? ofxVlc4RecordingMuxProfile::Mp4Aac
 				: muxProfileIndex == 1
-					? ofxVlc4RecordingMuxProfile::MkvFlac
-					: ofxVlc4RecordingMuxProfile::OggVorbis;
+					? ofxVlc4RecordingMuxProfile::MkvOpus
+					: muxProfileIndex == 2
+						? ofxVlc4RecordingMuxProfile::MkvFlac
+						: muxProfileIndex == 3
+							? ofxVlc4RecordingMuxProfile::MkvLpcm
+							: ofxVlc4RecordingMuxProfile::OggVorbis;
 			presetChanged = true;
 		}
 

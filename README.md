@@ -175,6 +175,7 @@ git clone --branch develop https://github.com/jvcleave/ofxImGui.git
   - expects the `ofxMidi` addon for device output
 - `ofxVlc4RecorderExample`
   - focused recording example with an ImGui recorder panel, native record, session-based texture/window capture, muxing, and recorder readback metrics
+  - includes recording presets for `H265 / HEVC`, `MKV / Opus`, and `MKV / LPCM`
 
 For audio-visualization workflows, the addon treats `ofxProjectM` as the primary integrated path. Bundled VLC visualization plugins remain available through the staged runtime, but they are better treated as optional libVLC runtime extras than as the main addon feature path.
 

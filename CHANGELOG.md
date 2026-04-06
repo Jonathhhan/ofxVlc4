@@ -11,6 +11,7 @@
 - Windows installs now keep one shared `libs/libvlc/runtime/vs/x64` runtime and link examples to it locally
 - added first-class `addSubtitleSlave(...)` and `addAudioSlave(...)` helpers on top of the generic media-slave path
 - `ofxVlc4Example` now includes a subtitle picker plus consistent subtitle-file handling through path entry and drag/drop
+- added first-class recording presets for `H265 / HEVC`, `MKV / Opus`, and `MKV / LPCM`
 
 ## 1.0.1
 

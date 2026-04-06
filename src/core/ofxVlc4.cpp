@@ -540,6 +540,8 @@ std::string ofxVlc4::recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPres
 	switch (preset) {
 	case ofxVlc4RecordingVideoCodecPreset::H264:
 		return "H264";
+	case ofxVlc4RecordingVideoCodecPreset::H265:
+		return "X265";
 	case ofxVlc4RecordingVideoCodecPreset::Mp4v:
 		return "MP4V";
 	case ofxVlc4RecordingVideoCodecPreset::Mjpg:
@@ -550,6 +552,9 @@ std::string ofxVlc4::recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPres
 
 ofxVlc4RecordingVideoCodecPreset ofxVlc4::recordingVideoCodecPresetForCodec(const std::string & codec) {
 	const std::string normalizedCodec = ofToUpper(ofTrim(codec));
+	if (normalizedCodec == "X265" || normalizedCodec == "H265" || normalizedCodec == "HEVC") {
+		return ofxVlc4RecordingVideoCodecPreset::H265;
+	}
 	if (normalizedCodec == "MP4V") {
 		return ofxVlc4RecordingVideoCodecPreset::Mp4v;
 	}
@@ -563,6 +568,8 @@ const char * ofxVlc4::recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecP
 	switch (preset) {
 	case ofxVlc4RecordingVideoCodecPreset::H264:
 		return "H264";
+	case ofxVlc4RecordingVideoCodecPreset::H265:
+		return "H265 / HEVC";
 	case ofxVlc4RecordingVideoCodecPreset::Mp4v:
 		return "MP4V";
 	case ofxVlc4RecordingVideoCodecPreset::Mjpg:
@@ -575,7 +582,11 @@ std::string ofxVlc4::recordingMuxContainerForProfile(ofxVlc4RecordingMuxProfile 
 	switch (profile) {
 	case ofxVlc4RecordingMuxProfile::Mp4Aac:
 		return "mp4";
+	case ofxVlc4RecordingMuxProfile::MkvOpus:
+		return "mkv";
 	case ofxVlc4RecordingMuxProfile::MkvFlac:
+		return "mkv";
+	case ofxVlc4RecordingMuxProfile::MkvLpcm:
 		return "mkv";
 	case ofxVlc4RecordingMuxProfile::OggVorbis:
 		return "ogg";
@@ -587,8 +598,12 @@ std::string ofxVlc4::recordingMuxAudioCodecForProfile(ofxVlc4RecordingMuxProfile
 	switch (profile) {
 	case ofxVlc4RecordingMuxProfile::Mp4Aac:
 		return "mp4a";
+	case ofxVlc4RecordingMuxProfile::MkvOpus:
+		return "opus";
 	case ofxVlc4RecordingMuxProfile::MkvFlac:
 		return "flac";
+	case ofxVlc4RecordingMuxProfile::MkvLpcm:
+		return "lpcm";
 	case ofxVlc4RecordingMuxProfile::OggVorbis:
 		return "vorb";
 	}
@@ -599,8 +614,12 @@ const char * ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile profil
 	switch (profile) {
 	case ofxVlc4RecordingMuxProfile::Mp4Aac:
 		return "MP4 / AAC";
+	case ofxVlc4RecordingMuxProfile::MkvOpus:
+		return "MKV / OPUS";
 	case ofxVlc4RecordingMuxProfile::MkvFlac:
 		return "MKV / FLAC";
+	case ofxVlc4RecordingMuxProfile::MkvLpcm:
+		return "MKV / LPCM";
 	case ofxVlc4RecordingMuxProfile::OggVorbis:
 		return "OGG / VORBIS";
 	}
@@ -620,7 +639,13 @@ ofxVlc4MuxOptions ofxVlc4::recordingMuxOptionsForProfile(
 	options.audioChannels = std::max(1, channelCount);
 	options.deleteSourceFilesOnSuccess = deleteSourceFilesOnSuccess;
 	options.muxTimeoutMs = muxTimeoutMs;
-	options.audioBitrateKbps = profile == ofxVlc4RecordingMuxProfile::MkvFlac ? 0 : 192;
+	options.audioBitrateKbps =
+		(profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
+		 profile == ofxVlc4RecordingMuxProfile::MkvLpcm)
+			? 0
+			: profile == ofxVlc4RecordingMuxProfile::MkvOpus
+				? 160
+				: 192;
 	return options;
 }
 
@@ -642,7 +667,9 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 		muxTimeoutMs);
 	config.targetWidth = std::max(0, preset.targetWidth);
 	config.targetHeight = std::max(0, preset.targetHeight);
-	if (preset.audioBitrateKbps > 0 && config.muxOptions.audioCodec != "flac") {
+	if (preset.audioBitrateKbps > 0 &&
+		config.muxOptions.audioCodec != "flac" &&
+		config.muxOptions.audioCodec != "lpcm") {
 		config.muxOptions.audioBitrateKbps = preset.audioBitrateKbps;
 	}
 	return config;
@@ -688,7 +715,9 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 		muxTimeoutMs);
 	config.targetWidth = std::max(0, preset.targetWidth);
 	config.targetHeight = std::max(0, preset.targetHeight);
-	if (preset.audioBitrateKbps > 0 && config.muxOptions.audioCodec != "flac") {
+	if (preset.audioBitrateKbps > 0 &&
+		config.muxOptions.audioCodec != "flac" &&
+		config.muxOptions.audioCodec != "lpcm") {
 		config.muxOptions.audioBitrateKbps = preset.audioBitrateKbps;
 	}
 	return config;

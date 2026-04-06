@@ -83,13 +83,16 @@ enum class ofxVlc4RecordingAudioSource {
 
 enum class ofxVlc4RecordingVideoCodecPreset {
 	H264 = 0,
+	H265,
 	Mp4v,
 	Mjpg
 };
 
 enum class ofxVlc4RecordingMuxProfile {
 	Mp4Aac = 0,
+	MkvOpus,
 	MkvFlac,
+	MkvLpcm,
 	OggVorbis
 };
 

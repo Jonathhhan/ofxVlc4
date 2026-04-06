@@ -12,6 +12,7 @@ This example keeps the UI small and concentrates on the addon's recording-relate
 - WAV audio capture through the addon recorder
 - session-based benchmark and window recording with post-stop muxing
 - ImGui control panel for recorder state, codec, mux profile, size, FPS, and bitrate
+  - includes `H265 / HEVC` plus `MKV / Opus` and `MKV / LPCM` recorder presets
 - snapshot capture
 - drag-and-drop media loading
 - automatic startup seed from `bin/data/fingers.mp4` when present
@@ -45,9 +46,9 @@ Controls:
 - `F`
   - toggle benchmark audio source between `OF synth` and `VLC playback`
 - `G`
-  - cycle benchmark/native video recording codec
+  - cycle benchmark/native video recording codec between `H264`, `H265 / HEVC`, `MP4V`, and `MJPG`
 - `H`
-  - cycle benchmark mux profile between `MP4/AAC`, `MKV/FLAC`, and `OGG/Vorbis`
+  - cycle benchmark mux profile between `MP4/AAC`, `MKV/Opus`, `MKV/FLAC`, `MKV/LPCM`, and `OGG/Vorbis`
 - `J`
   - toggle whether successful muxes delete or keep the temporary sidecar `.mp4` and `.wav`
 - `V`
