@@ -166,7 +166,7 @@ git clone --branch develop https://github.com/jvcleave/ofxImGui.git
 ## Examples
 
 - `ofxVlc4Example`
-  - full GUI, previews, projectM integration, diagnostics
+    - full GUI, previews, projectM integration, diagnostics, and subtitle loading/track control
 - `ofxVlc4360Example`
   - focused ImGui-based 360 / panoramic playback example with projection, stereo mode, live viewpoint controls, and lightweight playlist/folder drop support
   - includes a helper download script for free 360 sample media
@@ -339,15 +339,18 @@ Useful newer API groups:
   - `getMediaReadinessInfo()`
   - `getPlaybackStateInfo()`
   - `getVideoStateInfo()`
-- audio/video state snapshots
-  - `getAudioStateInfo()`
-  - `getVideoStateInfo()`
-  - `getRendererStateInfo()`
-  - `getSubtitleStateInfo()`
-  - `getNavigationStateInfo()`
+  - audio/video state snapshots
+    - `getAudioStateInfo()`
+    - `getVideoStateInfo()`
+    - `getRendererStateInfo()`
+    - `getSubtitleStateInfo()`
+    - `getNavigationStateInfo()`
+  - subtitle rendering
+    - subtitle tracks can be selected and displayed inside the OF app through libVLC's subtitle renderer
+    - the current addon path treats subtitles as VLC-rendered overlay pixels, not as extracted cue text for custom OF font/layout rendering
 - texture workflow
-  - `getTexture()`
-  - `getRenderTexture()`
+    - `getTexture()`
+    - `getRenderTexture()`
 - diagnostics/timing
   - `getWatchTimeInfo()`
   - `getMediaStats()`

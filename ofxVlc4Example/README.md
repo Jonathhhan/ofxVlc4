@@ -72,6 +72,8 @@ Inside `Advanced` the example now also exposes:
 - media info, tracks, subtitles, navigation, bookmarks, renderer/discovery, and capture/record status
 - video output, filters, adjustments, 3D/stereo options, crop/aspect/fit, and backend state
 - live audio callback timing counters so conversion/copy costs can be checked under load
+- subtitles render inside the OF app through libVLC's subtitle overlay path; this example controls track selection, delay, and scale, but does not expose subtitle cues as custom OF-drawn text
+- the `Tracks & Subtitles` section also includes a quick `Load Subtitle...` picker for attaching an external subtitle file through the existing media-slave path
 
 Outside `Advanced` there are dedicated top-level sections for:
 

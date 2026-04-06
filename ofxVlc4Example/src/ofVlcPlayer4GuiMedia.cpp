@@ -911,6 +911,7 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		const std::vector<ofxVlc4::MediaTrackInfo> videoTracks = player.getVideoTracks();
 		const std::vector<ofxVlc4::MediaTrackInfo> audioTracks = player.getAudioTracks();
 		const std::vector<ofxVlc4::MediaTrackInfo> subtitleTracks = player.getSubtitleTracks();
+		const ofxVlc4::SubtitleStateInfo subtitleState = player.getSubtitleStateInfo();
 		if (!audioTracks.empty()) {
 			drawTrackSelector("Audio Track", audioTracks, false, [&](const std::string & trackId) {
 				player.selectAudioTrackById(trackId);
@@ -920,6 +921,34 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		drawTrackSelector("Subtitle Track", subtitleTracks, true, [&](const std::string & trackId) {
 			player.selectSubtitleTrackById(trackId);
 		});
+
+		const float subtitleButtonWidth =
+			(ImGui::GetContentRegionAvail().x - buttonSpacing) / 2.0f;
+		if (ImGui::Button("Load Subtitle...", ImVec2(subtitleButtonWidth, 0.0f))) {
+			ofFileDialogResult result = ofSystemLoadDialog("Select subtitle file");
+			if (result.bSuccess) {
+				const std::string selectedPath = result.getPath();
+				mediaSlaveTypeIndex = 0;
+				mediaSlavePath = selectedPath;
+				player.addMediaSlave(ofxVlc4::MediaSlaveType::Subtitle, selectedPath);
+			}
+		}
+		ImGui::SameLine(0.0f, buttonSpacing);
+		ImGui::BeginDisabled(subtitleTracks.empty() && !subtitleState.trackSelected);
+		if (ImGui::Button("Disable Subtitle", ImVec2(subtitleButtonWidth, 0.0f))) {
+			player.selectSubtitleTrackById("");
+		}
+		ImGui::EndDisabled();
+
+		std::string subtitleStatus = subtitleState.trackSelected
+			? ("Current: " + (subtitleState.selectedTrackLabel.empty() ? subtitleState.selectedTrackId : subtitleState.selectedTrackLabel))
+			: "Current: Off";
+		if (!subtitleState.trackListAvailable) {
+			subtitleStatus += "   |   Track list not ready";
+		} else {
+			subtitleStatus += "   |   Tracks: " + ofToString(subtitleState.trackCount);
+		}
+		ImGui::TextDisabled("%s", subtitleStatus.c_str());
 
 		int subtitleDelayMs = player.getSubtitleDelayMs();
 		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(compactControlWidth));
