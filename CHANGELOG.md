@@ -6,7 +6,7 @@
 - projects should now include `src/ofxVlc4.h` and use `ofxVlc4` directly
 - restored the bundled `vlc-help.txt` asset
 - `Help` now derives from `vlc-help.txt`
-- `LongHelp` and `FullHelp` derive from `vlc-full-help.txt`
+- `FullHelp` derives from `vlc-full-help.txt`
 - Windows installs now keep one shared `libs/libvlc/runtime/vs/x64` runtime and link examples to it locally
 
 ## 1.0.1

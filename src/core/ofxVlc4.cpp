@@ -119,49 +119,6 @@ std::string loadBundledVlcHelpText(const std::string & fileName) {
 	return "";
 }
 
-int parseHelpSectionNumber(const std::string & line) {
-	size_t index = 0;
-	while (index < line.size() && std::isdigit(static_cast<unsigned char>(line[index]))) {
-		++index;
-	}
-	if (index == 0 || index + 1 >= line.size() || line[index] != '.' || line[index + 1] != ' ') {
-		return -1;
-	}
-	return ofToInt(line.substr(0, index));
-}
-
-std::string extractHelpSections(
-	const std::string & helpText,
-	const std::set<int> & includedSections,
-	bool includePreamble) {
-	std::vector<std::string> lines = ofSplitString(helpText, "\n", false, false);
-	std::ostringstream output;
-	int currentSection = 0;
-	bool wroteAnything = false;
-
-	for (const std::string & line : lines) {
-		const int parsedSection = parseHelpSectionNumber(line);
-		if (parsedSection > 0) {
-			currentSection = parsedSection;
-		}
-
-		const bool shouldInclude =
-			(currentSection == 0 && includePreamble) ||
-			(currentSection > 0 && includedSections.count(currentSection) > 0);
-		if (!shouldInclude) {
-			continue;
-		}
-
-		if (wroteAnything) {
-			output << "\n";
-		}
-		output << line;
-		wroteAnything = true;
-	}
-
-	return output.str();
-}
-
 template <typename FilterInfo>
 void appendFilterList(std::ostringstream & output, const std::string & title, const std::vector<FilterInfo> & filters) {
 	output << title << "\n";
@@ -1002,8 +959,6 @@ std::string ofxVlc4::vlcHelpModeToOptionString(ofxVlc4VlcHelpMode mode) {
 	switch (mode) {
 	case ofxVlc4VlcHelpMode::Help:
 		return "--help";
-	case ofxVlc4VlcHelpMode::LongHelp:
-		return "--longhelp";
 	case ofxVlc4VlcHelpMode::FullHelp:
 	default:
 		return "--full-help";
@@ -1019,11 +974,6 @@ std::string ofxVlc4::getVlcHelpText(ofxVlc4VlcHelpMode mode) const {
 			return bundledHelp;
 		}
 		return "ofxVlc4 VLC help reference is not available.";
-	case ofxVlc4VlcHelpMode::LongHelp:
-		if (!bundledFullHelp.empty()) {
-			return extractHelpSections(bundledFullHelp, { 1, 2, 3, 4, 5, 6 }, true);
-		}
-		return "ofxVlc4 VLC long help reference is not available.";
 	case ofxVlc4VlcHelpMode::FullHelp:
 	default:
 		if (!bundledFullHelp.empty()) {

@@ -11,7 +11,7 @@ Bundled VLC help assets:
 - `vlc-help.txt`
   - runtime-derived English `--help`, used for `Help`
 - `vlc-full-help.txt`
-  - runtime-derived English `--full-help`, used for `LongHelp` and `FullHelp`
+  - runtime-derived English `--full-help`, used for `FullHelp`
 
 It is aimed at media-player style apps, video-texture workflows, and hybrid tools where playback, analysis, overlays, and custom rendering need to live inside openFrameworks.
 

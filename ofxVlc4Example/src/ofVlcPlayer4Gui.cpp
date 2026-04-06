@@ -35,7 +35,6 @@ struct PlaylistDragPayload {
 
 constexpr const char * kVlcHelpModeLabels[] = {
 	"help",
-	"longhelp",
 	"full-help"
 };
 
@@ -44,8 +43,6 @@ ofxVlc4VlcHelpMode vlcHelpModeFromIndex(int index) {
 	case 0:
 		return ofxVlc4VlcHelpMode::Help;
 	case 1:
-		return ofxVlc4VlcHelpMode::LongHelp;
-	case 2:
 	default:
 		return ofxVlc4VlcHelpMode::FullHelp;
 	}
