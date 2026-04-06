@@ -1,13 +1,16 @@
 # Changelog
 
-## Unreleased
+## 1.0.2
 
+- fixed addon version reporting so the numeric version fields and version string stay in sync at `1.0.2`
 - removed the deprecated compatibility header `src/ofxVlc4Player.h`
 - projects should now include `src/ofxVlc4.h` and use `ofxVlc4` directly
 - restored the bundled `vlc-help.txt` asset
 - `Help` now derives from `vlc-help.txt`
 - `FullHelp` derives from `vlc-full-help.txt`
 - Windows installs now keep one shared `libs/libvlc/runtime/vs/x64` runtime and link examples to it locally
+- added first-class `addSubtitleSlave(...)` and `addAudioSlave(...)` helpers on top of the generic media-slave path
+- `ofxVlc4Example` now includes a subtitle picker plus consistent subtitle-file handling through path entry and drag/drop
 
 ## 1.0.1
 

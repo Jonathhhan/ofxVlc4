@@ -1997,6 +1997,8 @@ public:
 	bool getCursorPosition(int & x, int & y) const;
 	std::vector<MediaSlaveInfo> getMediaSlaves() const;
 	bool addMediaSlave(MediaSlaveType type, const std::string & uri, unsigned priority = 2);
+	bool addSubtitleSlave(const std::string & uri, unsigned priority = 2);
+	bool addAudioSlave(const std::string & uri, unsigned priority = 2);
 	void clearMediaSlaves();
 	std::string takeSnapshot(const std::string & directory = "");
 	ThumbnailInfo getLastGeneratedThumbnail() const;

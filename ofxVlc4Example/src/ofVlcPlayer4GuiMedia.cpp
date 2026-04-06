@@ -930,7 +930,7 @@ void ofVlcPlayer4GuiMedia::drawContent(
 				const std::string selectedPath = result.getPath();
 				mediaSlaveTypeIndex = 0;
 				mediaSlavePath = selectedPath;
-				player.addMediaSlave(ofxVlc4::MediaSlaveType::Subtitle, selectedPath);
+				player.addSubtitleSlave(selectedPath);
 			}
 		}
 		ImGui::SameLine(0.0f, buttonSpacing);
@@ -1056,7 +1056,10 @@ void ofVlcPlayer4GuiMedia::drawContent(
 			const auto slaveType = mediaSlaveTypeIndex == 0
 				? ofxVlc4::MediaSlaveType::Subtitle
 				: ofxVlc4::MediaSlaveType::Audio;
-			if (player.addMediaSlave(slaveType, mediaSlavePath)) {
+			const bool added = (slaveType == ofxVlc4::MediaSlaveType::Subtitle)
+				? player.addSubtitleSlave(mediaSlavePath)
+				: player.addAudioSlave(mediaSlavePath);
+			if (added) {
 				mediaSlavePath.clear();
 			}
 		};

@@ -635,7 +635,7 @@ int ofApp::addPathToPlaylist(const std::string & rawPath) {
 	}
 
 	if (isSubtitlePath(resolvedPath)) {
-		return player.addMediaSlave(ofxVlc4::MediaSlaveType::Subtitle, resolvedPath) ? 1 : 0;
+		return player.addSubtitleSlave(resolvedPath) ? 1 : 0;
 	}
 
 	const int addedCount = player.addPathToPlaylist(resolvedPath, kSeedExtensions);

@@ -3451,6 +3451,14 @@ bool ofxVlc4::addMediaSlave(MediaSlaveType type, const std::string & uri, unsign
 	return mediaComponent->addMediaSlave(type, uri, priority);
 }
 
+bool ofxVlc4::addSubtitleSlave(const std::string & uri, unsigned priority) {
+	return addMediaSlave(MediaSlaveType::Subtitle, uri, priority);
+}
+
+bool ofxVlc4::addAudioSlave(const std::string & uri, unsigned priority) {
+	return addMediaSlave(MediaSlaveType::Audio, uri, priority);
+}
+
 void ofxVlc4::clearMediaSlaves() {
 	mediaComponent->clearMediaSlaves();
 }

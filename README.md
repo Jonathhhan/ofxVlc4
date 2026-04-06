@@ -21,7 +21,7 @@ Parts of this addon, its examples, GUI structure, and documentation were develop
 
 ## Release
 
-- addon release version: `1.0.1`
+- addon release version: `1.0.2`
 - changelog: `CHANGELOG.md`
 
 ## Highlights
@@ -254,6 +254,14 @@ Playlist helpers:
 - `getPlaylistStateInfo()`
 - `getPlaylistItems()`
 - `getCurrentPlaylistItemInfo()`
+
+External slave helpers:
+
+- `getMediaSlaves()`
+- `addMediaSlave(type, uri, priority)`
+- `addSubtitleSlave(uri, priority)`
+- `addAudioSlave(uri, priority)`
+- `clearMediaSlaves()`
 - `getPlaylist()`
 
 Structured playlist API:
@@ -346,8 +354,9 @@ Useful newer API groups:
     - `getSubtitleStateInfo()`
     - `getNavigationStateInfo()`
   - subtitle rendering
-    - subtitle tracks can be selected and displayed inside the OF app through libVLC's subtitle renderer
-    - the current addon path treats subtitles as VLC-rendered overlay pixels, not as extracted cue text for custom OF font/layout rendering
+      - subtitle tracks can be selected and displayed inside the OF app through libVLC's subtitle renderer
+      - the current addon path treats subtitles as VLC-rendered overlay pixels, not as extracted cue text for custom OF font/layout rendering
+      - external subtitle/audio attachments can be added through `addSubtitleSlave(...)`, `addAudioSlave(...)`, or the generic `addMediaSlave(...)`
 - texture workflow
     - `getTexture()`
     - `getRenderTexture()`

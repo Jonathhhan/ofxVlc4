@@ -31,8 +31,8 @@ constexpr const char * kLogChannel = "ofxVlc4";
 std::atomic<int> gLogLevel { static_cast<int>(OF_LOG_NOTICE) };
 constexpr int kOfxVlc4AddonVersionMajor = 1;
 constexpr int kOfxVlc4AddonVersionMinor = 0;
-constexpr int kOfxVlc4AddonVersionPatch = 0;
-constexpr const char * kOfxVlc4AddonVersionString = "1.0.1";
+constexpr int kOfxVlc4AddonVersionPatch = 2;
+constexpr const char * kOfxVlc4AddonVersionString = "1.0.2";
 
 bool shouldLog(ofLogLevel level) {
 	const ofLogLevel configuredLevel = static_cast<ofLogLevel>(gLogLevel.load());
