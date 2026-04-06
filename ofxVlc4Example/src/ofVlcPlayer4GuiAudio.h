@@ -13,6 +13,7 @@ public:
 		float wideSliderWidth);
 
 private:
+	int volume = 50;
 	char audioFilterChain[512] = "";
 	std::string bypassedAudioFilterChain;
 	bool audioFiltersBypassed = false;

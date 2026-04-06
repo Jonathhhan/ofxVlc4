@@ -171,6 +171,7 @@ void ofVlcPlayer4GuiAudio::drawContent(
 
 	int callbackChannelIndex = player.getAudioCaptureChannelCount() <= 1 ? 0 : 1;
 	float callbackBufferSeconds = static_cast<float>(player.getAudioCaptureBufferSeconds());
+	volume = audioState.volumeKnown ? audioState.volume : player.getVolume();
 
 	if (!ImGui::IsAnyItemActive()) {
 		const std::string currentAudioFilterChain = player.getAudioFilterChain();
@@ -181,6 +182,42 @@ void ofVlcPlayer4GuiAudio::drawContent(
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
 	ImGui::PushItemWidth(compactControlWidth);
+
+	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Playback", MenuContentPolicy::Leaf, false)) {
+		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(wideSliderWidth));
+		if (ImGui::SliderInt("Volume", &volume, 0, 100)) {
+			player.setVolume(volume);
+		}
+		if (ofVlcPlayer4GuiControls::applyHoveredWheelStep(volume, 0, 100, 5, 1)) {
+			player.setVolume(volume);
+		}
+
+		bool muted = audioState.mutedKnown ? audioState.muted : player.isMuted();
+		if (ImGui::Checkbox("Mute", &muted)) {
+			player.toggleMute();
+			volume = player.getVolume();
+		}
+
+		bool captureEnabled = player.isAudioCaptureEnabled();
+		if (ImGui::Checkbox("Audio Capture", &captureEnabled)) {
+			player.setAudioCaptureEnabled(captureEnabled);
+		}
+
+		ImGui::Separator();
+		ImGui::TextDisabled(
+			"State: %s%s",
+			audioState.ready ? "ready" : "waiting",
+			audioState.paused ? " (paused)" : "");
+		ImGui::TextDisabled(
+			"Tracks: %d%s",
+			audioState.trackCount,
+			audioState.tracksAvailable ? "" : " (pending)");
+		if (audioState.deviceKnown && !audioState.deviceId.empty()) {
+			ImGui::TextDisabled("Active device: %s", audioState.deviceId.c_str());
+		}
+
+		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
+	}
 
 	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Live Controls", MenuContentPolicy::Leaf, false)) {
 		if (ofVlcPlayer4GuiControls::drawComboWithWheel("Mixmode", mixModeIndex, mixModes, IM_ARRAYSIZE(mixModes))) {

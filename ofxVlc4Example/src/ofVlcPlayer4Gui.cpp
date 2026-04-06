@@ -36,8 +36,7 @@ struct PlaylistDragPayload {
 constexpr const char * kVlcHelpModeLabels[] = {
 	"help",
 	"longhelp",
-	"full-help",
-	"list"
+	"full-help"
 };
 
 ofxVlc4VlcHelpMode vlcHelpModeFromIndex(int index) {
@@ -46,8 +45,6 @@ ofxVlc4VlcHelpMode vlcHelpModeFromIndex(int index) {
 		return ofxVlc4VlcHelpMode::Help;
 	case 1:
 		return ofxVlc4VlcHelpMode::LongHelp;
-	case 3:
-		return ofxVlc4VlcHelpMode::List;
 	case 2:
 	default:
 		return ofxVlc4VlcHelpMode::FullHelp;
@@ -517,7 +514,7 @@ void ofVlcPlayer4Gui::setup() {
 void ofVlcPlayer4Gui::refreshVlcHelpText(ofxVlc4 & player) {
 	const ofxVlc4VlcHelpMode mode = vlcHelpModeFromIndex(selectedVlcHelpModeIndex);
 	const std::string moduleName = trimGuiString(vlcHelpModuleName);
-	if (!moduleName.empty() && mode != ofxVlc4VlcHelpMode::List) {
+	if (!moduleName.empty()) {
 		vlcHelpTextCache = player.getVlcModuleHelpText(moduleName);
 	} else {
 		vlcHelpTextCache = player.getVlcHelpText(mode);
@@ -982,7 +979,7 @@ void ofVlcPlayer4Gui::drawVlcHelpSection(ofxVlc4 & player, bool detachedOnly) {
 	ImGui::SameLine(0.0f, kButtonSpacing);
 	if (ImGui::Button("Log", ImVec2(actionWidth, 0.0f))) {
 		const std::string moduleName = trimGuiString(vlcHelpModuleName);
-		if (!moduleName.empty() && vlcHelpModeFromIndex(selectedVlcHelpModeIndex) != ofxVlc4VlcHelpMode::List) {
+		if (!moduleName.empty()) {
 			player.printVlcModuleHelp(moduleName);
 		} else {
 			player.printVlcHelp(vlcHelpModeFromIndex(selectedVlcHelpModeIndex));
