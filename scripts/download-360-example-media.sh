@@ -30,7 +30,7 @@ Options:
 Examples:
   bash scripts/download-360-example-media.sh
   bash scripts/download-360-example-media.sh --preset dji-mini-2
-  bash scripts/download-360-example-media.sh --output-dir ./bin/data/360 --force
+  bash scripts/download-360-example-media.sh --output-dir ./bin/data --force
 EOF
 }
 
@@ -121,7 +121,7 @@ esac
 
 ADDON_ROOT="$(resolve_addon_root "$SCRIPT_DIR")" || die "Could not resolve addon root from '$SCRIPT_DIR'."
 if [[ -z "$OUTPUT_DIR" ]]; then
-	OUTPUT_DIR="${ADDON_ROOT}/ofxVlc4360Example/bin/data/360"
+	OUTPUT_DIR="${ADDON_ROOT}/ofxVlc4360Example/bin/data"
 fi
 
 mkdir -p "$OUTPUT_DIR"
