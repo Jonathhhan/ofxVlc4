@@ -14,3 +14,15 @@ ofxVlc4MidiExample/icon.rc
 ofxVlc4MidiExample/ofxVlc4MidiExample.sln
 ofxVlc4MidiExample/ofxVlc4MidiExample.vcxproj
 ofxVlc4MidiExample/ofxVlc4MidiExample.vcxproj.filters
+ofxVlc4Example/icon.rc
+ofxVlc4Example/ofxVlc4Example.sln
+ofxVlc4Example/ofxVlc4Example.vcxproj
+ofxVlc4Example/ofxVlc4Example.vcxproj.filters
+ofxVlc4360Example/icon.rc
+ofxVlc4360Example/ofxVlc4360Example.sln
+ofxVlc4360Example/ofxVlc4360Example.vcxproj
+ofxVlc4360Example/ofxVlc4360Example.vcxproj.filters
+ofxVlc4RecorderExample/icon.rc
+ofxVlc4RecorderExample/ofxVlc4RecorderExample.sln
+ofxVlc4RecorderExample/ofxVlc4RecorderExample.vcxproj
+ofxVlc4RecorderExample/ofxVlc4RecorderExample.vcxproj.filters

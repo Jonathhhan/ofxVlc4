@@ -1,99 +1,86 @@
 #include "ofApp.h"
 
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
-#include <fstream>
-#include <iomanip>
-#include <iterator>
 #include <set>
-#include <sstream>
 
 namespace {
-constexpr float kOverlayPadding = 12.0f;
-constexpr float kLineHeight = 18.0f;
 constexpr float kDefaultAspect = 16.0f / 9.0f;
 constexpr int kVideoModeFrameRate = 60;
 constexpr int kAudioOnlyModeFrameRate = 30;
+constexpr double kTwoPi = 6.28318530717958647692;
+constexpr uint64_t kBenchmarkMuxTimeoutMs = 15000;
 
 const std::set<std::string> & audioOnlyExtensions() {
 	static const std::set<std::string> extensions = {
-		".wav", ".mp3", ".flac", ".ogg", ".mid", ".midi",
+		".wav", ".mp3", ".flac", ".ogg",
 		".m4a", ".aac", ".aiff", ".wma"
 	};
 	return extensions;
-}
-
-bool isMidiPath(const std::string & path) {
-	const std::string extension = ofToLower(ofFilePath::getFileExt(path));
-	return extension == "mid" || extension == "midi";
 }
 
 bool hasActiveVlcMedia(const ofxVlc4 & player) {
 	return player.hasPlaylist() || !player.getCurrentPath().empty();
 }
 
-std::string formatSeconds(double seconds) {
-	std::ostringstream stream;
-	stream << std::fixed << std::setprecision(2) << seconds << " s";
-	return stream.str();
-}
-
-std::string trimWhitespace(const std::string & value) {
-	const auto begin = value.find_first_not_of(" \t\r\n");
-	if (begin == std::string::npos) {
-		return "";
-	}
-	const auto end = value.find_last_not_of(" \t\r\n");
-	return value.substr(begin, end - begin + 1);
+std::string yesNo(bool value) {
+	return value ? "yes" : "no";
 }
 }
 
-//--------------------------------------------------------------
 void ofApp::setup() {
-	ofSetWindowTitle("ofxVlc4 Simple Example");
+	ofSetWindowTitle("ofxVlc4 Recorder Example");
 	ofSetFrameRate(kVideoModeFrameRate);
 	ofSetBackgroundColor(ofColor(12, 12, 12));
 	ofSetColor(255);
 
-	const std::string logDir = ofToDataPath("logs", true);
-	std::error_code directoryError;
-	std::filesystem::create_directories(logDir, directoryError);
+	nativeRecordingDirectory = ofToDataPath("recordings/native", true);
+	audioRecordingBasePath = ofToDataPath("recordings/audio/audio-recording", true);
+	benchmarkRecordingBasePath = ofToDataPath("recordings/benchmark/benchmark-recording", true);
+	windowRecordingBasePath = ofToDataPath("recordings/window/window-recording", true);
+	snapshotDirectory = ofToDataPath("snapshots", true);
+
+	std::error_code error;
+	std::filesystem::create_directories(nativeRecordingDirectory, error);
+	std::filesystem::create_directories(std::filesystem::path(audioRecordingBasePath).parent_path(), error);
+	std::filesystem::create_directories(std::filesystem::path(benchmarkRecordingBasePath).parent_path(), error);
+	std::filesystem::create_directories(std::filesystem::path(windowRecordingBasePath).parent_path(), error);
+	std::filesystem::create_directories(snapshotDirectory, error);
 
 	player = std::make_unique<ofxVlc4>();
-
-	// Keep the minimal example on VLC's normal audio output path.
-	player->setAudioCaptureEnabled(false);
+	player->setAudioCaptureEnabled(true);
 	player->init(0, nullptr);
 	player->setWatchTimeEnabled(true);
 	player->setWatchTimeMinPeriodUs(50000);
 	player->setVolume(70);
-	refreshMidiOutputs();
-	midiAnalysisStatus = "Drop media or press Space after loading a file.";
+	player->setNativeRecordDirectory(nativeRecordingDirectory);
+	player->setVideoReadbackBufferCount(3);
+	player->setRecordingPreset(ofxVlc4RecordingPreset{});
+
+	benchmarkAudioSampleRate = std::max(8000, player->getAudioCaptureSampleRate());
+	benchmarkAudioChannelCount = std::max(1, player->getAudioCaptureChannelCount());
+	setupBenchmarkAudio();
+	gui.setup(nullptr, true, ImGuiConfigFlags_None, true);
+	ImGui::GetIO().IniFilename = "imgui_recorder.ini";
+	loadSeedMedia();
 }
 
-//--------------------------------------------------------------
 void ofApp::update() {
 	if (!player || shuttingDown) {
 		return;
 	}
 
-	if (!isMidiModeActive()) {
-		player->update();
-	}
-	midiPlayback.update(ofGetElapsedTimef());
-	dispatchMidiMessages(
-		midiPlayback.getMessages(),
-		midiPlayback.getLastDispatchBegin(),
-		midiPlayback.getLastDispatchEnd());
-	if (midiWasPlaying && isMidiModeActive() && !midiPlayback.isPlaying()) {
-		sendMidiPanic();
-	}
-	midiWasPlaying = isMidiModeActive() && midiPlayback.isPlaying();
+	updateBenchmarkTexture();
+	player->update();
 	updateAudioOnlyMode();
-	updateMidiAnalysis();
+
+	if (!player->isVideoRecording() && !player->isWindowRecording()) {
+		benchmarkVideoRecordingActive = false;
+		windowRecordingActive = false;
+	}
 }
 
-//--------------------------------------------------------------
 void ofApp::draw() {
 	ofBackground(12, 12, 12);
 
@@ -103,19 +90,15 @@ void ofApp::draw() {
 		return;
 	}
 
-	const bool midiMode = isMidiModeActive();
-	const bool vlcHasMedia = !midiMode && hasActiveVlcMedia(*player);
-	const ofxVlc4::MediaReadinessInfo readiness = midiMode
-		? ofxVlc4::MediaReadinessInfo{}
-		: (vlcHasMedia ? player->getMediaReadinessInfo() : ofxVlc4::MediaReadinessInfo{});
-	const ofxVlc4::VideoStateInfo videoState = midiMode
-		? ofxVlc4::VideoStateInfo{}
-		: (vlcHasMedia ? player->getVideoStateInfo() : ofxVlc4::VideoStateInfo{});
+	const bool vlcHasMedia = hasActiveVlcMedia(*player);
+	const ofxVlc4::MediaReadinessInfo readiness = vlcHasMedia ? player->getMediaReadinessInfo() : ofxVlc4::MediaReadinessInfo{};
+	const ofxVlc4::VideoStateInfo videoState = vlcHasMedia ? player->getVideoStateInfo() : ofxVlc4::VideoStateInfo{};
+	const bool useBenchmarkPreview = benchmarkModeActive && benchmarkFbo.isAllocated();
 
 	const float availableWidth = std::max(1.0f, ofGetWidth() - previewMargin * 2.0f);
-	const float availableHeight = std::max(1.0f, ofGetHeight() - 170.0f);
-	float sourceWidth = static_cast<float>(videoState.sourceWidth);
-	float sourceHeight = static_cast<float>(videoState.sourceHeight);
+	const float availableHeight = std::max(1.0f, ofGetHeight() - 230.0f);
+	float sourceWidth = useBenchmarkPreview ? static_cast<float>(benchmarkFbo.getWidth()) : static_cast<float>(videoState.sourceWidth);
+	float sourceHeight = useBenchmarkPreview ? static_cast<float>(benchmarkFbo.getHeight()) : static_cast<float>(videoState.sourceHeight);
 	if (sourceWidth <= 1.0f || sourceHeight <= 1.0f) {
 		sourceWidth = kDefaultAspect;
 		sourceHeight = 1.0f;
@@ -137,186 +120,86 @@ void ofApp::draw() {
 	ofDrawRectangle(drawX - 1.0f, drawY - 1.0f, drawWidth + 2.0f, drawHeight + 2.0f);
 	ofSetColor(0, 0, 0);
 	ofDrawRectangle(drawX, drawY, drawWidth, drawHeight);
-	if (!midiMode && readiness.hasReceivedVideoFrame) {
+	if (useBenchmarkPreview) {
+		ofSetColor(255);
+		benchmarkFbo.draw(drawX, drawY, drawWidth, drawHeight);
+	} else if (readiness.hasReceivedVideoFrame) {
 		ofSetColor(255);
 		player->draw(drawX, drawY, drawWidth, drawHeight);
 	} else {
 		ofSetColor(150);
-		const std::string placeholder = midiMode
-			? "Local MIDI mode active. Playback is sent to the selected MIDI output port."
-			: (!vlcHasMedia
-				? "Drop a media file to begin."
-			: (readiness.mediaAttached
-			? (audioOnlyModeActive
-				? "Audio-only media active. Video output is intentionally idle."
-				: "No video frame yet. Audio-only or startup state.")
-			: "Drop a media file to begin."));
+		const std::string placeholder = useBenchmarkPreview
+			? "Benchmark preview active."
+			: !vlcHasMedia
+			? "Drop a media file or press O to load one."
+			: (audioOnlyModeActive
+				? "Audio-only media active. Recording controls still work."
+				: "Waiting for first video frame.");
 		ofDrawBitmapString(placeholder, drawX + 14.0f, drawY + 24.0f);
 	}
 	ofPopStyle();
 
-	const float boxX = previewMargin;
-	const float boxY = drawY + drawHeight + 16.0f;
-	const float boxW = static_cast<float>(ofGetWidth()) - previewMargin * 2.0f;
-	const bool showMidiDetails = midiMode;
-	const float boxH = showMidiDetails ? 224.0f : 130.0f;
-
-	ofPushStyle();
-	ofSetColor(18, 18, 18, 235);
-	ofDrawRectangle(boxX, boxY, boxW, boxH);
-	ofSetColor(220);
-	ofDrawBitmapString("Media: " + currentMediaLabel(), boxX + kOverlayPadding, boxY + kOverlayPadding + kLineHeight * 0.0f);
-	ofDrawBitmapString("State: " + playbackLabel(), boxX + kOverlayPadding, boxY + kOverlayPadding + kLineHeight * 1.0f);
-	ofDrawBitmapString(
-		midiMode
-			? ("Readiness: local-midi=yes parsed=" + std::string(midiReport.valid ? "yes" : "no") +
-				" messages=" + ofToString(midiChannelMessages.size()) +
-				" dispatched=" + ofToString(midiPlayback.getDispatchedCount()) +
-				" active=" + std::string(midiPlayback.isPlaying() ? "yes" : "no"))
-			: ("Readiness: attached=" + std::string(readiness.mediaAttached ? "yes" : "no") +
-				" prepared=" + std::string(readiness.startupPrepared ? "yes" : "no") +
-				" geometry=" + std::string(readiness.geometryKnown ? "yes" : "no") +
-				" frame=" + std::string(readiness.hasReceivedVideoFrame ? "yes" : "no") +
-				" playing=" + std::string(readiness.playbackActive ? "yes" : "no")),
-		boxX + kOverlayPadding,
-		boxY + kOverlayPadding + kLineHeight * 2.0f);
-	ofDrawBitmapString(
-		midiMode
-			? ("MIDI Transport: position " + formatSeconds(midiPlayback.getPositionSeconds()) +
-				" / " + formatSeconds(midiPlayback.getDurationSeconds()))
-			: ("Playlist: " + ofToString(player->getPlaylist().size()) +
-				" items, current index " + ofToString(player->getCurrentIndex())),
-		boxX + kOverlayPadding,
-		boxY + kOverlayPadding + kLineHeight * 3.0f);
-	ofDrawBitmapString(
-		"Mode: " + std::string(audioOnlyModeActive ? "audio-only optimized" : "full video/default"),
-		boxX + kOverlayPadding,
-		boxY + kOverlayPadding + kLineHeight * 4.0f);
-	ofDrawBitmapString(
-		"MIDI: local timeline mode | VLC reserved for regular audio/video only",
-		boxX + kOverlayPadding,
-		boxY + kOverlayPadding + kLineHeight * 5.0f);
-	ofDrawBitmapString(
-		"Controls: Space play/pause, S stop, [/ ] port, R refresh, -/+ tempo, ,/. ch, K mute, L solo, 0 clear, I export",
-		boxX + kOverlayPadding,
-		boxY + kOverlayPadding + kLineHeight * 6.0f);
-
-	if (showMidiDetails) {
-		std::string midiLine1 = "MIDI: waiting for analysis...";
-		std::string midiLine2 = "Instruments: waiting for analysis...";
-		std::string midiLine3 = "MIDI export: not written";
-		std::string midiLine4 = "OF MIDI bridge: not ready";
-		if (midiReport.valid) {
-			midiLine1 =
-				"MIDI Info: fmt=" + ofToString(midiReport.format) +
-				" tracks=" + ofToString(midiReport.trackCountParsed) +
-				" ppq=" + ofToString(midiReport.ticksPerQuarterNote) +
-				" duration=" + formatSeconds(midiReport.durationSeconds) +
-				" tempos=" + ofToString(midiReport.tempoChangeCount) +
-				" markers=" + ofToString(midiReport.markerCount);
-
-			std::ostringstream instrumentLine;
-			instrumentLine << "Instruments: ";
-			if (midiReport.instruments.empty()) {
-				instrumentLine << "none";
-			} else {
-				for (size_t i = 0; i < std::min<size_t>(midiReport.instruments.size(), 3); ++i) {
-					if (i > 0) {
-						instrumentLine << " | ";
-					}
-					const MidiInstrumentUse & instrument = midiReport.instruments[i];
-					instrumentLine << "ch " << (instrument.channel + 1)
-						<< " prog " << instrument.program;
-					if (!instrument.programName.empty()) {
-						instrumentLine << " " << instrument.programName;
-					}
-				}
-				if (midiReport.instruments.size() > 3) {
-					instrumentLine << " | +" << (midiReport.instruments.size() - 3) << " more";
-				}
-			}
-			midiLine2 = instrumentLine.str();
-			if (!midiExportPath.empty()) {
-				midiLine3 = "MIDI export: " + ofFilePath::getFileName(midiExportPath);
-			}
-			std::ostringstream midiRoute;
-			midiRoute
-				<< "MIDI out: " << midiOutputStatus
-				<< " | tempo x" << std::fixed << std::setprecision(2) << midiPlayback.getTempoMultiplier()
-				<< " | ch " << (selectedMidiChannel + 1);
-			if (soloMidiChannel >= 0) {
-				midiRoute << " | solo " << (soloMidiChannel + 1);
-			}
-			if (!mutedMidiChannels.empty()) {
-				midiRoute << " | muted " << mutedMidiChannels.size();
-			}
-			midiRoute << " | dispatched " << midiPlayback.getDispatchedCount()
-				<< "/" << midiChannelMessages.size();
-			midiLine4 = midiRoute.str();
-		} else if (!midiAnalysisStatus.empty()) {
-			midiLine1 = midiAnalysisStatus;
-		}
-
-		ofDrawBitmapString(midiLine1, boxX + kOverlayPadding, boxY + kOverlayPadding + kLineHeight * 7.0f);
-		ofDrawBitmapString(midiLine2, boxX + kOverlayPadding, boxY + kOverlayPadding + kLineHeight * 8.0f);
-		ofDrawBitmapString(midiLine3, boxX + kOverlayPadding, boxY + kOverlayPadding + kLineHeight * 9.0f);
-		ofDrawBitmapString(midiLine4, boxX + kOverlayPadding, boxY + kOverlayPadding + kLineHeight * 10.0f);
-	}
-
-	std::string status;
-	if (!midiMode) {
-		status = player->getLastErrorMessage().empty()
-			? player->getLastStatusMessage()
-			: ("Error: " + player->getLastErrorMessage());
-	}
-	if (status.empty()) {
-		status = midiAnalysisStatus;
-	}
-	if (!status.empty()) {
-		ofDrawBitmapString(
-			status,
-			boxX + kOverlayPadding,
-			boxY + kOverlayPadding + kLineHeight * (showMidiDetails ? 11.0f : 7.0f));
-	}
-	ofPopStyle();
+	gui.begin();
+	drawControlPanel();
+	gui.end();
 }
 
-//--------------------------------------------------------------
 void ofApp::exit() {
 	shutdownPlayer();
+	gui.exit();
 }
 
-//--------------------------------------------------------------
-void ofApp::shutdownPlayer() {
-	if (shuttingDown) {
+void ofApp::audioOut(ofSoundBuffer & buffer) {
+	buffer.set(0.0f);
+	if (!player || shuttingDown || player->getRecordingAudioSource() != ofxVlc4RecordingAudioSource::ExternalSubmitted) {
 		return;
 	}
 
-	shuttingDown = true;
-	sendMidiPanic();
-	closeMidiOutput();
-	if (player) {
-		player.reset();
+	const size_t channelCount = std::max<size_t>(1, buffer.getNumChannels());
+	const size_t frameCount = buffer.getNumFrames();
+	auto & samples = buffer.getBuffer();
+	const double sampleRate = static_cast<double>(std::max(1, benchmarkAudioSampleRate));
+
+	for (size_t frame = 0; frame < frameCount; ++frame) {
+		const float modulator = 0.5f + 0.5f * std::sin(benchmarkAudioModPhase);
+		const double carrierFrequency = 180.0 + static_cast<double>(modulator) * 220.0;
+		const float carrier = std::sin(benchmarkAudioPhase);
+		const float shimmer = std::sin(benchmarkAudioPhase * 0.5 + benchmarkAudioModPhase * 0.35);
+		const float sample = 0.16f * carrier + 0.07f * shimmer;
+
+		for (size_t channel = 0; channel < channelCount; ++channel) {
+			samples[frame * channelCount + channel] = sample;
+		}
+
+		benchmarkAudioPhase += kTwoPi * carrierFrequency / sampleRate;
+		benchmarkAudioModPhase += kTwoPi * 0.35 / sampleRate;
+		if (benchmarkAudioPhase >= kTwoPi) {
+			benchmarkAudioPhase = std::fmod(benchmarkAudioPhase, kTwoPi);
+		}
+		if (benchmarkAudioModPhase >= kTwoPi) {
+			benchmarkAudioModPhase = std::fmod(benchmarkAudioModPhase, kTwoPi);
+		}
 	}
+
+	player->submitRecordedAudioSamples(samples.data(), samples.size());
 }
 
-//--------------------------------------------------------------
 void ofApp::keyPressed(int key) {
 	if (!player || shuttingDown) {
 		return;
 	}
 
-	const bool midiMode = isMidiModeActive();
 	switch (key) {
+	case 'o':
+	case 'O': {
+		ofFileDialogResult result = ofSystemLoadDialog("Choose media file");
+		if (result.bSuccess) {
+			loadMediaPath(result.getPath(), true);
+		}
+		break;
+	}
 	case ' ':
-		if (midiMode) {
-			if (midiPlayback.isPlaying()) {
-				midiPlayback.pause(ofGetElapsedTimef());
-				sendMidiPanic();
-			} else {
-				midiPlayback.play(ofGetElapsedTimef());
-			}
-		} else if (player->isPlaying()) {
+		if (player->isPlaying()) {
 			player->pause();
 		} else {
 			player->play();
@@ -324,491 +207,905 @@ void ofApp::keyPressed(int key) {
 		break;
 	case 's':
 	case 'S':
-		if (midiMode) {
-			midiPlayback.stop();
-			sendMidiPanic();
-		} else {
-			player->stop();
+		if (benchmarkVideoRecordingActive || isBenchmarkRecordingActive()) {
+			requestBenchmarkRecordingStop();
+			break;
 		}
+		if (windowRecordingActive || isWindowCaptureRecordingActive()) {
+			requestWindowRecordingStop();
+			break;
+		}
+		player->stop();
 		break;
 	case 'n':
 	case 'N':
-		if (!midiMode) {
-			player->nextMediaListItem();
-		}
+		player->nextMediaListItem();
 		break;
 	case 'p':
 	case 'P':
-		if (!midiMode) {
-			player->previousMediaListItem();
-		}
+		player->previousMediaListItem();
 		break;
 	case 'm':
 	case 'M':
-		if (!midiMode) {
-			player->toggleMute();
-		}
-		break;
-	case 'i':
-	case 'I':
-		if (midiMode) {
-			exportMidiAnalysis(midiPlayback.getPath());
-		}
-		break;
-	case '[':
-		if (!midiOutputPorts.empty()) {
-			int nextIndex = midiOutputPortIndex <= 0 ? static_cast<int>(midiOutputPorts.size()) - 1 : midiOutputPortIndex - 1;
-			openMidiOutputPort(nextIndex);
-		}
-		break;
-	case ']':
-		if (!midiOutputPorts.empty()) {
-			int nextIndex = midiOutputPortIndex < 0 ? 0 : (midiOutputPortIndex + 1) % static_cast<int>(midiOutputPorts.size());
-			openMidiOutputPort(nextIndex);
-		}
+		player->toggleMute();
 		break;
 	case 'r':
 	case 'R':
-		refreshMidiOutputs();
+		toggleNativeRecording();
 		break;
-	case '-':
-	case '_':
-		if (midiMode) {
-			midiPlayback.setTempoMultiplier(midiPlayback.getTempoMultiplier() - 0.1, ofGetElapsedTimef());
-			midiAnalysisStatus = "MIDI tempo x" + ofToString(midiPlayback.getTempoMultiplier(), 2);
-		}
+	case 'a':
+	case 'A':
+		toggleAudioRecording();
 		break;
-	case '+':
-	case '=':
-		if (midiMode) {
-			midiPlayback.setTempoMultiplier(midiPlayback.getTempoMultiplier() + 0.1, ofGetElapsedTimef());
-			midiAnalysisStatus = "MIDI tempo x" + ofToString(midiPlayback.getTempoMultiplier(), 2);
-		}
+	case 'x':
+	case 'X':
+		takeSnapshot();
 		break;
-	case ',':
-	case '<':
-		if (midiMode) {
-			selectedMidiChannel = selectedMidiChannel <= 0 ? 15 : selectedMidiChannel - 1;
-			midiAnalysisStatus = "Selected MIDI channel " + ofToString(selectedMidiChannel + 1);
-		}
+	case 'b':
+	case 'B':
+		toggleBenchmarkMode();
 		break;
-	case '.':
-	case '>':
-		if (midiMode) {
-			selectedMidiChannel = (selectedMidiChannel + 1) % 16;
-			midiAnalysisStatus = "Selected MIDI channel " + ofToString(selectedMidiChannel + 1);
-		}
+	case 'f':
+	case 'F':
+		toggleBenchmarkAudioSource();
 		break;
-	case 'k':
-	case 'K':
-		if (midiMode) {
-			if (mutedMidiChannels.count(selectedMidiChannel) > 0) {
-				mutedMidiChannels.erase(selectedMidiChannel);
-				midiAnalysisStatus = "Unmuted MIDI channel " + ofToString(selectedMidiChannel + 1);
-			} else {
-				mutedMidiChannels.insert(selectedMidiChannel);
-				midiAnalysisStatus = "Muted MIDI channel " + ofToString(selectedMidiChannel + 1);
-			}
-			sendMidiPanic();
+	case 'g':
+	case 'G':
+		cycleVideoRecordingCodec();
+		break;
+	case 'h':
+	case 'H':
+		cycleBenchmarkMuxProfile();
+		break;
+	case 'j':
+	case 'J':
+		toggleBenchmarkMuxSourceCleanup();
+		break;
+	case 'v':
+	case 'V':
+		toggleBenchmarkVideoRecording();
+		break;
+	case 'w':
+	case 'W':
+		if (windowRecordingActive || isWindowCaptureRecordingActive()) {
+			requestWindowRecordingStop();
+			break;
 		}
+		toggleWindowRecording();
+		break;
+	case 'c':
+	case 'C':
+		player->clearLastMessages();
 		break;
 	case 'l':
 	case 'L':
-		if (midiMode) {
-			soloMidiChannel = (soloMidiChannel == selectedMidiChannel) ? -1 : selectedMidiChannel;
-			midiAnalysisStatus = soloMidiChannel >= 0
-				? ("Solo MIDI channel " + ofToString(soloMidiChannel + 1))
-				: "Cleared MIDI solo";
-			sendMidiPanic();
-		}
+		cycleReadbackPolicy();
 		break;
-	case '0':
-		if (midiMode) {
-			soloMidiChannel = -1;
-			midiAnalysisStatus = "Cleared MIDI solo";
-			sendMidiPanic();
-		}
+	case '[':
+		adjustReadbackBufferCount(-1);
+		break;
+	case ']':
+		adjustReadbackBufferCount(1);
 		break;
 	case OF_KEY_UP:
-		if (!midiMode) {
-			player->setVolume(std::min(100, player->getVolume() + 5));
-		}
+		player->setVolume(std::min(100, player->getVolume() + 5));
 		break;
 	case OF_KEY_DOWN:
-		if (!midiMode) {
-			player->setVolume(std::max(0, player->getVolume() - 5));
-		}
+		player->setVolume(std::max(0, player->getVolume() - 5));
 		break;
 	default:
 		break;
 	}
 }
 
-//--------------------------------------------------------------
-void ofApp::windowResized(int w, int h) {
-	(void)w;
-	(void)h;
+void ofApp::dragEvent(ofDragInfo dragInfo) {
+	if (dragInfo.files.empty()) {
+		return;
+	}
+
+	std::vector<std::filesystem::path> paths;
+	paths.reserve(dragInfo.files.size());
+	for (const auto & file : dragInfo.files) {
+		paths.emplace_back(file);
+	}
+	replacePlaylistFromDroppedFiles(paths);
 }
 
-//--------------------------------------------------------------
-void ofApp::dragEvent(ofDragInfo dragInfo) {
-	replacePlaylistFromDroppedFiles(dragInfo.files);
+void ofApp::windowResized(int, int) {
+}
+
+void ofApp::shutdownPlayer() {
+	if (!player || shuttingDown) {
+		return;
+	}
+
+	shuttingDown = true;
+	closeBenchmarkAudio();
+	stopActiveRecorders();
+	player->close();
+	player.reset();
+}
+
+void ofApp::setupBenchmarkAudio() {
+	ofSoundStreamSettings settings;
+	settings.setOutListener(this);
+	settings.sampleRate = benchmarkAudioSampleRate;
+	settings.numOutputChannels = benchmarkAudioChannelCount;
+	settings.numInputChannels = 0;
+	settings.bufferSize = 512;
+	settings.numBuffers = 4;
+
+	const auto configureOutputApi = [&](ofSoundDevice::Api api) {
+		settings.setApi(api);
+		const std::vector<ofSoundDevice> devices = benchmarkAudioStream.getDeviceList(api);
+		const auto defaultDevice = std::find_if(devices.begin(), devices.end(), [](const ofSoundDevice & device) {
+			return device.outputChannels > 0 && device.isDefaultOutput;
+		});
+		if (defaultDevice != devices.end()) {
+			settings.setOutDevice(*defaultDevice);
+			return true;
+		}
+		const auto firstOutputDevice = std::find_if(devices.begin(), devices.end(), [](const ofSoundDevice & device) {
+			return device.outputChannels > 0;
+		});
+		if (firstOutputDevice != devices.end()) {
+			settings.setOutDevice(*firstOutputDevice);
+			return true;
+		}
+		return false;
+	};
+
+	bool configuredApi = configureOutputApi(ofSoundDevice::Api::MS_WASAPI);
+	if (!configuredApi) {
+		configuredApi = configureOutputApi(ofSoundDevice::Api::MS_DS);
+	}
+	if (!configuredApi) {
+		settings.setApi(ofSoundDevice::Api::DEFAULT);
+	}
+
+	benchmarkAudioStream.setup(settings);
+}
+
+void ofApp::closeBenchmarkAudio() {
+	benchmarkAudioStream.stop();
+	benchmarkAudioStream.close();
+}
+
+void ofApp::stopActiveRecorders() {
+	if (!player) {
+		return;
+	}
+
+	if (isWindowCaptureRecordingActive()) {
+		windowRecordingActive = false;
+		player->endWindowRecording();
+	}
+	if (isBenchmarkRecordingActive()) {
+		player->stopRecordingSession();
+		benchmarkVideoRecordingActive = false;
+	}
+	player->setNativeRecordingEnabled(false);
+	if (player->isAudioRecording()) {
+		player->recordAudio(audioRecordingBasePath);
+	}
+}
+
+void ofApp::loadSeedMedia() {
+	if (!player || shuttingDown) {
+		return;
+	}
+
+	const std::vector<std::filesystem::path> candidates = {
+		ofToDataPath("fingers.mp4", true),
+		ofToDataPath("movie.mp4", true),
+		ofToDataPath("sample.mp4", true)
+	};
+
+	for (const auto & candidate : candidates) {
+		std::error_code error;
+		if (std::filesystem::exists(candidate, error) && !error) {
+			loadMediaPath(candidate.string(), true);
+			return;
+		}
+	}
+}
+
+bool ofApp::allocateBenchmarkTexture() {
+	if (benchmarkFbo.isAllocated()) {
+		return true;
+	}
+
+	benchmarkFbo.allocate(benchmarkWidth, benchmarkHeight, GL_RGB);
+	if (!benchmarkFbo.isAllocated()) {
+		ofLogError("ofApp") << "Failed to allocate benchmark FBO "
+			<< benchmarkWidth << "x" << benchmarkHeight << ".";
+		return false;
+	}
+
+	benchmarkFbo.begin();
+	ofClear(0, 0, 0, 255);
+	benchmarkFbo.end();
+	benchmarkFbo.getTexture().setTextureMinMagFilter(GL_LINEAR, GL_LINEAR);
+	return true;
+}
+
+void ofApp::updateBenchmarkTexture() {
+	if (!benchmarkModeActive) {
+		return;
+	}
+
+	if (!allocateBenchmarkTexture()) {
+		return;
+	}
+	benchmarkPhase += 0.015f;
+
+	benchmarkFbo.begin();
+	ofPushStyle();
+	ofClear(8, 8, 10, 255);
+	ofBackgroundGradient(ofColor(18, 20, 28), ofColor(4, 6, 10));
+
+	const float width = static_cast<float>(benchmarkFbo.getWidth());
+	const float height = static_cast<float>(benchmarkFbo.getHeight());
+
+	for (int i = 0; i < 48; ++i) {
+		const float t = static_cast<float>(i) / 47.0f;
+		const float x = t * width;
+		const float barWidth = width / 64.0f;
+		const float wave = 0.5f + 0.5f * std::sin(benchmarkPhase * 3.0f + t * 18.0f);
+		const float barHeight = (0.15f + wave * 0.7f) * height;
+		ofSetColor(
+			static_cast<unsigned char>(40 + 160 * wave),
+			static_cast<unsigned char>(120 + 90 * (1.0f - wave)),
+			static_cast<unsigned char>(180 + 50 * wave),
+			210);
+		ofDrawRectangle(x, height - barHeight, barWidth, barHeight);
+	}
+
+	for (int ring = 0; ring < 9; ++ring) {
+		const float radius = 70.0f + ring * 42.0f + 24.0f * std::sin(benchmarkPhase * 2.0f + ring);
+		ofNoFill();
+		ofSetLineWidth(2.0f);
+		ofSetColor(60 + ring * 12, 130 + ring * 8, 220 - ring * 10, 180);
+		ofDrawCircle(width * 0.5f, height * 0.42f, radius);
+	}
+
+	ofFill();
+	for (int y = 0; y < 14; ++y) {
+		for (int x = 0; x < 24; ++x) {
+			const float tx = static_cast<float>(x) / 23.0f;
+			const float ty = static_cast<float>(y) / 13.0f;
+			const float pulse = 0.5f + 0.5f * std::sin(benchmarkPhase * 4.0f + tx * 11.0f + ty * 7.0f);
+			ofSetColor(
+				static_cast<unsigned char>(50 + 180 * pulse),
+				static_cast<unsigned char>(40 + 90 * (1.0f - pulse)),
+				static_cast<unsigned char>(90 + 120 * pulse),
+				120);
+			ofDrawRectangle(
+				tx * width,
+				ty * height * 0.6f,
+				width / 30.0f,
+				height / 24.0f);
+		}
+	}
+
+	ofSetColor(255);
+	ofDrawBitmapStringHighlight(
+		"Benchmark texture " + ofToString(benchmarkWidth) + "x" + ofToString(benchmarkHeight) +
+			" phase=" + ofToString(benchmarkPhase, 2),
+		24.0f,
+		32.0f);
+	ofPopStyle();
+	benchmarkFbo.end();
+}
+
+bool ofApp::loadMediaPath(const std::string & path, bool autoPlay) {
+	if (!player || path.empty()) {
+		return false;
+	}
+
+	benchmarkModeActive = false;
+	benchmarkVideoRecordingActive = false;
+	stopActiveRecorders();
+	player->stop();
+	player->clearPlaylist();
+	player->addPathToPlaylist(path);
+	if (autoPlay) {
+		player->playIndex(0);
+	}
+	return true;
 }
 
 void ofApp::replacePlaylistFromDroppedFiles(const std::vector<std::filesystem::path> & paths) {
-	if (!player || shuttingDown) {
+	if (!player) {
 		return;
 	}
 
-	if (!paths.empty() && isMidiPath(paths.front().string())) {
-		loadMidiPath(paths.front().string(), true);
-		return;
-	}
-
-	sendMidiPanic();
-	clearMidiMode();
-	player->clearPlaylist();
+	std::vector<std::string> mediaPaths;
+	mediaPaths.reserve(paths.size());
 	for (const auto & path : paths) {
-		player->addPathToPlaylist(path.string());
+		if (std::filesystem::is_regular_file(path)) {
+			mediaPaths.push_back(path.string());
+		}
 	}
 
-	if (player->hasPlaylist()) {
-		midiAnalysisStatus = "Dropped media ready. Press Space to start.";
+	if (mediaPaths.empty()) {
+		return;
 	}
+
+	benchmarkModeActive = false;
+	benchmarkVideoRecordingActive = false;
+	stopActiveRecorders();
+	player->stop();
+	player->clearPlaylist();
+
+	for (const auto & mediaPath : mediaPaths) {
+		player->addPathToPlaylist(mediaPath);
+	}
+	player->playIndex(0);
 }
 
-//--------------------------------------------------------------
 void ofApp::updateAudioOnlyMode() {
-	if (!player || shuttingDown) {
-		return;
-	}
-
-	const bool shouldUseAudioOnlyMode = isMidiModeActive() || isCurrentMediaAudioOnly();
+	const bool shouldUseAudioOnlyMode = isCurrentMediaAudioOnly();
 	if (audioOnlyModeActive == shouldUseAudioOnlyMode) {
 		return;
 	}
 
 	audioOnlyModeActive = shouldUseAudioOnlyMode;
-	player->setWatchTimeEnabled(!audioOnlyModeActive);
 	ofSetFrameRate(audioOnlyModeActive ? kAudioOnlyModeFrameRate : kVideoModeFrameRate);
 }
 
-//--------------------------------------------------------------
-void ofApp::updateMidiAnalysis() {
-	if (!player || shuttingDown || isMidiModeActive()) {
-		return;
+bool ofApp::isCurrentMediaAudioOnly() const {
+	if (benchmarkModeActive) {
+		return false;
+	}
+	if (!player) {
+		return false;
 	}
 
 	const std::string currentPath = player->getCurrentPath();
-	if (!isMidiPath(currentPath)) {
-		clearMidiAnalysis();
-		return;
-	}
-	if (currentPath == analyzedMidiPath) {
-		return;
-	}
-
-	if (analyzeMidiPath(currentPath)) {
-		exportMidiAnalysis(currentPath);
-	}
-}
-
-//--------------------------------------------------------------
-void ofApp::clearMidiAnalysis() {
-	analyzedMidiPath.clear();
-	midiExportPath.clear();
-	midiAnalysisStatus.clear();
-	midiReport = {};
-	midiChannelMessages.clear();
-}
-
-//--------------------------------------------------------------
-bool ofApp::loadMidiPath(const std::string & path, bool autoPlay) {
-	if (!player || shuttingDown) {
+	if (currentPath.empty()) {
 		return false;
 	}
 
-	player->stop();
-	player->clearPlaylist();
-	sendMidiPanic();
-	clearMidiMode();
-	if (!analyzeMidiPath(path)) {
-		return false;
-	}
-	if (!midiPlayback.load(path, midiReport, midiChannelMessages)) {
-		midiAnalysisStatus = "MIDI transport load failed.";
-		return false;
-	}
-
-	midiAnalysisStatus = "MIDI transport ready.";
-	if (autoPlay) {
-		midiPlayback.play(ofGetElapsedTimef());
-		midiAnalysisStatus = "MIDI transport playing.";
-	} else {
-		midiAnalysisStatus = "MIDI transport ready. Press Space to start.";
-	}
-	return true;
+	const std::string extension = "." + ofToLower(ofFilePath::getFileExt(currentPath));
+	return audioOnlyExtensions().count(extension) > 0;
 }
 
-//--------------------------------------------------------------
-void ofApp::clearMidiMode() {
-	midiPlayback.clear();
-	selectedMidiChannel = 0;
-	soloMidiChannel = -1;
-	mutedMidiChannels.clear();
-	midiWasPlaying = false;
-	clearMidiAnalysis();
-}
-
-//--------------------------------------------------------------
-bool ofApp::isMidiModeActive() const {
-	return midiPlayback.isLoaded();
-}
-
-//--------------------------------------------------------------
-void ofApp::refreshMidiOutputs() {
-	const std::string previouslyOpenName = midiOut.isOpen() ? midiOut.getName() : "";
-	closeMidiOutput();
-	midiOutputPorts = midiOut.getOutPortList();
-	if (midiOutputPorts.empty()) {
-		midiOutputPortIndex = -1;
-		midiOutputStatus = "no output ports";
-		ofLogNotice("ofxVlc4") << "No MIDI output ports available.";
+void ofApp::toggleBenchmarkMode() {
+	if (!player) {
 		return;
 	}
 
-	std::string preferredName = previouslyOpenName;
-	if (preferredName.empty()) {
-		std::ifstream input(ofToDataPath("settings/midi-output.txt", true));
-		if (input) {
-			std::getline(input, preferredName);
-			preferredName = trimWhitespace(preferredName);
+	if (benchmarkModeActive && isBenchmarkRecordingActive()) {
+		player->stop();
+		benchmarkVideoRecordingActive = false;
+	}
+	benchmarkModeActive = !benchmarkModeActive;
+	if (benchmarkModeActive) {
+		if (!allocateBenchmarkTexture()) {
+			benchmarkModeActive = false;
+			return;
+		}
+		ofSetFrameRate(kVideoModeFrameRate);
+	}
+}
+
+void ofApp::toggleBenchmarkAudioSource() {
+	if (isBenchmarkRecordingActive()) {
+		return;
+	}
+
+	const ofxVlc4RecordingAudioSource audioSource = player->getRecordingAudioSourcePreset();
+	player->setRecordingAudioSourcePreset(
+		audioSource == ofxVlc4RecordingAudioSource::ExternalSubmitted
+			? ofxVlc4RecordingAudioSource::VlcCaptured
+			: ofxVlc4RecordingAudioSource::ExternalSubmitted);
+}
+
+void ofApp::cycleVideoRecordingCodec() {
+	if (!player || isBenchmarkRecordingActive() || player->isNativeRecordingEnabled() || player->isVideoRecording()) {
+		return;
+	}
+
+	const ofxVlc4RecordingVideoCodecPreset presets[] = {
+		ofxVlc4RecordingVideoCodecPreset::H264,
+		ofxVlc4RecordingVideoCodecPreset::Mp4v,
+		ofxVlc4RecordingVideoCodecPreset::Mjpg
+	};
+	const ofxVlc4RecordingVideoCodecPreset currentPreset = player->getVideoRecordingCodecPreset();
+	for (size_t i = 0; i < std::size(presets); ++i) {
+		if (presets[i] == currentPreset) {
+			player->setVideoRecordingCodecPreset(presets[(i + 1) % std::size(presets)]);
+			return;
+		}
+	}
+	player->setVideoRecordingCodecPreset(presets[0]);
+}
+
+void ofApp::cycleBenchmarkMuxProfile() {
+	if ((player && (player->isRecordingMuxPending() || player->isRecordingMuxInProgress())) ||
+		isBenchmarkRecordingActive()) {
+		return;
+	}
+
+	const ofxVlc4RecordingMuxProfile muxProfile = player->getRecordingMuxProfile();
+	player->setRecordingMuxProfile(
+		muxProfile == ofxVlc4RecordingMuxProfile::Mp4Aac
+			? ofxVlc4RecordingMuxProfile::MkvFlac
+			: muxProfile == ofxVlc4RecordingMuxProfile::MkvFlac
+				? ofxVlc4RecordingMuxProfile::OggVorbis
+				: ofxVlc4RecordingMuxProfile::Mp4Aac);
+}
+
+void ofApp::toggleBenchmarkMuxSourceCleanup() {
+	if ((player && (player->isRecordingMuxPending() || player->isRecordingMuxInProgress())) ||
+		isBenchmarkRecordingActive()) {
+		return;
+	}
+
+	player->setRecordingDeleteMuxSourceFilesOnSuccess(!player->getRecordingDeleteMuxSourceFilesOnSuccess());
+}
+
+void ofApp::toggleBenchmarkVideoRecording() {
+	if (!player) {
+		return;
+	}
+	if (isRecordingBusy() && !isBenchmarkRecordingActive()) {
+		return;
+	}
+	if (benchmarkVideoRecordingActive || isBenchmarkRecordingActive()) {
+		requestBenchmarkRecordingStop();
+		return;
+	}
+
+	if (!benchmarkModeActive) {
+		benchmarkModeActive = true;
+		if (!allocateBenchmarkTexture()) {
+			benchmarkModeActive = false;
+			return;
 		}
 	}
 
-	int preferredIndex = -1;
-	if (!preferredName.empty()) {
-		for (size_t i = 0; i < midiOutputPorts.size(); ++i) {
-			if (midiOutputPorts[i] == preferredName) {
-				preferredIndex = static_cast<int>(i);
+	stopActiveRecorders();
+	if (!benchmarkFbo.isAllocated()) {
+		ofLogError("ofApp") << "Benchmark recording requested without an allocated FBO.";
+		return;
+	}
+	if (!player->startRecordingSession(ofxVlc4::textureRecordingSessionConfig(
+		benchmarkRecordingBasePath,
+		benchmarkFbo.getTexture(),
+		player->getRecordingPreset(),
+		benchmarkAudioSampleRate,
+		benchmarkAudioChannelCount,
+		kBenchmarkMuxTimeoutMs))) {
+		return;
+	}
+	benchmarkVideoRecordingActive = true;
+}
+
+void ofApp::toggleWindowRecording() {
+	if (!player) {
+		return;
+	}
+	if (windowRecordingActive || isWindowCaptureRecordingActive()) {
+		requestWindowRecordingStop();
+		return;
+	}
+	if (isRecordingBusy() && !isWindowCaptureRecordingActive()) {
+		return;
+	}
+
+	stopActiveRecorders();
+	if (!player->startRecordingSession(ofxVlc4::windowRecordingSessionConfig(
+		windowRecordingBasePath,
+		player->getRecordingPreset(),
+		benchmarkAudioSampleRate,
+		benchmarkAudioChannelCount,
+		kBenchmarkMuxTimeoutMs))) {
+		windowRecordingActive = false;
+		return;
+	}
+	windowRecordingActive = true;
+}
+
+void ofApp::cycleReadbackPolicy() {
+	if (!player) {
+		return;
+	}
+
+	const ofxVlc4VideoReadbackPolicy currentPolicy = player->getVideoReadbackPolicy();
+	player->setVideoReadbackPolicy(
+		currentPolicy == ofxVlc4VideoReadbackPolicy::DropLateFrames
+			? ofxVlc4VideoReadbackPolicy::BlockForFreshestFrame
+			: ofxVlc4VideoReadbackPolicy::DropLateFrames);
+}
+
+void ofApp::adjustReadbackBufferCount(int delta) {
+	if (!player) {
+		return;
+	}
+
+	const size_t currentCount = player->getVideoReadbackBufferCount();
+	const size_t nextCount = static_cast<size_t>(std::clamp<int>(static_cast<int>(currentCount) + delta, 2, 4));
+	player->setVideoReadbackBufferCount(nextCount);
+}
+
+void ofApp::toggleNativeRecording() {
+	if (!player) {
+		return;
+	}
+
+	if (!player->isNativeRecordingEnabled() && player->isAudioRecording()) {
+		player->recordAudio(audioRecordingBasePath);
+	}
+	player->setNativeRecordingEnabled(!player->isNativeRecordingEnabled());
+}
+
+void ofApp::toggleAudioRecording() {
+	if (!player) {
+		return;
+	}
+
+	if (!player->isAudioRecording() && player->isNativeRecordingEnabled()) {
+		player->setNativeRecordingEnabled(false);
+	}
+	player->recordAudio(audioRecordingBasePath);
+}
+
+void ofApp::takeSnapshot() {
+	if (!player) {
+		return;
+	}
+
+	player->takeSnapshot(snapshotDirectory);
+}
+
+std::string ofApp::currentMediaLabel() const {
+	if (isWindowCaptureRecordingActive()) {
+		return "app window";
+	}
+	if (benchmarkModeActive) {
+		return "benchmark texture";
+	}
+	if (!player) {
+		return "none";
+	}
+
+	const std::string currentPath = player->getCurrentPath();
+	return currentPath.empty() ? "none" : ofFilePath::getFileName(currentPath);
+}
+
+std::string ofApp::playbackLabel() const {
+	if (isWindowCaptureRecordingActive()) {
+		return "Window recording";
+	}
+	if (benchmarkModeActive) {
+		return isBenchmarkRecordingActive() ? "Benchmark recording" : "Benchmark preview";
+	}
+	if (!player) {
+		return "closed";
+	}
+
+	const ofxVlc4::PlaybackStateInfo state = player->getPlaybackStateInfo();
+	if (state.playing) {
+		return "Playing";
+	}
+	if (state.transitioning) {
+		return "Transitioning";
+	}
+	if (state.pauseRequested || player->canPause()) {
+		return "Paused/ready";
+	}
+	if (state.stopped) {
+		return "Stopped";
+	}
+	return "Idle";
+}
+
+bool ofApp::isBenchmarkRecordingActive() const {
+	return benchmarkVideoRecordingActive ||
+		(player &&
+			benchmarkModeActive &&
+			!player->isWindowRecording() &&
+			(player->isVideoRecording() || player->isAudioRecording()));
+}
+
+bool ofApp::isWindowCaptureRecordingActive() const {
+	return windowRecordingActive || (player && player->isWindowRecording());
+}
+
+void ofApp::requestBenchmarkRecordingStop() {
+	if (!player) {
+		return;
+	}
+
+	benchmarkVideoRecordingActive = false;
+	player->stopRecordingSession();
+}
+
+void ofApp::requestWindowRecordingStop() {
+	if (!player) {
+		return;
+	}
+
+	windowRecordingActive = false;
+	player->stopRecordingSession();
+}
+
+std::string ofApp::recordingSessionStateLabel() const {
+	if (!player) {
+		return "Closed";
+	}
+	return ofxVlc4::recordingSessionStateLabel(player->getRecordingSessionState());
+}
+
+bool ofApp::isRecordingBusy() const {
+	if (!player) {
+		return false;
+	}
+
+	const ofxVlc4RecordingSessionState sessionState = player->getRecordingSessionState();
+	const bool sessionBusy =
+		sessionState == ofxVlc4RecordingSessionState::Capturing ||
+		sessionState == ofxVlc4RecordingSessionState::Stopping ||
+		sessionState == ofxVlc4RecordingSessionState::Finalizing ||
+		sessionState == ofxVlc4RecordingSessionState::Muxing;
+	return sessionBusy ||
+		player->isNativeRecordingEnabled() ||
+		player->isVideoRecording() ||
+		player->isAudioRecording() ||
+		player->isWindowRecording();
+}
+
+void ofApp::drawControlPanel() {
+	if (!player) {
+		return;
+	}
+
+	ImGui::SetNextWindowPos(ImVec2(std::max(24.0f, ofGetWidth() - 410.0f), 24.0f), ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(386.0f, std::min(720.0f, ofGetHeight() - 48.0f)), ImGuiCond_Once);
+
+	const bool muxBusy = player->isRecordingMuxPending() || player->isRecordingMuxInProgress();
+	const bool benchmarkActive = benchmarkVideoRecordingActive || isBenchmarkRecordingActive();
+	const bool windowActive = windowRecordingActive || isWindowCaptureRecordingActive();
+	const bool nativeActive = player->isNativeRecordingEnabled();
+	const bool audioActive = player->isAudioRecording();
+	const std::string muxState = recordingSessionStateLabel();
+
+	if (ImGui::Begin("Recorder Controls", nullptr, ImGuiWindowFlags_NoCollapse)) {
+		ImGui::Text("Mode: %s", benchmarkModeActive ? "Benchmark" : "Playback");
+		ImGui::TextWrapped("Media: %s", currentMediaLabel().c_str());
+		ImGui::Text("Playback: %s", playbackLabel().c_str());
+		ImGui::Text("Recording: %s", muxState.c_str());
+
+		const std::string muxedPath = player->getLastMuxedRecordingPath();
+		if (!muxedPath.empty()) {
+			ImGui::TextWrapped("Last muxed: %s", ofFilePath::getFileName(muxedPath).c_str());
+		}
+		const std::string muxError = player->getLastMuxError();
+		if (!muxError.empty()) {
+			ImGui::TextWrapped("Mux note: %s", muxError.c_str());
+		}
+
+		ImGui::SeparatorText("Transport");
+		if (ImGui::Button("Open...", ImVec2(88, 0))) {
+			ofFileDialogResult result = ofSystemLoadDialog("Choose media file");
+			if (result.bSuccess) {
+				loadMediaPath(result.getPath(), true);
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(player->isPlaying() ? "Pause" : "Play", ImVec2(88, 0))) {
+			if (player->isPlaying()) {
+				player->pause();
+			} else {
+				player->play();
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Stop", ImVec2(88, 0))) {
+			if (benchmarkActive) {
+				requestBenchmarkRecordingStop();
+			} else if (windowActive) {
+				requestWindowRecordingStop();
+			} else {
+				player->stop();
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Snap", ImVec2(88, 0))) {
+			takeSnapshot();
+		}
+
+		if (ImGui::Button("Prev", ImVec2(88, 0))) {
+			player->previousMediaListItem();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Next", ImVec2(88, 0))) {
+			player->nextMediaListItem();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(player->isMuted() ? "Unmute" : "Mute", ImVec2(88, 0))) {
+			player->toggleMute();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear Msgs", ImVec2(88, 0))) {
+			player->clearLastMessages();
+		}
+
+		int volume = player->getVolume();
+		if (ImGui::SliderInt("Volume", &volume, 0, 100)) {
+			player->setVolume(volume);
+		}
+
+		ImGui::SeparatorText("Recorder");
+		bool benchmarkMode = benchmarkModeActive;
+		if (ImGui::Checkbox("Benchmark mode", &benchmarkMode)) {
+			toggleBenchmarkMode();
+		}
+
+		ofxVlc4RecordingPreset recordingPreset = player->getRecordingPreset();
+		bool presetChanged = false;
+		const char * audioSourceItems[] = { "OpenFrameworks", "VLC playback" };
+		int audioSourceIndex = recordingPreset.audioSource == ofxVlc4RecordingAudioSource::ExternalSubmitted ? 0 : 1;
+		ImGui::BeginDisabled(benchmarkActive);
+		if (ImGui::Combo("Benchmark audio", &audioSourceIndex, audioSourceItems, IM_ARRAYSIZE(audioSourceItems))) {
+			recordingPreset.audioSource = audioSourceIndex == 0
+				? ofxVlc4RecordingAudioSource::ExternalSubmitted
+				: ofxVlc4RecordingAudioSource::VlcCaptured;
+			presetChanged = true;
+		}
+
+		const ofxVlc4RecordingVideoCodecPreset codecPresets[] = {
+			ofxVlc4RecordingVideoCodecPreset::H264,
+			ofxVlc4RecordingVideoCodecPreset::Mp4v,
+			ofxVlc4RecordingVideoCodecPreset::Mjpg
+		};
+		int codecIndex = 0;
+		for (size_t i = 0; i < std::size(codecPresets); ++i) {
+			if (codecPresets[i] == recordingPreset.videoCodecPreset) {
+				codecIndex = static_cast<int>(i);
 				break;
 			}
 		}
-	}
-
-	if (!openMidiOutputPort(preferredIndex >= 0 ? preferredIndex : 0)) {
-		midiOutputStatus = "failed to open MIDI output";
-	}
-}
-
-//--------------------------------------------------------------
-bool ofApp::openMidiOutputPort(int index) {
-	if (index < 0 || index >= static_cast<int>(midiOutputPorts.size())) {
-		return false;
-	}
-
-	sendMidiPanic();
-	midiOut.closePort();
-	if (!midiOut.openPort(static_cast<unsigned int>(index))) {
-		midiOutputStatus = "failed: " + midiOutputPorts[index];
-		midiOutputPortIndex = -1;
-		return false;
-	}
-
-	midiOutputPortIndex = index;
-	midiOutputStatus = midiOut.getName();
-	saveMidiOutputPreference();
-	ofLogNotice("ofxVlc4") << "Opened MIDI output: " << midiOutputStatus;
-	return true;
-}
-
-//--------------------------------------------------------------
-void ofApp::closeMidiOutput() {
-	if (midiOut.isOpen()) {
-		midiOut.closePort();
-	}
-	midiOutputPortIndex = -1;
-	if (midiOutputPorts.empty()) {
-		midiOutputStatus = "no output ports";
-	} else {
-		midiOutputStatus = "not connected";
-	}
-}
-
-//--------------------------------------------------------------
-void ofApp::saveMidiOutputPreference() const {
-	if (midiOutputPortIndex < 0 || midiOutputPortIndex >= static_cast<int>(midiOutputPorts.size())) {
-		return;
-	}
-
-	const std::string settingsDir = ofToDataPath("settings", true);
-	std::error_code ec;
-	std::filesystem::create_directories(settingsDir, ec);
-	std::ofstream output(ofToDataPath("settings/midi-output.txt", true), std::ios::trunc);
-	if (!output) {
-		return;
-	}
-	output << midiOutputPorts[midiOutputPortIndex] << "\n";
-}
-
-//--------------------------------------------------------------
-void ofApp::dispatchMidiMessages(const std::vector<MidiChannelMessage> & messages, size_t beginIndex, size_t endIndex) {
-	if (!midiOut.isOpen() || messages.empty() || beginIndex >= endIndex || beginIndex >= messages.size()) {
-		return;
-	}
-
-	const size_t clampedEnd = std::min(endIndex, messages.size());
-	for (size_t i = beginIndex; i < clampedEnd; ++i) {
-		const MidiChannelMessage & message = messages[i];
-		if (message.bytes.empty()) {
-			continue;
-		}
-		if (message.channel >= 0) {
-			if (soloMidiChannel >= 0 && message.channel != soloMidiChannel) {
-				continue;
+		if (ImGui::BeginCombo("Video codec", ofxVlc4::recordingVideoCodecPresetLabel(codecPresets[codecIndex]))) {
+			for (int i = 0; i < static_cast<int>(std::size(codecPresets)); ++i) {
+				const bool selected = i == codecIndex;
+				if (ImGui::Selectable(ofxVlc4::recordingVideoCodecPresetLabel(codecPresets[i]), selected)) {
+					recordingPreset.videoCodecPreset = codecPresets[i];
+					presetChanged = true;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
 			}
-			if (mutedMidiChannels.count(message.channel) > 0) {
-				continue;
+			ImGui::EndCombo();
+		}
+
+		const char * muxProfileItems[] = {
+			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::Mp4Aac),
+			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::MkvFlac),
+			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::OggVorbis)
+		};
+		int muxProfileIndex = recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::Mp4Aac
+			? 0
+			: recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::MkvFlac
+				? 1
+				: 2;
+		if (ImGui::Combo("Mux profile", &muxProfileIndex, muxProfileItems, IM_ARRAYSIZE(muxProfileItems))) {
+			recordingPreset.muxProfile = muxProfileIndex == 0
+				? ofxVlc4RecordingMuxProfile::Mp4Aac
+				: muxProfileIndex == 1
+					? ofxVlc4RecordingMuxProfile::MkvFlac
+					: ofxVlc4RecordingMuxProfile::OggVorbis;
+			presetChanged = true;
+		}
+
+		bool deleteTempSources = recordingPreset.deleteMuxSourceFilesOnSuccess;
+		if (ImGui::Checkbox("Delete temp mux sources", &deleteTempSources)) {
+			recordingPreset.deleteMuxSourceFilesOnSuccess = deleteTempSources;
+			presetChanged = true;
+		}
+
+		int outputWidth = recordingPreset.targetWidth;
+		int outputHeight = recordingPreset.targetHeight;
+		if (ImGui::InputInt("Output width", &outputWidth, 0, 0)) {
+			recordingPreset.targetWidth = std::max(0, outputWidth);
+			presetChanged = true;
+		}
+		if (ImGui::InputInt("Output height", &outputHeight, 0, 0)) {
+			recordingPreset.targetHeight = std::max(0, outputHeight);
+			presetChanged = true;
+		}
+		ImGui::TextDisabled("0 x 0 keeps the source size.");
+
+		int recordingFps = recordingPreset.videoFrameRate;
+		if (ImGui::SliderInt("Recording FPS", &recordingFps, 1, 120)) {
+			recordingPreset.videoFrameRate = recordingFps;
+			presetChanged = true;
+		}
+
+		int videoBitrate = recordingPreset.videoBitrateKbps;
+		if (ImGui::InputInt("Video bitrate (kbps)", &videoBitrate, 0, 0)) {
+			recordingPreset.videoBitrateKbps = std::max(0, videoBitrate);
+			presetChanged = true;
+		}
+
+		int audioBitrate = recordingPreset.audioBitrateKbps;
+		if (ImGui::InputInt("Mux audio bitrate (kbps)", &audioBitrate, 0, 0)) {
+			recordingPreset.audioBitrateKbps = std::max(0, audioBitrate);
+			presetChanged = true;
+		}
+
+		int readbackPolicyIndex = player->getVideoReadbackPolicy() == ofxVlc4VideoReadbackPolicy::DropLateFrames ? 0 : 1;
+		const char * readbackPolicyItems[] = { "Drop late frames", "Block for freshest" };
+		if (ImGui::Combo("Readback policy", &readbackPolicyIndex, readbackPolicyItems, IM_ARRAYSIZE(readbackPolicyItems))) {
+			player->setVideoReadbackPolicy(
+				readbackPolicyIndex == 0
+					? ofxVlc4VideoReadbackPolicy::DropLateFrames
+					: ofxVlc4VideoReadbackPolicy::BlockForFreshestFrame);
+		}
+
+		int readbackBuffers = static_cast<int>(player->getVideoReadbackBufferCount());
+		if (ImGui::SliderInt("Readback buffers", &readbackBuffers, 2, 4)) {
+			player->setVideoReadbackBufferCount(static_cast<size_t>(readbackBuffers));
+		}
+		if (presetChanged) {
+			player->setRecordingPreset(recordingPreset);
+		}
+		ImGui::EndDisabled();
+
+		if (ImGui::Button(benchmarkActive ? "Stop Benchmark AV" : "Start Benchmark AV", ImVec2(-1, 0))) {
+			toggleBenchmarkVideoRecording();
+		}
+		if (ImGui::Button(windowActive ? "Stop Window AV" : "Start Window AV", ImVec2(-1, 0))) {
+			if (windowActive) {
+				requestWindowRecordingStop();
+			} else {
+				toggleWindowRecording();
 			}
 		}
-		auto & bytes = const_cast<std::vector<unsigned char> &>(message.bytes);
-		midiOut.sendMidiBytes(bytes);
-	}
-}
 
-//--------------------------------------------------------------
-void ofApp::sendMidiPanic() {
-	if (!midiOut.isOpen()) {
-		return;
-	}
-
-	for (int channel = 1; channel <= 16; ++channel) {
-		midiOut.sendControlChange(channel, 120, 0);
-		midiOut.sendControlChange(channel, 123, 0);
-	}
-}
-
-//--------------------------------------------------------------
-bool ofApp::analyzeMidiPath(const std::string & path) {
-	clearMidiAnalysis();
-	analyzedMidiPath = path;
-	midiReport = midiAnalyzer.analyzeFile(path);
-	if (!midiReport.valid) {
-		midiAnalysisStatus = "MIDI analysis failed: " + midiReport.errorMessage;
-		return false;
-	}
-
-	midiChannelMessages = MidiBridge::toChannelMessages(midiReport);
-	midiAnalysisStatus = "MIDI analyzed in memory.";
-	return true;
-}
-
-//--------------------------------------------------------------
-bool ofApp::exportMidiAnalysis(const std::string & path) {
-	if (midiReport.valid && analyzedMidiPath != path) {
-		if (!analyzeMidiPath(path)) {
-			return false;
+		if (ImGui::Button(nativeActive ? "Stop Native VLC Record" : "Start Native VLC Record", ImVec2(-1, 0))) {
+			toggleNativeRecording();
 		}
-	} else if (!midiReport.valid) {
-		if (!analyzeMidiPath(path)) {
-			return false;
+		if (ImGui::Button(audioActive ? "Stop WAV Audio" : "Start WAV Audio", ImVec2(-1, 0))) {
+			toggleAudioRecording();
 		}
-	}
 
-	const std::string logDir = ofToDataPath("logs", true);
-	std::error_code ec;
-	std::filesystem::create_directories(logDir, ec);
-
-	const std::string baseName = ofFilePath::removeExt(ofFilePath::getFileName(path));
-	const std::filesystem::path exportPrefix = std::filesystem::path(logDir) / (baseName + ".midi");
-	std::string exportError;
-	if (!MidiReportExporter::exportAll(midiReport, exportPrefix.string(), exportError)) {
-		midiAnalysisStatus = "MIDI export failed: " + exportError;
-		ofLogError("ofxVlc4") << midiAnalysisStatus;
-		return false;
+		ImGui::SeparatorText("Status");
+		ImGui::TextWrapped("%s", overlayStatusLine().c_str());
+		ImGui::TextWrapped("Keyboard fallback: V benchmark, W window, S stop.");
 	}
-	midiExportPath = exportPrefix.string() + ".txt";
-	midiAnalysisStatus = "MIDI summary export written.";
-	ofLogNotice("ofxVlc4") << "MIDI summary export written: " << midiExportPath;
-	return true;
+	ImGui::End();
 }
 
-//--------------------------------------------------------------
-bool ofApp::isCurrentMediaAudioOnly() const {
-	if (!player || isMidiModeActive()) {
-		return false;
-	}
-
-	if (!hasActiveVlcMedia(*player)) {
-		return false;
-	}
-
-	const ofxVlc4::MediaReadinessInfo readiness = player->getMediaReadinessInfo();
-	if (readiness.mediaAttached && readiness.audioTrackCount > 0 && readiness.videoTrackCount == 0) {
-		return true;
-	}
-
-	const int currentIndex = player->getCurrentIndex();
-	if (currentIndex < 0 || currentIndex >= static_cast<int>(player->getPlaylist().size())) {
-		return false;
-	}
-
-	const std::string extension = ofToLower(ofFilePath::getFileExt(player->getFileNameAtIndex(currentIndex)));
-	return !extension.empty() && audioOnlyExtensions().count("." + extension) > 0;
-}
-
-//--------------------------------------------------------------
-std::string ofApp::currentMediaLabel() {
+std::string ofApp::overlayStatusLine() const {
 	if (!player) {
 		return "Player closed";
 	}
 
-	if (isMidiModeActive()) {
-		return ofFilePath::getFileName(midiPlayback.getPath());
+	const ofxVlc4::PlaybackStateInfo state = player->getPlaybackStateInfo();
+	if (!player->getLastErrorMessage().empty()) {
+		return "Error: " + player->getLastErrorMessage();
 	}
-
-	if (!hasActiveVlcMedia(*player)) {
-		return "No media loaded";
+	if (!player->getLastStatusMessage().empty()) {
+		return player->getLastStatusMessage();
 	}
-
-	const int currentIndex = player->getCurrentIndex();
-	if (currentIndex >= 0 && currentIndex < static_cast<int>(player->getPlaylist().size())) {
-		return player->getFileNameAtIndex(currentIndex);
+	if (!state.nativeRecording.lastFailureReason.empty()) {
+		return "Native record error: " + state.nativeRecording.lastFailureReason;
 	}
-	return "No media loaded";
-}
-
-//--------------------------------------------------------------
-std::string ofApp::playbackLabel() {
-	if (!player) {
-		return "Closed";
+	if (!state.snapshot.lastFailureReason.empty()) {
+		return "Snapshot error: " + state.snapshot.lastFailureReason;
 	}
-
-	if (isMidiModeActive()) {
-		if (midiPlayback.isPlaying()) {
-			return "Playing (MIDI out)";
-		}
-		if (midiPlayback.isPaused()) {
-			return "Paused (MIDI out)";
-		}
-		if (midiPlayback.isFinished()) {
-			return "Finished (MIDI out)";
-		}
-		return "Stopped (MIDI out)";
+	if (!state.nativeRecording.lastOutputPath.empty()) {
+		return "Last native output: " + state.nativeRecording.lastOutputPath;
 	}
-
-	if (!hasActiveVlcMedia(*player)) {
-		return "Idle";
+	if (!state.snapshot.lastSavedPath.empty()) {
+		return "Last snapshot: " + state.snapshot.lastSavedPath;
 	}
-
-	if (player->isPlaying()) {
-		return "Playing";
+	if (benchmarkModeActive) {
+		return "Benchmark mode ready";
 	}
-	if (player->canPause() && !player->isStopped()) {
-		return "Paused";
-	}
-	if (player->isStopped()) {
-		return "Stopped";
-	}
-	return "Idle";
+	return "Ready";
 }

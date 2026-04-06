@@ -1,5 +1,5 @@
 #include "ofMain.h"
-#include "RecorderApp.h"
+#include "ofApp.h"
 
 //========================================================================
 int main( ){
@@ -11,7 +11,7 @@ int main( ){
 
 	auto window = ofCreateWindow(settings);
 
-	ofRunApp(window, std::make_shared<RecorderApp>());
+	ofRunApp(window, std::make_shared<ofApp>());
 	ofRunMainLoop();
 
 }
