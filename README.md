@@ -107,7 +107,7 @@ This installs:
 - runtime DLLs/plugins into the example `bin` folders
 - runtime DLLs/plugins into the example `dll/x64` staging folders used by the Visual Studio post-build copy step
 
-The installer works in a temporary directory outside the addon tree, which is helpful when the addon lives in a OneDrive-synced folder.
+The installer works in a temporary directory outside the addon tree, which is helpful when the addon lives in a synced or otherwise path-sensitive folder.
 
 ### macOS
 
@@ -450,7 +450,7 @@ That keeps startup, playback transitions, and shutdown much more predictable tha
 
 ## Recorder Notes
 
-The addon recorder is still built around libVLC media callbacks, so the practical performance wins come from reducing work on the addon side rather than expecting the callback transport itself to become zero-copy.
+The addon recorder is still built around libVLC media callbacks, and the current path still performs GPU readback plus CPU-side frame copies before libVLC consumes the data. In practice, the recorder-side performance wins come from reducing stalls and backlog on the addon side rather than expecting the transport itself to become zero-copy.
 
 Current recorder-side optimizations include:
 
