@@ -2,16 +2,14 @@
 
 `ofxVlc4` is an openFrameworks wrapper around `libVLC 4` with a texture-based video path, optional native-window backends on Windows, playlist helpers, transport controls, media discovery, diagnostics, recording helpers, MIDI utilities, and a large GUI example.
 
-The current concrete player class is `ofxVlc4`. For compatibility with older code, the addon also ships:
+The main public header is:
 
 - `src/ofxVlc4.h`
+
+For older codebases, the addon also keeps the compatibility header:
+
 - `src/ofxVlc4Player.h`
-- `vlc-help.txt`
-- `vlc-full-help.txt`
-
-The compatibility header provides:
-
-- `using ofxVlc4Player = ofxVlc4;`
+  - `using ofxVlc4Player = ofxVlc4;`
 
 Bundled VLC help assets:
 
