@@ -8,6 +8,8 @@ This is the full example app for:
 
 It is meant as a real integration example, not just a minimal playback demo. The app combines playlist playback, diagnostics, alternate video backends, detached GUI panels, video preview windows, and `projectM`-based visualization.
 
+For visualization, this example treats `ofxProjectM` as the primary integrated path. VLC's built-in visualization plugins can still exist in the bundled runtime, but they are better treated as optional libVLC extras than as the main example workflow.
+
 ## What it shows
 
 - `libVLC` playback through the OF texture backend
