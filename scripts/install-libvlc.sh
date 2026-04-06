@@ -459,22 +459,6 @@ function Get-ExampleRuntimeTargets([string]$AddonRootPath) {
 		})
 }
 
-function Copy-RuntimeToExampleTargets([string]$LibvlcDll, [string]$LibvlccoreDll, [string]$PluginsSourceRoot, [string]$LuaSourceRoot, [object[]]$ExampleRuntimeTargets) {
-	foreach ($Target in $ExampleRuntimeTargets) {
-		Ensure-Directory $Target.BinDirectory
-		Copy-OptionalFile $LibvlcDll $Target.BinDirectory
-		Copy-OptionalFile $LibvlccoreDll $Target.BinDirectory
-		Copy-DirectoryContents $PluginsSourceRoot (Join-Path $Target.BinDirectory 'plugins')
-		Copy-DirectoryContents $LuaSourceRoot (Join-Path $Target.BinDirectory 'lua')
-
-		Ensure-Directory $Target.DllDirectory
-		Copy-OptionalFile $LibvlcDll $Target.DllDirectory
-		Copy-OptionalFile $LibvlccoreDll $Target.DllDirectory
-		Copy-DirectoryContents $PluginsSourceRoot (Join-Path $Target.DllDirectory 'plugins')
-		Copy-DirectoryContents $LuaSourceRoot (Join-Path $Target.DllDirectory 'lua')
-	}
-}
-
 function Remove-PathIfExists([string]$Path) {
 	if (-not (Test-Path -LiteralPath $Path)) {
 		return
@@ -546,18 +530,16 @@ function New-HardLinkedDirectoryTreeOrCopy([string]$SourceDirectory, [string]$De
 }
 
 function Link-SharedRuntimeToExampleTargets([string]$SharedRuntimeDirectory, [object[]]$ExampleRuntimeTargets) {
-	$SharedLibvlcDll = Join-Path $SharedRuntimeDirectory 'libvlc.dll'
-	$SharedLibvlccoreDll = Join-Path $SharedRuntimeDirectory 'libvlccore.dll'
 	$SharedPluginsDirectory = Join-Path $SharedRuntimeDirectory 'plugins'
 	$SharedLuaDirectory = Join-Path $SharedRuntimeDirectory 'lua'
 
 	foreach ($Target in $ExampleRuntimeTargets) {
 		Ensure-Directory $Target.BinDirectory
 		Ensure-Directory (Split-Path -Parent $Target.DllDirectory)
+		# Leave DLL copying to the generated VS post-build step to avoid copying onto prelinked files.
+		Get-ChildItem -LiteralPath $Target.BinDirectory -Filter '*.dll' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
 		New-HardLinkedDirectoryTreeOrCopy $SharedRuntimeDirectory $Target.DllDirectory
-		New-HardLinkOrCopyFile $SharedLibvlcDll (Join-Path $Target.BinDirectory 'libvlc.dll')
-		New-HardLinkOrCopyFile $SharedLibvlccoreDll (Join-Path $Target.BinDirectory 'libvlccore.dll')
 		New-HardLinkedDirectoryTreeOrCopy $SharedPluginsDirectory (Join-Path $Target.BinDirectory 'plugins')
 		New-HardLinkedDirectoryTreeOrCopy $SharedLuaDirectory (Join-Path $Target.BinDirectory 'lua')
 	}

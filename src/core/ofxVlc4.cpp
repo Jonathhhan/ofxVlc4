@@ -1004,8 +1004,6 @@ std::string ofxVlc4::vlcHelpModeToOptionString(ofxVlc4VlcHelpMode mode) {
 		return "--help";
 	case ofxVlc4VlcHelpMode::LongHelp:
 		return "--longhelp";
-	case ofxVlc4VlcHelpMode::List:
-		return "--list";
 	case ofxVlc4VlcHelpMode::FullHelp:
 	default:
 		return "--full-help";
@@ -1026,21 +1024,6 @@ std::string ofxVlc4::getVlcHelpText(ofxVlc4VlcHelpMode mode) const {
 			return extractHelpSections(bundledFullHelp, { 1, 2, 3, 4, 5, 6 }, true);
 		}
 		return "ofxVlc4 VLC long help reference is not available.";
-	case ofxVlc4VlcHelpMode::List: {
-		std::ostringstream output;
-		output << "ofxVlc4 VLC list reference\n";
-		output << "Requested option: " << vlcHelpModeToOptionString(mode) << "\n\n";
-		output << "Common help options\n";
-		output << "  --help\n";
-		output << "  --longhelp\n";
-		output << "  --full-help\n";
-		output << "  --list\n";
-		output << "  --module <name>\n\n";
-		appendFilterList(output, "Audio filters", getAudioFilters());
-		output << "\n";
-		appendFilterList(output, "Video filters", getVideoFilters());
-		return output.str();
-	}
 	case ofxVlc4VlcHelpMode::FullHelp:
 	default:
 		if (!bundledFullHelp.empty()) {

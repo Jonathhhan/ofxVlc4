@@ -137,8 +137,7 @@ enum class ofxVlc4MidiSyncSource {
 enum class ofxVlc4VlcHelpMode {
 	Help = 0,
 	LongHelp,
-	FullHelp,
-	List
+	FullHelp
 };
 
 class ofxVlc4 {

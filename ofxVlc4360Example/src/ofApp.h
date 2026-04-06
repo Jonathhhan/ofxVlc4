@@ -24,7 +24,6 @@ private:
 	void drawControlPanel();
 	void loadMediaPath(const std::string & path, bool autoPlay = true);
 	void replacePlaylistFromPaths(const std::vector<std::string> & paths, bool autoPlay = true);
-	bool canAddAnyPlaylistPath(const std::vector<std::string> & paths) const;
 	void openMediaDialog();
 	void resetViewpoint();
 	void nudgeViewpoint(float deltaYaw, float deltaPitch, float deltaRoll, float deltaFov);

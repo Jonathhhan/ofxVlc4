@@ -104,7 +104,13 @@ void ofApp::dragEvent(ofDragInfo dragInfo) {
 		return;
 	}
 
-	replacePlaylistFromPaths(dragInfo.files, true);
+	std::vector<std::string> droppedPaths;
+	droppedPaths.reserve(dragInfo.files.size());
+	for (const auto & droppedPath : dragInfo.files) {
+		droppedPaths.push_back(std::filesystem::path(droppedPath).string());
+	}
+
+	replacePlaylistFromPaths(droppedPaths, true);
 }
 
 void ofApp::windowResized(int w, int h) {
@@ -277,7 +283,7 @@ void ofApp::drawControlPanel() {
 
 	ImGui::SeparatorText("Diagnostics");
 	ImGui::Text("Frame attached: %s", readiness.mediaAttached ? "yes" : "no");
-	ImGui::Text("Prepared: %s", readiness.mediaPrepared ? "yes" : "no");
+	ImGui::Text("Prepared: %s", readiness.startupPrepared ? "yes" : "no");
 	ImGui::Text("Video frame: %s", readiness.hasReceivedVideoFrame ? "yes" : "no");
 	ImGui::Text("Playlist items: %d", static_cast<int>(playlistState.size));
 	if (!infoStatus.empty()) {
@@ -306,11 +312,6 @@ void ofApp::replacePlaylistFromPaths(const std::vector<std::string> & paths, boo
 		return;
 	}
 
-	if (!canAddAnyPlaylistPath(paths)) {
-		infoStatus = "Failed to add media to playlist.";
-		return;
-	}
-
 	player.stop();
 	player.clearPlaylist();
 
@@ -334,47 +335,6 @@ void ofApp::replacePlaylistFromPaths(const std::vector<std::string> & paths, boo
 	if (autoPlay) {
 		player.playIndex(0);
 	}
-}
-
-bool ofApp::canAddAnyPlaylistPath(const std::vector<std::string> & paths) const {
-	namespace fs = std::filesystem;
-
-	for (const std::string & pathString : paths) {
-		if (pathString.empty()) {
-			continue;
-		}
-
-		std::error_code ec;
-		const fs::path path(pathString);
-		if (!fs::exists(path, ec) || ec) {
-			continue;
-		}
-
-		if (fs::is_regular_file(path, ec) && !ec) {
-			ofFile file(path.string());
-			if (file.exists() && player.isSupportedMediaFile(file)) {
-				return true;
-			}
-			continue;
-		}
-
-		if (fs::is_directory(path, ec) && !ec) {
-			for (const auto & entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec)) {
-				if (ec) {
-					break;
-				}
-				if (!entry.is_regular_file()) {
-					continue;
-				}
-				ofFile file(entry.path().string());
-				if (file.exists() && player.isSupportedMediaFile(file)) {
-					return true;
-				}
-			}
-		}
-	}
-
-	return false;
 }
 
 void ofApp::openMediaDialog() {
