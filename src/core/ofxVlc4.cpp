@@ -1013,11 +1013,12 @@ std::string ofxVlc4::vlcHelpModeToOptionString(ofxVlc4VlcHelpMode mode) {
 }
 
 std::string ofxVlc4::getVlcHelpText(ofxVlc4VlcHelpMode mode) const {
+	const std::string bundledHelp = loadBundledVlcHelpText("vlc-help.txt");
 	const std::string bundledFullHelp = loadBundledVlcHelpText("vlc-full-help.txt");
 	switch (mode) {
 	case ofxVlc4VlcHelpMode::Help:
-		if (!bundledFullHelp.empty()) {
-			return extractHelpSections(bundledFullHelp, { 1, 2 }, true);
+		if (!bundledHelp.empty()) {
+			return bundledHelp;
 		}
 		return "ofxVlc4 VLC help reference is not available.";
 	case ofxVlc4VlcHelpMode::LongHelp:
