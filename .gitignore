@@ -9,3 +9,8 @@
 *.vcxproj.user
 imgui*.ini
 *.tmp
+# Generated Visual Studio project files
+ofxVlc4MidiExample/icon.rc
+ofxVlc4MidiExample/ofxVlc4MidiExample.sln
+ofxVlc4MidiExample/ofxVlc4MidiExample.vcxproj
+ofxVlc4MidiExample/ofxVlc4MidiExample.vcxproj.filters
