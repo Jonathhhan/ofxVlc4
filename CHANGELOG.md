@@ -14,7 +14,7 @@ Highlights:
   - `ofxVlc4MidiExample`
   - `ofxVlc4RecorderExample`
 - added `ofxVlc4360Example` as a focused ImGui-based 360 / panoramic playback surface for projection, stereo mode, and live viewpoint control
-- added `scripts/download-360-example-media.ps1` to fetch free 360 sample media for `ofxVlc4360Example`
+- added `scripts/download-360-example-media.sh` to fetch free 360 sample media for `ofxVlc4360Example`
 - formalized the addon-owned playlist API with structured helpers:
   - `getPlaylistStateInfo()`
   - `getPlaylistItems()`

@@ -59,13 +59,13 @@ Useful API calls demonstrated:
 
 Helper script:
 
-- [../scripts/download-360-example-media.ps1](../scripts/download-360-example-media.ps1)
+- [../scripts/download-360-example-media.sh](../scripts/download-360-example-media.sh)
   - downloads a free 360 sample from Wikimedia Commons into `bin/data/360`
   - presets:
     - `oceanside-4k`
     - `dji-mini-2`
   - example:
-    - `powershell -ExecutionPolicy Bypass -File ..\scripts\download-360-example-media.ps1`
+    - `bash ../scripts/download-360-example-media.sh`
 
 Notes:
 
