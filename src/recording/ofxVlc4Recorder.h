@@ -94,6 +94,12 @@ private:
 	void captureVideoFrameLocked();
 	bool waitForSubmittedReadbackLocked(size_t bufferIndex, uint64_t & waitMicrosOut);
 	bool consumeReadbackBufferLocked(size_t bufferIndex);
+	bool tryConsumeSubmittedReadbackLocked(
+		size_t bufferIndex,
+		bool blockUntilReady,
+		bool & consumedOut,
+		uint64_t & waitMicrosOut);
+	bool drainAvailableReadbackBuffersLocked(bool blockUntilReady);
 	void clearBufferedAudioCapture();
 	void drainBufferedAudioLocked();
 	void finalizeAudioCaptureStream();

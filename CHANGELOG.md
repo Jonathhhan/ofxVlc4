@@ -2,12 +2,14 @@
 
 ## Unreleased
 
+- removed the deprecated compatibility header `src/ofxVlc4Player.h`
+- projects should now include `src/ofxVlc4.h` and use `ofxVlc4` directly
+
 ## 1.0.1
 
 Highlights:
 
 - renamed the main addon class and internal source layout from `ofxVlc4Player` to `ofxVlc4`
-- kept `src/ofxVlc4Player.h` as a compatibility header with `using ofxVlc4Player = ofxVlc4`
 - renamed the smaller example to `ofxVlc4MidiExample` and rebuilt the examples around the current addon scope:
   - `ofxVlc4Example`
   - `ofxVlc4360Example`

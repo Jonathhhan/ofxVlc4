@@ -1182,6 +1182,7 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 			videoFramesReady = 1;
 			videoSynchronousFrames = 1;
 			publishCapturedFrameLocked();
+			initializeVideoReadbackBuffersLocked(recordingFrameSize);
 		}
 		recordingReadOffset = 0;
 	}
@@ -1229,11 +1230,16 @@ std::string ofxVlc4Recorder::updateCaptureState() {
 		const uint64_t nowUs = ofGetElapsedTimeMicros();
 
 		std::lock_guard<std::mutex> lock(recordingMutex);
-		if (recordingTexture.isAllocated() &&
-			recordingPixels.isAllocated() &&
-			(lastVideoCaptureTimeUs == 0 || nowUs >= lastVideoCaptureTimeUs + videoFrameIntervalUs)) {
-			captureVideoFrameLocked();
-			lastVideoCaptureTimeUs = nowUs;
+		if (recordingTexture.isAllocated() && recordingPixels.isAllocated()) {
+			if (recordingPboEnabled && !drainAvailableReadbackBuffersLocked(false)) {
+				++videoMapFailureCount;
+				++videoDroppedFrames;
+				destroyVideoReadbackBuffersLocked();
+			}
+			if (lastVideoCaptureTimeUs == 0 || nowUs >= lastVideoCaptureTimeUs + videoFrameIntervalUs) {
+				captureVideoFrameLocked();
+				lastVideoCaptureTimeUs = nowUs;
+			}
 		}
 	}
 
@@ -1390,6 +1396,61 @@ bool ofxVlc4Recorder::consumeReadbackBufferLocked(size_t bufferIndex) {
 #endif
 }
 
+bool ofxVlc4Recorder::tryConsumeSubmittedReadbackLocked(
+	size_t bufferIndex,
+	bool blockUntilReady,
+	bool & consumedOut,
+	uint64_t & waitMicrosOut) {
+	consumedOut = false;
+	waitMicrosOut = 0;
+#ifdef TARGET_OPENGLES
+	(void)bufferIndex;
+	(void)blockUntilReady;
+	return false;
+#else
+	if (bufferIndex >= recordingPixelPackFences.size()) {
+		return false;
+	}
+
+	const auto originalPolicy = readbackPolicy;
+	readbackPolicy = blockUntilReady
+		? ofxVlc4VideoReadbackPolicy::BlockForFreshestFrame
+		: ofxVlc4VideoReadbackPolicy::DropLateFrames;
+	const bool ready = waitForSubmittedReadbackLocked(bufferIndex, waitMicrosOut);
+	readbackPolicy = originalPolicy;
+	if (!ready) {
+		return !blockUntilReady;
+	}
+
+	consumedOut = consumeReadbackBufferLocked(bufferIndex);
+	return consumedOut;
+#endif
+}
+
+bool ofxVlc4Recorder::drainAvailableReadbackBuffersLocked(bool blockUntilReady) {
+	while (!recordingPboPendingIndices.empty()) {
+		bool consumed = false;
+		uint64_t waitMicros = 0;
+		const size_t readIndex = recordingPboPendingIndices.front();
+		if (!tryConsumeSubmittedReadbackLocked(readIndex, blockUntilReady, consumed, waitMicros)) {
+			return false;
+		}
+		if (!consumed) {
+			break;
+		}
+		if (waitMicros > 0) {
+			++videoWaitCount;
+			videoTotalWaitMicros += waitMicros;
+			videoMaxWaitMicros = std::max(videoMaxWaitMicros, waitMicros);
+		}
+		recordingPboPendingIndices.pop_front();
+		recordingPboPrimed = !recordingPboPendingIndices.empty();
+		blockUntilReady = false;
+	}
+
+	return true;
+}
+
 void ofxVlc4Recorder::captureVideoFrameLocked() {
 	if (!recordingTexture.isAllocated() || !recordingPixels.isAllocated()) {
 		return;
@@ -1403,25 +1464,10 @@ void ofxVlc4Recorder::captureVideoFrameLocked() {
 		const auto failToSynchronousPath = [&]() {
 			destroyVideoReadbackBuffersLocked();
 		};
-		if (!recordingPboPendingIndices.empty()) {
-			const size_t readIndex = recordingPboPendingIndices.front();
-			uint64_t waitMicros = 0;
-			const bool ready = waitForSubmittedReadbackLocked(readIndex, waitMicros);
-			if (ready) {
-				if (waitMicros > 0) {
-					++videoWaitCount;
-					videoTotalWaitMicros += waitMicros;
-					videoMaxWaitMicros = std::max(videoMaxWaitMicros, waitMicros);
-				}
-				if (consumeReadbackBufferLocked(readIndex)) {
-					recordingPboPendingIndices.pop_front();
-					recordingPboPrimed = !recordingPboPendingIndices.empty();
-				} else {
-					++videoMapFailureCount;
-					++videoDroppedFrames;
-					failToSynchronousPath();
-				}
-			}
+		if (!drainAvailableReadbackBuffersLocked(false)) {
+			++videoMapFailureCount;
+			++videoDroppedFrames;
+			failToSynchronousPath();
 		}
 
 		if (!recordingPboEnabled) {
@@ -1436,26 +1482,10 @@ void ofxVlc4Recorder::captureVideoFrameLocked() {
 				return;
 			}
 
-			const size_t readIndex = recordingPboPendingIndices.front();
-			uint64_t waitMicros = 0;
-			if (!waitForSubmittedReadbackLocked(readIndex, waitMicros)) {
+			if (!drainAvailableReadbackBuffersLocked(true)) {
 				++videoMapFailureCount;
 				++videoDroppedFrames;
 				failToSynchronousPath();
-			} else {
-				if (waitMicros > 0) {
-					++videoWaitCount;
-					videoTotalWaitMicros += waitMicros;
-					videoMaxWaitMicros = std::max(videoMaxWaitMicros, waitMicros);
-				}
-				if (consumeReadbackBufferLocked(readIndex)) {
-					recordingPboPendingIndices.pop_front();
-					recordingPboPrimed = !recordingPboPendingIndices.empty();
-				} else {
-					++videoMapFailureCount;
-					++videoDroppedFrames;
-					failToSynchronousPath();
-				}
 			}
 		}
 

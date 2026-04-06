@@ -6,11 +6,6 @@ The main public header is:
 
 - `src/ofxVlc4.h`
 
-For older codebases, the addon also keeps the compatibility header:
-
-- `src/ofxVlc4Player.h`
-  - `using ofxVlc4Player = ofxVlc4;`
-
 Bundled VLC help assets:
 
 - `vlc-help.txt`
@@ -51,7 +46,6 @@ Parts of this addon, its examples, GUI structure, and documentation were develop
 The main public API stays in:
 
 - `src/ofxVlc4.h`
-- `src/ofxVlc4Player.h`
 
 Implementation is split by concern:
 
