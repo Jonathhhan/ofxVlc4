@@ -18,7 +18,7 @@ die() {
 usage() {
 	cat <<'EOF'
 Usage:
-  bash scripts/download-360-example-media.sh [options]
+  bash ofxVlc4360Example/download-360-example-media.sh [options]
 
 Options:
   --preset NAME              Preset to download
@@ -28,30 +28,10 @@ Options:
   --help, -h                 Show this help text
 
 Examples:
-  bash scripts/download-360-example-media.sh
-  bash scripts/download-360-example-media.sh --preset dji-mini-2
-  bash scripts/download-360-example-media.sh --output-dir ./bin/data --force
+  bash ofxVlc4360Example/download-360-example-media.sh
+  bash ofxVlc4360Example/download-360-example-media.sh --preset dji-mini-2
+  bash ofxVlc4360Example/download-360-example-media.sh --output-dir ./bin/data --force
 EOF
-}
-
-resolve_addon_root() {
-	local current_dir="$1"
-
-	while [[ -n "$current_dir" ]]; do
-		if [[ -d "${current_dir}/libs" && -f "${current_dir}/addon_config.mk" ]]; then
-			printf '%s\n' "$current_dir"
-			return 0
-		fi
-
-		local parent_dir
-		parent_dir="$(dirname "$current_dir")"
-		if [[ "$parent_dir" == "$current_dir" ]]; then
-			break
-		fi
-		current_dir="$parent_dir"
-	done
-
-	return 1
 }
 
 download_to_file() {
@@ -119,9 +99,8 @@ case "$PRESET_KEY" in
 		;;
 esac
 
-ADDON_ROOT="$(resolve_addon_root "$SCRIPT_DIR")" || die "Could not resolve addon root from '$SCRIPT_DIR'."
 if [[ -z "$OUTPUT_DIR" ]]; then
-	OUTPUT_DIR="${ADDON_ROOT}/ofxVlc4360Example/bin/data"
+	OUTPUT_DIR="${SCRIPT_DIR}/bin/data"
 fi
 
 mkdir -p "$OUTPUT_DIR"
