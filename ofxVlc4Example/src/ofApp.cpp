@@ -6,6 +6,9 @@ const std::initializer_list<std::string> kSeedExtensions = {
 	".jpg", ".jpeg", ".png", ".mp3", ".wav", ".aiff", ".mid", ".midi", ".h264",
 	".flac", ".bmp"
 };
+const std::initializer_list<std::string> kSubtitleExtensions = {
+	".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx"
+};
 constexpr float kMaxVideoPreviewHeight = 4320.0f;
 
 std::string normalizeInputPath(std::string path) {
@@ -23,6 +26,16 @@ std::string normalizeInputPath(std::string path) {
 
 bool looksLikeUri(const std::string & path) {
 	return path.find("://") != std::string::npos;
+}
+
+bool isSubtitlePath(const std::string & path) {
+	const std::string extension = ofToLower(ofFilePath::getFileExt(path));
+	if (extension.empty()) {
+		return false;
+	}
+
+	const std::string dottedExtension = "." + extension;
+	return std::find(kSubtitleExtensions.begin(), kSubtitleExtensions.end(), dottedExtension) != kSubtitleExtensions.end();
 }
 
 std::string resolveInputPath(const std::string & rawPath);
@@ -594,12 +607,14 @@ void ofApp::keyPressed(int key) {
 
 //--------------------------------------------------------------
 void ofApp::dragEvent(ofDragInfo dragInfo) {
-	remoteGui.handleDragEvent(
-		dragInfo,
-		player,
-		[this](const std::string & rawPath) {
-			return addPathToPlaylist(rawPath);
-		});
+	for (const auto & file : dragInfo.files) {
+		const std::string rawPath = file.string();
+		const std::string resolvedPath = resolveInputPath(rawPath);
+		if (isSubtitlePath(resolvedPath) && player.addMediaSlave(ofxVlc4::MediaSlaveType::Subtitle, resolvedPath)) {
+			continue;
+		}
+		addPathToPlaylist(rawPath);
+	}
 }
 
 //--------------------------------------------------------------
