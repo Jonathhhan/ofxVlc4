@@ -4,6 +4,8 @@
 
 - removed the deprecated compatibility header `src/ofxVlc4Player.h`
 - projects should now include `src/ofxVlc4.h` and use `ofxVlc4` directly
+- removed the redundant bundled `vlc-help.txt` asset
+- `Help` and `LongHelp` now derive from `vlc-full-help.txt`
 
 ## 1.0.1
 

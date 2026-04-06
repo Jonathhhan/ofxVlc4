@@ -8,10 +8,8 @@ The main public header is:
 
 Bundled VLC help assets:
 
-- `vlc-help.txt`
-  - runtime-derived English `--longhelp`
 - `vlc-full-help.txt`
-  - runtime-derived English `--full-help`
+  - runtime-derived English `--full-help`, also used to derive the shorter help views
 
 It is aimed at media-player style apps, video-texture workflows, and hybrid tools where playback, analysis, overlays, and custom rendering need to live inside openFrameworks.
 

@@ -1013,17 +1013,16 @@ std::string ofxVlc4::vlcHelpModeToOptionString(ofxVlc4VlcHelpMode mode) {
 }
 
 std::string ofxVlc4::getVlcHelpText(ofxVlc4VlcHelpMode mode) const {
-	const std::string bundledLongHelp = loadBundledVlcHelpText("vlc-help.txt");
 	const std::string bundledFullHelp = loadBundledVlcHelpText("vlc-full-help.txt");
 	switch (mode) {
 	case ofxVlc4VlcHelpMode::Help:
-		if (!bundledLongHelp.empty()) {
-			return extractHelpSections(bundledLongHelp, { 1, 2 }, true);
+		if (!bundledFullHelp.empty()) {
+			return extractHelpSections(bundledFullHelp, { 1, 2 }, true);
 		}
 		return "ofxVlc4 VLC help reference is not available.";
 	case ofxVlc4VlcHelpMode::LongHelp:
-		if (!bundledLongHelp.empty()) {
-			return extractHelpSections(bundledLongHelp, { 1, 2, 3, 4, 5, 6 }, true);
+		if (!bundledFullHelp.empty()) {
+			return extractHelpSections(bundledFullHelp, { 1, 2, 3, 4, 5, 6 }, true);
 		}
 		return "ofxVlc4 VLC long help reference is not available.";
 	case ofxVlc4VlcHelpMode::List: {
@@ -1045,9 +1044,6 @@ std::string ofxVlc4::getVlcHelpText(ofxVlc4VlcHelpMode mode) const {
 	default:
 		if (!bundledFullHelp.empty()) {
 			return bundledFullHelp;
-		}
-		if (!bundledLongHelp.empty()) {
-			return bundledLongHelp;
 		}
 		return "ofxVlc4 VLC full help reference is not available.";
 	}
