@@ -74,7 +74,7 @@ Inside `Advanced` the example now also exposes:
 - live audio callback timing counters so conversion/copy costs can be checked under load
 - subtitles render inside the OF app through libVLC's subtitle overlay path; this example controls track selection, delay, and scale, but does not expose subtitle cues as custom OF-drawn text
 - the `Tracks & Subtitles` section also includes a quick `Load Subtitle...` picker for attaching an external subtitle file through the existing media-slave path
-- dropping `.srt`, `.ass`, `.ssa`, `.vtt`, `.sub`, or `.idx` files onto the example attaches them as external subtitles; other dropped files still go through the normal playlist path
+- `.srt`, `.ass`, `.ssa`, `.vtt`, `.sub`, and `.idx` files are treated as external subtitles through the picker, playlist/path entry flow, and drag/drop; other files still go through the normal playlist path
 
 Outside `Advanced` there are dedicated top-level sections for:
 

@@ -607,14 +607,12 @@ void ofApp::keyPressed(int key) {
 
 //--------------------------------------------------------------
 void ofApp::dragEvent(ofDragInfo dragInfo) {
-	for (const auto & file : dragInfo.files) {
-		const std::string rawPath = file.string();
-		const std::string resolvedPath = resolveInputPath(rawPath);
-		if (isSubtitlePath(resolvedPath) && player.addMediaSlave(ofxVlc4::MediaSlaveType::Subtitle, resolvedPath)) {
-			continue;
-		}
-		addPathToPlaylist(rawPath);
-	}
+	remoteGui.handleDragEvent(
+		dragInfo,
+		player,
+		[this](const std::string & rawPath) {
+			return addPathToPlaylist(rawPath);
+		});
 }
 
 //--------------------------------------------------------------
@@ -634,6 +632,10 @@ int ofApp::addPathToPlaylist(const std::string & rawPath) {
 	if (isLocalPath && !pathExists(resolvedPath)) {
 		ofxVlc4::logWarning("Playlist path not found: " + normalizeInputPath(rawPath));
 		return 0;
+	}
+
+	if (isSubtitlePath(resolvedPath)) {
+		return player.addMediaSlave(ofxVlc4::MediaSlaveType::Subtitle, resolvedPath) ? 1 : 0;
 	}
 
 	const int addedCount = player.addPathToPlaylist(resolvedPath, kSeedExtensions);
