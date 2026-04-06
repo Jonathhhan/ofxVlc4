@@ -3,6 +3,7 @@
 #include "ofxImGui.h"
 
 #include <cstdint>
+#include <functional>
 #include <string>
 
 class ofxVlc4;
@@ -16,6 +17,13 @@ public:
 		float inputLabelPadding,
 		float dualActionButtonWidth,
 		float buttonSpacing);
+	void setCustomSubtitleCallbacks(
+		std::function<bool(const std::string &)> loadCallback,
+		std::function<void()> clearCallback,
+		std::function<std::string()> statusCallback,
+		std::function<std::vector<std::string>()> fontLabelsCallback,
+		std::function<int()> selectedFontIndexCallback,
+		std::function<void(int)> setFontIndexCallback);
 
 private:
 	void drawDiagnosticsSubMenu(
@@ -60,4 +68,10 @@ private:
 	bool metadataLoadedFromPlayer = false;
 	std::string libVlcLogFilePath;
 	bool libVlcLogFilePathLoaded = false;
+	std::function<bool(const std::string &)> loadCustomSubtitleCallback;
+	std::function<void()> clearCustomSubtitleCallback;
+	std::function<std::string()> customSubtitleStatusCallback;
+	std::function<std::vector<std::string>()> customSubtitleFontLabelsCallback;
+	std::function<int()> customSubtitleSelectedFontIndexCallback;
+	std::function<void(int)> customSubtitleSetFontIndexCallback;
 };

@@ -39,6 +39,7 @@ Parts of this addon, its examples, GUI structure, and documentation were develop
 - snapshots, thumbnails, native record, bookmarks
 - texture recording helpers plus automatic current-window capture helpers
 - watch-time, stats, logging, dialog callbacks, metadata editing
+- optional high-level player-command dispatch for transport, disc navigation, and teletext color-key actions
 - MIDI analysis, bridge, and local transport helpers
 
 ## Source layout
@@ -166,16 +167,19 @@ git clone --branch develop https://github.com/jvcleave/ofxImGui.git
 ## Examples
 
 - `ofxVlc4Example`
-    - full GUI, previews, projectM integration, diagnostics, and subtitle loading/track control
+    - full GUI, previews, projectM integration, diagnostics, subtitle loading/track control, and an optional OF-drawn `.srt` overlay with selectable TTF fonts
+    - includes a dedicated `DVD / Disc` control section for title/chapter/program navigation, menu buttons, and teletext controls when libVLC exposes them
 - `ofxVlc4360Example`
   - focused ImGui-based 360 / panoramic playback example with projection, stereo mode, live viewpoint controls, and lightweight playlist/folder drop support
   - includes a helper download script for free 360 sample media
 - `ofxVlc4MidiExample`
   - smaller ImGui-based MIDI/media example with local MIDI transport, sync, export, and `ofxMidiOut` routing
   - expects the `ofxMidi` addon for device output
-- `ofxVlc4RecorderExample`
-  - focused recording example with an ImGui recorder panel, native record, session-based texture/window capture, muxing, and recorder readback metrics
+  - `ofxVlc4RecorderExample`
+    - focused recording example with an ImGui recorder panel, native record, session-based texture/window capture, muxing, and recorder readback metrics
   - includes recording presets for `H265 / HEVC`, `MKV / Opus`, and `MKV / LPCM`
+  - `H265 / HEVC` recording currently requires one of the `MKV` mux profiles
+  - `H265 / HEVC` recording normalizes capture sizes to the bundled x265 alignment before encoding (`width % 16 == 0`, `height % 8 == 0`)
 
 For audio-visualization workflows, the addon treats `ofxProjectM` as the primary integrated path. Bundled VLC visualization plugins remain available through the staged runtime, but they are better treated as optional libVLC runtime extras than as the main addon feature path.
 
@@ -354,10 +358,10 @@ Useful newer API groups:
     - `getRendererStateInfo()`
     - `getSubtitleStateInfo()`
     - `getNavigationStateInfo()`
-  - subtitle rendering
+- subtitle rendering
       - subtitle tracks can be selected and displayed inside the OF app through libVLC's subtitle renderer
-      - the current addon path treats subtitles as VLC-rendered overlay pixels, not as extracted cue text for custom OF font/layout rendering
       - external subtitle/audio attachments can be added through `addSubtitleSlave(...)`, `addAudioSlave(...)`, or the generic `addMediaSlave(...)`
+      - `ofxVlc4Example` also includes an optional `.srt` parser + OF overlay path when you want subtitle strings rendered with OF fonts instead of VLC's own subtitle renderer
 - texture workflow
     - `getTexture()`
     - `getRenderTexture()`

@@ -629,7 +629,18 @@ void ofApp::cycleBenchmarkMuxProfile() {
 		return;
 	}
 
+	const ofxVlc4RecordingVideoCodecPreset codecPreset = player->getVideoRecordingCodecPreset();
 	const ofxVlc4RecordingMuxProfile muxProfile = player->getRecordingMuxProfile();
+	if (codecPreset == ofxVlc4RecordingVideoCodecPreset::H265) {
+		player->setRecordingMuxProfile(
+			muxProfile == ofxVlc4RecordingMuxProfile::MkvOpus
+				? ofxVlc4RecordingMuxProfile::MkvFlac
+				: muxProfile == ofxVlc4RecordingMuxProfile::MkvFlac
+					? ofxVlc4RecordingMuxProfile::MkvLpcm
+					: ofxVlc4RecordingMuxProfile::MkvOpus);
+		return;
+	}
+
 	player->setRecordingMuxProfile(
 		muxProfile == ofxVlc4RecordingMuxProfile::Mp4Aac
 			? ofxVlc4RecordingMuxProfile::MkvOpus
@@ -1015,6 +1026,13 @@ void ofApp::drawControlPanel() {
 							? ofxVlc4RecordingMuxProfile::MkvLpcm
 							: ofxVlc4RecordingMuxProfile::OggVorbis;
 			presetChanged = true;
+		}
+		if (const std::string compatibilityMessage =
+				ofxVlc4::recordingMuxProfileCompatibilityMessage(
+					recordingPreset.muxProfile,
+					recordingPreset.videoCodecPreset);
+			!compatibilityMessage.empty()) {
+			ImGui::TextWrapped("%s", compatibilityMessage.c_str());
 		}
 
 		bool deleteTempSources = recordingPreset.deleteMuxSourceFilesOnSuccess;

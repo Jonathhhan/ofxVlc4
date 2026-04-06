@@ -2,10 +2,12 @@
 
 #include "ofMain.h"
 #include "ofVlcPlayer4Gui.h"
+#include "SimpleSrtSubtitleParser.h"
 #include "ofxProjectM.h"
 #include "ofxVlc4.h"
 
 #include <string>
+#include <vector>
 
 class ofApp : public ofBaseApp {
 public:
@@ -25,6 +27,14 @@ public:
 	int addPathToPlaylist(const std::string & rawPath);
 	void reloadProjectMTextures(bool useStandardTextures = false, bool restartPreset = true);
 	bool loadCustomProjectMTexture(const std::string & rawPath);
+	bool loadCustomSubtitleFile(const std::string & rawPath);
+	void clearCustomSubtitleFile();
+	std::string customSubtitleStatus() const;
+	void setupCustomSubtitleFonts();
+	bool reloadCustomSubtitleFont();
+	std::vector<std::string> customSubtitleFontLabels() const;
+	int customSubtitleFontSelection() const;
+	void setCustomSubtitleFontSelection(int index);
 	void loadPlayerProjectMTexture();
 	void drawPlayerToFbo(ofxVlc4 & sourcePlayer, ofFbo & targetFbo, float width, float height, bool preserveAspect);
 	void refreshProjectMSourceTexture();
@@ -33,6 +43,8 @@ public:
 	void ensureProjectMInitialized();
 	void setupAnaglyphShader();
 	void updateAnaglyphPreview(const ofTexture & sourceTexture, float sourceWidth, float sourceHeight, const AnaglyphSettings & settings);
+	const SimpleSrtSubtitleCue * findActiveCustomSubtitleCue() const;
+	void drawCustomSubtitleOverlay() const;
 
 	void audioOut(ofSoundBuffer & buffer);
 
@@ -56,6 +68,14 @@ public:
 	bool videoPreviewShowsVideo = false;
 	bool anaglyphShaderReady = false;
 	bool showPlaybackStateOverlay = false;
+	std::string customSubtitlePath;
+	std::string customSubtitleLoadError;
+	std::vector<SimpleSrtSubtitleCue> customSubtitleCues;
+	std::vector<std::string> customSubtitleFontPaths;
+	std::vector<std::string> customSubtitleFontNames;
+	ofTrueTypeFont customSubtitleFont;
+	int customSubtitleFontIndex = -1;
+	bool customSubtitleFontLoaded = false;
 
 	int bufferSize = 128;
 	int outChannels = 2;

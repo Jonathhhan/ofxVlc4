@@ -78,6 +78,24 @@ inline std::map<std::string, DetachedSectionState> & detachedSectionStates() {
 	return states;
 }
 
+inline bool hasDetachedSections() {
+	for (const auto & [_, state] : detachedSectionStates()) {
+		if (state.detached || state.detachPending) {
+			return true;
+		}
+	}
+	return false;
+}
+
+inline void closeAllDetachedSections() {
+	for (auto & [_, state] : detachedSectionStates()) {
+		state.detached = false;
+		state.detachPending = false;
+		state.collapseInlineOnReturn = true;
+		state.applyInitialWindowPos = false;
+	}
+}
+
 inline std::vector<DetachedSectionScope> & detachedMenuScopes() {
 	static std::vector<DetachedSectionScope> scopes;
 	return scopes;

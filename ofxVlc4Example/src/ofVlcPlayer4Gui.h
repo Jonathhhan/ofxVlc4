@@ -62,7 +62,13 @@ public:
 		const std::function<void()> & reloadProjectMPresets,
 		const std::function<void()> & reloadProjectMTextures,
 		const std::function<void()> & loadPlayerProjectMTexture,
-		const std::function<bool(const std::string &)> & loadCustomProjectMTexture);
+		const std::function<bool(const std::string &)> & loadCustomProjectMTexture,
+		const std::function<bool(const std::string &)> & loadCustomSubtitle,
+		const std::function<void()> & clearCustomSubtitle,
+		const std::function<std::string()> & customSubtitleStatus,
+		const std::function<std::vector<std::string>()> & customSubtitleFontLabels,
+		const std::function<int()> & customSubtitleSelectedFontIndex,
+		const std::function<void(int)> & setCustomSubtitleFontIndex);
 	void updateSelection(ofxVlc4 & player);
 	void handleDragEvent(
 		const ofDragInfo & dragInfo,
@@ -84,7 +90,13 @@ private:
 		const std::function<void()> & reloadProjectMPresets,
 		const std::function<void()> & reloadProjectMTextures,
 		const std::function<void()> & loadPlayerProjectMTexture,
-		const std::function<bool(const std::string &)> & loadCustomProjectMTexture);
+		const std::function<bool(const std::string &)> & loadCustomProjectMTexture,
+		const std::function<bool(const std::string &)> & loadCustomSubtitle,
+		const std::function<void()> & clearCustomSubtitle,
+		const std::function<std::string()> & customSubtitleStatus,
+		const std::function<std::vector<std::string>()> & customSubtitleFontLabels,
+		const std::function<int()> & customSubtitleSelectedFontIndex,
+		const std::function<void(int)> & setCustomSubtitleFontIndex);
 	void drawHeaderSection(
 		ofxVlc4 & player,
 		bool hasPlaylist,

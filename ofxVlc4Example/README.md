@@ -38,6 +38,8 @@ For visualization, this example treats `ofxProjectM` as the primary integrated p
   - compact menu/submenu + detached-window helpers
 - `src/ofVlcPlayer4GuiStyle.h`
   - shared GUI palette and spacing tokens
+- `src/SimpleSrtSubtitleParser.h`
+  - lightweight `.srt` cue parsing for the optional OF-drawn subtitle overlay
 
 ## Setup
 
@@ -70,10 +72,13 @@ Inside `Advanced` the example now also exposes:
 
 - audio routing, devices, callback capture settings, filters, sync, and diagnostics
 - media info, tracks, subtitles, navigation, bookmarks, renderer/discovery, and capture/record status
+- a dedicated `DVD / Disc` section for title, chapter, program, menu navigation, and teletext controls when disc-style media exposes them
 - video output, filters, adjustments, 3D/stereo options, crop/aspect/fit, and backend state
 - live audio callback timing counters so conversion/copy costs can be checked under load
-- subtitles render inside the OF app through libVLC's subtitle overlay path; this example controls track selection, delay, and scale, but does not expose subtitle cues as custom OF-drawn text
+- subtitles still render through libVLC's normal overlay path for built-in and attached subtitle tracks
+- the example also has an optional custom `.srt` overlay path that parses cue text in C++ and draws it inside OF with selectable TTF fonts
 - the `Tracks & Subtitles` section also includes a quick `Load Subtitle...` picker for attaching an external subtitle file through the existing media-slave path
+- the same section now also includes `Load Custom SRT...`, `Disable Custom SRT`, and a font picker for the OF-drawn subtitle overlay
 - `.srt`, `.ass`, `.ssa`, `.vtt`, `.sub`, and `.idx` files are treated as external subtitles through the picker, playlist/path entry flow, and drag/drop; other files still go through the normal playlist path
 
 Outside `Advanced` there are dedicated top-level sections for:

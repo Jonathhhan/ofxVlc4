@@ -464,6 +464,37 @@ public:
 		Index
 	};
 
+	enum class PlayerCommand {
+		PlayPause = 0,
+		Play,
+		Pause,
+		Stop,
+		NextItem,
+		PreviousItem,
+		SeekForwardSmall,
+		SeekBackwardSmall,
+		SeekForwardLarge,
+		SeekBackwardLarge,
+		VolumeUp,
+		VolumeDown,
+		ToggleMute,
+		NextFrame,
+		PreviousChapter,
+		NextChapter,
+		MenuActivate,
+		MenuUp,
+		MenuDown,
+		MenuLeft,
+		MenuRight,
+		MenuPopup,
+		TeletextRed,
+		TeletextGreen,
+		TeletextYellow,
+		TeletextBlue,
+		TeletextIndex,
+		ToggleTeletextTransparency
+	};
+
 	enum class ThumbnailImageType {
 		Png = 0,
 		Jpg,
@@ -1722,6 +1753,12 @@ public:
 	static std::string recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPreset preset);
 	static ofxVlc4RecordingVideoCodecPreset recordingVideoCodecPresetForCodec(const std::string & codec);
 	static const char * recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecPreset preset);
+	static bool recordingMuxProfileSupportsVideoCodec(
+		ofxVlc4RecordingMuxProfile profile,
+		ofxVlc4RecordingVideoCodecPreset preset);
+	static std::string recordingMuxProfileCompatibilityMessage(
+		ofxVlc4RecordingMuxProfile profile,
+		ofxVlc4RecordingVideoCodecPreset preset);
 	static std::string recordingMuxContainerForProfile(ofxVlc4RecordingMuxProfile profile);
 	static std::string recordingMuxAudioCodecForProfile(ofxVlc4RecordingMuxProfile profile);
 	static const char * recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile profile);
@@ -2118,6 +2155,7 @@ public:
 	void nextChapter();
 	void nextFrame();
 	void navigate(NavigationMode mode);
+	bool executePlayerCommand(PlayerCommand command);
 	int getTeletextPage() const;
 	void setTeletextPage(int page);
 	bool isTeletextTransparencyEnabled() const;

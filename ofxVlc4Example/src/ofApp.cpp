@@ -10,6 +10,22 @@ const std::initializer_list<std::string> kSubtitleExtensions = {
 	".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx"
 };
 constexpr float kMaxVideoPreviewHeight = 4320.0f;
+constexpr int kCustomSubtitleFontSize = 36;
+constexpr float kCustomSubtitleBottomMargin = 54.0f;
+constexpr float kCustomSubtitleShadowOffset = 2.0f;
+
+struct CustomSubtitleFontCandidate {
+	const char * label;
+	const char * path;
+};
+
+const CustomSubtitleFontCandidate kCustomSubtitleFontCandidates[] = {
+	{ "Arial", "C:\\Windows\\Fonts\\arial.ttf" },
+	{ "Calibri", "C:\\Windows\\Fonts\\calibri.ttf" },
+	{ "Georgia", "C:\\Windows\\Fonts\\georgia.ttf" },
+	{ "Times New Roman", "C:\\Windows\\Fonts\\times.ttf" },
+	{ "Trebuchet MS", "C:\\Windows\\Fonts\\trebuc.ttf" }
+};
 
 std::string normalizeInputPath(std::string path) {
 	path = ofTrim(path);
@@ -36,6 +52,10 @@ bool isSubtitlePath(const std::string & path) {
 
 	const std::string dottedExtension = "." + extension;
 	return std::find(kSubtitleExtensions.begin(), kSubtitleExtensions.end(), dottedExtension) != kSubtitleExtensions.end();
+}
+
+bool isSrtPath(const std::string & path) {
+	return ofToLower(ofFilePath::getFileExt(path)) == "srt";
 }
 
 std::string resolveInputPath(const std::string & rawPath);
@@ -379,6 +399,7 @@ void ofApp::setup() {
 	soundStream.start();
 
 	remoteGui.setup();
+	setupCustomSubtitleFonts();
 	setupAnaglyphShader();
 	projectMSourceFbo.allocate(std::max(ofGetScreenWidth(), 1), std::max(ofGetScreenHeight(), 1), GL_RGBA);
 	clearAllocatedFbo(projectMSourceFbo);
@@ -592,7 +613,27 @@ void ofApp::draw() {
 		},
 		[this](const std::string & rawPath) {
 			return loadCustomProjectMTexture(rawPath);
+		},
+		[this](const std::string & rawPath) {
+			return loadCustomSubtitleFile(rawPath);
+		},
+		[this]() {
+			clearCustomSubtitleFile();
+		},
+		[this]() {
+			return customSubtitleStatus();
+		},
+		[this]() {
+			return customSubtitleFontLabels();
+		},
+		[this]() {
+			return customSubtitleFontSelection();
+		},
+		[this](int index) {
+			setCustomSubtitleFontSelection(index);
 		});
+
+	drawCustomSubtitleOverlay();
 
 	if (showPlaybackStateOverlay) {
 		drawPlaybackStateOverlay(player.getMediaReadinessInfo());
@@ -825,4 +866,185 @@ bool ofApp::loadCustomProjectMTexture(const std::string & rawPath) {
 	applyProjectMTexture();
 	restartCurrentProjectMPresetIfInitialized(projectM, projectMInitialized);
 	return true;
+}
+
+void ofApp::setupCustomSubtitleFonts() {
+	customSubtitleFontPaths.clear();
+	customSubtitleFontNames.clear();
+
+	for (const auto & candidate : kCustomSubtitleFontCandidates) {
+		if (!ofFile::doesFileExist(candidate.path, true)) {
+			continue;
+		}
+		customSubtitleFontNames.push_back(candidate.label);
+		customSubtitleFontPaths.push_back(candidate.path);
+	}
+
+	customSubtitleFontIndex = customSubtitleFontPaths.empty() ? -1 : 0;
+	reloadCustomSubtitleFont();
+}
+
+bool ofApp::reloadCustomSubtitleFont() {
+	customSubtitleFontLoaded = false;
+	customSubtitleFont = ofTrueTypeFont();
+
+	if (customSubtitleFontIndex < 0 ||
+		customSubtitleFontIndex >= static_cast<int>(customSubtitleFontPaths.size())) {
+		return false;
+	}
+
+	customSubtitleFontLoaded = customSubtitleFont.load(
+		customSubtitleFontPaths[static_cast<size_t>(customSubtitleFontIndex)],
+		kCustomSubtitleFontSize,
+		true,
+		true,
+		false,
+		0.3f,
+		0);
+	if (customSubtitleFontLoaded) {
+		customSubtitleFont.setLineHeight(kCustomSubtitleFontSize * 1.25f);
+	}
+	return customSubtitleFontLoaded;
+}
+
+std::vector<std::string> ofApp::customSubtitleFontLabels() const {
+	return customSubtitleFontNames;
+}
+
+int ofApp::customSubtitleFontSelection() const {
+	return customSubtitleFontIndex;
+}
+
+void ofApp::setCustomSubtitleFontSelection(int index) {
+	if (index < 0 || index >= static_cast<int>(customSubtitleFontPaths.size()) || index == customSubtitleFontIndex) {
+		return;
+	}
+
+	customSubtitleFontIndex = index;
+	reloadCustomSubtitleFont();
+}
+
+bool ofApp::loadCustomSubtitleFile(const std::string & rawPath) {
+	const std::string normalizedPath = normalizeInputPath(rawPath);
+	const std::string resolvedPath = resolveInputPath(normalizedPath);
+	if (resolvedPath.empty()) {
+		customSubtitleLoadError = "Custom subtitle path is empty.";
+		return false;
+	}
+
+	if (!pathExists(resolvedPath)) {
+		customSubtitleLoadError = "Custom subtitle file not found.";
+		return false;
+	}
+
+	if (!isSrtPath(resolvedPath)) {
+		customSubtitleLoadError = "Custom subtitle overlay currently supports .srt files only.";
+		return false;
+	}
+
+	std::vector<SimpleSrtSubtitleCue> parsedCues;
+	std::string parseError;
+	if (!SimpleSrtSubtitleParser::parseFile(resolvedPath, parsedCues, parseError)) {
+		customSubtitleLoadError = parseError.empty() ? "Failed to parse subtitle file." : parseError;
+		return false;
+	}
+
+	customSubtitlePath = resolvedPath;
+	customSubtitleLoadError.clear();
+	customSubtitleCues = std::move(parsedCues);
+	return true;
+}
+
+void ofApp::clearCustomSubtitleFile() {
+	customSubtitlePath.clear();
+	customSubtitleLoadError.clear();
+	customSubtitleCues.clear();
+}
+
+std::string ofApp::customSubtitleStatus() const {
+	if (!customSubtitleLoadError.empty()) {
+		return "Custom SRT: " + customSubtitleLoadError;
+	}
+	if (customSubtitlePath.empty() || customSubtitleCues.empty()) {
+		return "Custom SRT: Off";
+	}
+
+	std::string status = "Custom SRT: " + ofFilePath::getFileName(customSubtitlePath) +
+		" (" + ofToString(customSubtitleCues.size()) + " cues)";
+	if (customSubtitleFontIndex >= 0 &&
+		customSubtitleFontIndex < static_cast<int>(customSubtitleFontNames.size())) {
+		status += "   |   Font: " + customSubtitleFontNames[static_cast<size_t>(customSubtitleFontIndex)];
+	}
+	return status;
+}
+
+const SimpleSrtSubtitleCue * ofApp::findActiveCustomSubtitleCue() const {
+	if (customSubtitleCues.empty()) {
+		return nullptr;
+	}
+
+	const int currentTimeMs = player.getTime();
+	if (currentTimeMs < 0) {
+		return nullptr;
+	}
+
+	auto upper = std::upper_bound(
+		customSubtitleCues.begin(),
+		customSubtitleCues.end(),
+		currentTimeMs,
+		[](int timeMs, const SimpleSrtSubtitleCue & cue) {
+			return timeMs < cue.startMs;
+		});
+	if (upper == customSubtitleCues.begin()) {
+		return nullptr;
+	}
+
+	const auto & cue = *std::prev(upper);
+	return (currentTimeMs >= cue.startMs && currentTimeMs <= cue.endMs) ? &cue : nullptr;
+}
+
+void ofApp::drawCustomSubtitleOverlay() const {
+	const SimpleSrtSubtitleCue * cue = findActiveCustomSubtitleCue();
+	if (cue == nullptr || cue->text.empty()) {
+		return;
+	}
+
+	std::vector<std::string> lines = ofSplitString(cue->text, "\n", false, false);
+	if (lines.empty()) {
+		return;
+	}
+
+	ofPushStyle();
+	ofEnableAlphaBlending();
+
+	if (!customSubtitleFontLoaded) {
+		float y = ofGetHeight() - kCustomSubtitleBottomMargin - static_cast<float>((lines.size() - 1) * 18);
+		for (const auto & line : lines) {
+			const float x = std::max(20.0f, (ofGetWidth() * 0.5f) - (line.size() * 4.0f));
+			ofDrawBitmapStringHighlight(line, x, y, ofColor(0, 0, 0, 180), ofColor::white);
+			y += 18.0f;
+		}
+		ofPopStyle();
+		return;
+	}
+
+	const float lineHeight = std::max(customSubtitleFont.getLineHeight(), 1.0f);
+	float baselineY = ofGetHeight() - kCustomSubtitleBottomMargin - lineHeight * static_cast<float>(lines.size() - 1);
+	for (const auto & line : lines) {
+		const ofRectangle bounds = customSubtitleFont.getStringBoundingBox(line, 0.0f, 0.0f);
+		const float drawX = (ofGetWidth() - bounds.width) * 0.5f;
+		const float drawY = baselineY;
+
+		ofSetColor(0, 0, 0, 200);
+		customSubtitleFont.drawString(line, drawX - kCustomSubtitleShadowOffset, drawY);
+		customSubtitleFont.drawString(line, drawX + kCustomSubtitleShadowOffset, drawY);
+		customSubtitleFont.drawString(line, drawX, drawY - kCustomSubtitleShadowOffset);
+		customSubtitleFont.drawString(line, drawX, drawY + kCustomSubtitleShadowOffset);
+
+		ofSetColor(255);
+		customSubtitleFont.drawString(line, drawX, drawY);
+		baselineY += lineHeight;
+	}
+
+	ofPopStyle();
 }

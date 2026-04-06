@@ -49,6 +49,7 @@ Controls:
   - cycle benchmark/native video recording codec between `H264`, `H265 / HEVC`, `MP4V`, and `MJPG`
 - `H`
   - cycle benchmark mux profile between `MP4/AAC`, `MKV/Opus`, `MKV/FLAC`, `MKV/LPCM`, and `OGG/Vorbis`
+  - when `H265 / HEVC` is selected, the cycle is restricted to the `MKV` profiles
 - `J`
   - toggle whether successful muxes delete or keep the temporary sidecar `.mp4` and `.wav`
 - `V`
@@ -78,6 +79,8 @@ Output folders:
 - `J` controls whether the temporary sidecar `.mp4` and `.wav` are removed or preserved after a successful mux
 
 The ImGui recorder panel is now always visible and is the primary control surface for the example.
+- `H265 / HEVC` recording currently requires an `MKV` mux profile
+- `H265 / HEVC` capture sizes are normalized before encoding (`width % 16 == 0`, `height % 8 == 0`)
 - snapshots
   - `bin/data/snapshots`
 

@@ -530,7 +530,13 @@ void ofVlcPlayer4Gui::draw(
 	const std::function<void()> & reloadProjectMPresets,
 	const std::function<void()> & reloadProjectMTextures,
 	const std::function<void()> & loadPlayerProjectMTexture,
-	const std::function<bool(const std::string &)> & loadCustomProjectMTexture) {
+	const std::function<bool(const std::string &)> & loadCustomProjectMTexture,
+	const std::function<bool(const std::string &)> & loadCustomSubtitle,
+	const std::function<void()> & clearCustomSubtitle,
+	const std::function<std::string()> & customSubtitleStatus,
+	const std::function<std::vector<std::string>()> & customSubtitleFontLabels,
+	const std::function<int()> & customSubtitleSelectedFontIndex,
+	const std::function<void(int)> & setCustomSubtitleFontIndex) {
 	gui.begin();
 	drawImGui(
 		player,
@@ -544,7 +550,13 @@ void ofVlcPlayer4Gui::draw(
 		reloadProjectMPresets,
 		reloadProjectMTextures,
 		loadPlayerProjectMTexture,
-		loadCustomProjectMTexture);
+		loadCustomProjectMTexture,
+		loadCustomSubtitle,
+		clearCustomSubtitle,
+		customSubtitleStatus,
+		customSubtitleFontLabels,
+		customSubtitleSelectedFontIndex,
+		setCustomSubtitleFontIndex);
 	gui.end();
 	gui.draw();
 }
@@ -561,8 +573,21 @@ void ofVlcPlayer4Gui::drawImGui(
 	const std::function<void()> & reloadProjectMPresets,
 	const std::function<void()> & reloadProjectMTextures,
 	const std::function<void()> & loadPlayerProjectMTexture,
-		const std::function<bool(const std::string &)> & loadCustomProjectMTexture) {
+	const std::function<bool(const std::string &)> & loadCustomProjectMTexture,
+	const std::function<bool(const std::string &)> & loadCustomSubtitle,
+	const std::function<void()> & clearCustomSubtitle,
+	const std::function<std::string()> & customSubtitleStatus,
+	const std::function<std::vector<std::string>()> & customSubtitleFontLabels,
+	const std::function<int()> & customSubtitleSelectedFontIndex,
+	const std::function<void(int)> & setCustomSubtitleFontIndex) {
 	windowsSection.handleFullscreenEscape();
+	mediaSection.setCustomSubtitleCallbacks(
+		loadCustomSubtitle,
+		clearCustomSubtitle,
+		customSubtitleStatus,
+		customSubtitleFontLabels,
+		customSubtitleSelectedFontIndex,
+		setCustomSubtitleFontIndex);
 
 	layoutMetrics = makeGuiLayoutMetrics();
 	const auto & layout = layoutMetrics;
@@ -674,6 +699,11 @@ void ofVlcPlayer4Gui::drawHeaderSection(
 	ImGui::TextUnformatted(timeText.c_str());
 	if (hasPlaylist && ImGui::IsItemClicked(0)) {
 		showRemainingTime = !showRemainingTime;
+	}
+	if (ofVlcPlayer4GuiControls::hasDetachedSections()) {
+		if (ImGui::Button("Close Detached Menus")) {
+			ofVlcPlayer4GuiControls::closeAllDetachedSections();
+		}
 	}
 	ImGui::Separator();
 }
@@ -901,6 +931,9 @@ void ofVlcPlayer4Gui::drawAudioSection(ofxVlc4 & player, bool detachedOnly) {
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Audio", MenuContentPolicy::NestedOnly)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Audio", MenuContentPolicy::NestedOnly, false);
 	if (!open) {
+		if (detachedOnly) {
+			audioSection.drawContent(player, kLabelInnerSpacing, layout.compactControlWidth, kWideSliderWidth);
+		}
 		return;
 	}
 
@@ -914,6 +947,15 @@ void ofVlcPlayer4Gui::drawMediaSection(ofxVlc4 & player, bool detachedOnly) {
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Media", MenuContentPolicy::NestedOnly)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Media", MenuContentPolicy::NestedOnly, false);
 	if (!open) {
+		if (detachedOnly) {
+			mediaSection.drawContent(
+				player,
+				kLabelInnerSpacing,
+				layout.compactControlWidth,
+				layout.inputLabelPadding,
+				layout.dualActionButtonWidth,
+				kButtonSpacing);
+		}
 		return;
 	}
 
@@ -1018,6 +1060,9 @@ void ofVlcPlayer4Gui::drawVideoViewSection(ofxVlc4 & player, bool detachedOnly) 
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Video", MenuContentPolicy::ContentThenNested)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Video", MenuContentPolicy::ContentThenNested, false);
 	if (!open) {
+		if (detachedOnly) {
+			videoSection.drawViewContent(player, kLabelInnerSpacing, layout.compactControlWidth);
+		}
 		return;
 	}
 
@@ -1033,6 +1078,9 @@ void ofVlcPlayer4Gui::drawVideoAdjustmentsSection(ofxVlc4 & player, bool detache
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Adjustments", MenuContentPolicy::Leaf)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Adjustments", MenuContentPolicy::Leaf, false);
 	if (!open) {
+		if (detachedOnly) {
+			videoSection.drawAdjustmentsContent(player, kLabelInnerSpacing, layout.actionButtonWidth, kWideSliderWidth);
+		}
 		return;
 	}
 
@@ -1046,6 +1094,9 @@ void ofVlcPlayer4Gui::drawVideo3DSection(ofxVlc4 & player, bool detachedOnly) {
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("3D", MenuContentPolicy::Leaf)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("3D", MenuContentPolicy::Leaf, false);
 	if (!open) {
+		if (detachedOnly) {
+			videoSection.draw3DContent(player, kLabelInnerSpacing, layout.compactControlWidth, layout.actionButtonWidth);
+		}
 		return;
 	}
 
@@ -1294,18 +1345,20 @@ void ofVlcPlayer4Gui::drawMediaInfoSection(const MediaDisplayState & mediaDispla
 	const bool open = detachedOnly
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Info", MenuContentPolicy::Leaf)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Info", MenuContentPolicy::Leaf, false);
-	if (open) {
-		if (!mediaDisplayState.fileName.empty() || !mediaDisplayState.metadata.empty()) {
-			drawCurrentMediaInfoContent(
-				mediaDisplayState.path,
-				mediaDisplayState.fileName,
-				mediaDisplayState.metadata,
-				mediaFileInfoCache);
-		} else {
-			ImGui::TextDisabled("No media selected");
-		}
-		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
+	if (!open) {
+		return;
 	}
+
+	if (!mediaDisplayState.fileName.empty() || !mediaDisplayState.metadata.empty()) {
+		drawCurrentMediaInfoContent(
+			mediaDisplayState.path,
+			mediaDisplayState.fileName,
+			mediaDisplayState.metadata,
+			mediaFileInfoCache);
+	} else {
+		ImGui::TextDisabled("No media selected");
+	}
+	ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 }
 
 void ofVlcPlayer4Gui::updateMediaFileInfoCache(const MediaDisplayState & mediaDisplayState) {
@@ -1696,4 +1749,3 @@ bool ofVlcPlayer4Gui::shouldRenderProjectMPreview() const {
 const ofVlcPlayer4GuiVideo & ofVlcPlayer4Gui::getVideoSection() const {
 	return videoSection;
 }
-

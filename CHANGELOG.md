@@ -11,7 +11,10 @@
 - Windows installs now keep one shared `libs/libvlc/runtime/vs/x64` runtime and link examples to it locally
 - added first-class `addSubtitleSlave(...)` and `addAudioSlave(...)` helpers on top of the generic media-slave path
 - `ofxVlc4Example` now includes a subtitle picker plus consistent subtitle-file handling through path entry and drag/drop
+- `ofxVlc4Example` now includes dedicated `DVD / Disc` controls for title/chapter/program navigation, menu actions, and teletext page/color-key controls
+- added a high-level `executePlayerCommand(...)` API for common transport, disc navigation, and teletext command dispatch
 - added first-class recording presets for `H265 / HEVC`, `MKV / Opus`, and `MKV / LPCM`
+- `H265 / HEVC` recording now enforces `MKV` mux profiles and normalizes capture sizes to the bundled x265 encoder alignment (`width % 16 == 0`, `height % 8 == 0`)
 
 ## 1.0.1
 

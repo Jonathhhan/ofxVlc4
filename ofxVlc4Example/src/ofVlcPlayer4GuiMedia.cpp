@@ -793,7 +793,18 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Navigation & Input", MenuContentPolicy::Leaf, false)) {
+	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("DVD / Disc", MenuContentPolicy::Leaf, false)) {
+		const ofxVlc4::NavigationStateInfo navigationState = player.getNavigationStateInfo();
+		if (navigationState.available) {
+			ImGui::TextDisabled(
+				"Programs: %d   Titles: %d   Chapters: %d",
+				navigationState.programCount,
+				navigationState.titleCount,
+				navigationState.chapterCount);
+		} else {
+			ImGui::TextDisabled("Disc navigation is not active for the current media.");
+		}
+
 		const std::vector<ofxVlc4::TitleInfo> titles = player.getTitles();
 		if (!titles.empty()) {
 			std::vector<std::string> titleLabels;
@@ -877,6 +888,64 @@ void ofVlcPlayer4GuiMedia::drawContent(
 			buttonSpacing,
 			"dvdnav_bottom");
 
+		int teletextPage = player.getTeletextPage();
+		ImGui::TextDisabled(
+			"Teletext: page %d   transparency: %s",
+			teletextPage,
+			enabledLabel(player.isTeletextTransparencyEnabled()));
+		if (ImGui::InputInt("Teletext Page", &teletextPage, 1, 10)) {
+			player.setTeletextPage(teletextPage);
+		}
+		if (ofVlcPlayer4GuiControls::applyHoveredWheelStep(teletextPage, 0, 999, 1, 1)) {
+			player.setTeletextPage(teletextPage);
+		}
+
+		if (ImGui::Button("Teletext Off", ImVec2(dualActionButtonWidth, 0.0f))) {
+			player.setTeletextPage(0);
+		}
+		ImGui::SameLine(0.0f, buttonSpacing);
+		bool teletextTransparency = player.isTeletextTransparencyEnabled();
+		if (ImGui::Checkbox("Transparent", &teletextTransparency)) {
+			player.setTeletextTransparencyEnabled(teletextTransparency);
+		}
+
+		const float teletextButtonWidth =
+			(ImGui::GetContentRegionAvail().x - (buttonSpacing * 4.0f)) / 5.0f;
+		struct TeletextButtonSpec {
+			const char * label;
+			ofxVlc4::TeletextKey key;
+			ImVec4 color;
+		};
+		const TeletextButtonSpec teletextButtons[] = {
+			{ "Red", ofxVlc4::TeletextKey::Red, ImVec4(0.75f, 0.15f, 0.18f, 1.0f) },
+			{ "Green", ofxVlc4::TeletextKey::Green, ImVec4(0.16f, 0.55f, 0.24f, 1.0f) },
+			{ "Yellow", ofxVlc4::TeletextKey::Yellow, ImVec4(0.72f, 0.58f, 0.08f, 1.0f) },
+			{ "Blue", ofxVlc4::TeletextKey::Blue, ImVec4(0.18f, 0.34f, 0.75f, 1.0f) },
+			{ "Index", ofxVlc4::TeletextKey::Index, ImVec4(0.35f, 0.35f, 0.35f, 1.0f) }
+		};
+		for (int buttonIndex = 0; buttonIndex < IM_ARRAYSIZE(teletextButtons); ++buttonIndex) {
+			const auto & button = teletextButtons[buttonIndex];
+			ImGui::PushStyleColor(ImGuiCol_Button, button.color);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(
+				std::min(button.color.x + 0.10f, 1.0f),
+				std::min(button.color.y + 0.10f, 1.0f),
+				std::min(button.color.z + 0.10f, 1.0f),
+				1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, button.color);
+			if (ImGui::Button(button.label, ImVec2(teletextButtonWidth, 0.0f))) {
+				player.sendTeletextKey(button.key);
+			}
+			ImGui::PopStyleColor(3);
+			if (buttonIndex + 1 < IM_ARRAYSIZE(teletextButtons)) {
+				ImGui::SameLine(0.0f, buttonSpacing);
+			}
+		}
+
+		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
+	}
+
+	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Navigation & Input", MenuContentPolicy::Leaf, false)) {
+
 		if (ImGui::Button("Next Frame", ImVec2(singleActionButtonWidth, 0.0f))) {
 			player.nextFrame();
 		}
@@ -940,6 +1009,22 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		}
 		ImGui::EndDisabled();
 
+		const float customSubtitleButtonWidth =
+			(ImGui::GetContentRegionAvail().x - buttonSpacing) / 2.0f;
+		if (ImGui::Button("Load Custom SRT...", ImVec2(customSubtitleButtonWidth, 0.0f))) {
+			ofFileDialogResult result = ofSystemLoadDialog("Select custom SRT subtitle file");
+			if (result.bSuccess && loadCustomSubtitleCallback) {
+				loadCustomSubtitleCallback(result.getPath());
+			}
+		}
+		ImGui::SameLine(0.0f, buttonSpacing);
+		ImGui::BeginDisabled(!clearCustomSubtitleCallback);
+		if (ImGui::Button("Disable Custom SRT", ImVec2(customSubtitleButtonWidth, 0.0f)) &&
+			clearCustomSubtitleCallback) {
+			clearCustomSubtitleCallback();
+		}
+		ImGui::EndDisabled();
+
 		std::string subtitleStatus = subtitleState.trackSelected
 			? ("Current: " + (subtitleState.selectedTrackLabel.empty() ? subtitleState.selectedTrackId : subtitleState.selectedTrackLabel))
 			: "Current: Off";
@@ -949,6 +1034,36 @@ void ofVlcPlayer4GuiMedia::drawContent(
 			subtitleStatus += "   |   Tracks: " + ofToString(subtitleState.trackCount);
 		}
 		ImGui::TextDisabled("%s", subtitleStatus.c_str());
+		if (customSubtitleStatusCallback) {
+			const std::string customSubtitleStatus = customSubtitleStatusCallback();
+			if (!customSubtitleStatus.empty()) {
+				ImGui::TextDisabled("%s", customSubtitleStatus.c_str());
+			}
+		}
+
+		if (customSubtitleFontLabelsCallback &&
+			customSubtitleSelectedFontIndexCallback &&
+			customSubtitleSetFontIndexCallback) {
+			const std::vector<std::string> fontLabels = customSubtitleFontLabelsCallback();
+			if (!fontLabels.empty()) {
+				std::vector<const char *> fontLabelPointers;
+				fontLabelPointers.reserve(fontLabels.size());
+				for (const auto & fontLabel : fontLabels) {
+					fontLabelPointers.push_back(fontLabel.c_str());
+				}
+
+				int selectedFontIndex = ofClamp(
+					customSubtitleSelectedFontIndexCallback(),
+					0,
+					static_cast<int>(fontLabels.size()) - 1);
+				if (ofVlcPlayer4GuiControls::drawComboWithWheel(
+						"Custom Subtitle Font",
+						selectedFontIndex,
+						fontLabelPointers)) {
+					customSubtitleSetFontIndexCallback(selectedFontIndex);
+				}
+			}
+		}
 
 		int subtitleDelayMs = player.getSubtitleDelayMs();
 		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(compactControlWidth));
@@ -1696,4 +1811,19 @@ void ofVlcPlayer4GuiMedia::syncMetadataEditor(
 
 void ofVlcPlayer4GuiMedia::syncLibVlcLogFilePath(ofxVlc4 & player) {
 	syncEditableString(libVlcLogFilePath, libVlcLogFilePathLoaded, player.getLibVlcLogFilePath());
+}
+
+void ofVlcPlayer4GuiMedia::setCustomSubtitleCallbacks(
+	std::function<bool(const std::string &)> loadCallback,
+	std::function<void()> clearCallback,
+	std::function<std::string()> statusCallback,
+	std::function<std::vector<std::string>()> fontLabelsCallback,
+	std::function<int()> selectedFontIndexCallback,
+	std::function<void(int)> setFontIndexCallback) {
+	loadCustomSubtitleCallback = std::move(loadCallback);
+	clearCustomSubtitleCallback = std::move(clearCallback);
+	customSubtitleStatusCallback = std::move(statusCallback);
+	customSubtitleFontLabelsCallback = std::move(fontLabelsCallback);
+	customSubtitleSelectedFontIndexCallback = std::move(selectedFontIndexCallback);
+	customSubtitleSetFontIndexCallback = std::move(setFontIndexCallback);
 }

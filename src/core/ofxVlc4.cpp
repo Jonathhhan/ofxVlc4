@@ -578,6 +578,30 @@ const char * ofxVlc4::recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecP
 	return "H264";
 }
 
+bool ofxVlc4::recordingMuxProfileSupportsVideoCodec(
+	ofxVlc4RecordingMuxProfile profile,
+	ofxVlc4RecordingVideoCodecPreset preset) {
+	if (preset == ofxVlc4RecordingVideoCodecPreset::H265) {
+		return profile == ofxVlc4RecordingMuxProfile::MkvOpus ||
+			profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
+			profile == ofxVlc4RecordingMuxProfile::MkvLpcm;
+	}
+	return true;
+}
+
+std::string ofxVlc4::recordingMuxProfileCompatibilityMessage(
+	ofxVlc4RecordingMuxProfile profile,
+	ofxVlc4RecordingVideoCodecPreset preset) {
+	if (recordingMuxProfileSupportsVideoCodec(profile, preset)) {
+		return {};
+	}
+
+	if (preset == ofxVlc4RecordingVideoCodecPreset::H265) {
+		return "H265 / HEVC recording currently requires an MKV mux profile.";
+	}
+	return "Selected recording codec and mux profile are not compatible.";
+}
+
 std::string ofxVlc4::recordingMuxContainerForProfile(ofxVlc4RecordingMuxProfile profile) {
 	switch (profile) {
 	case ofxVlc4RecordingMuxProfile::Mp4Aac:
@@ -1120,6 +1144,11 @@ void ofxVlc4::setRecordingPreset(const ofxVlc4RecordingPreset & preset) {
 	setVideoRecordingFrameRate(preset.videoFrameRate);
 	setVideoRecordingBitrateKbps(preset.videoBitrateKbps);
 	setVideoRecordingCodecPreset(preset.videoCodecPreset);
+	if (const std::string compatibilityMessage =
+			recordingMuxProfileCompatibilityMessage(preset.muxProfile, preset.videoCodecPreset);
+		!compatibilityMessage.empty()) {
+		setStatus(compatibilityMessage);
+	}
 }
 
 ofxVlc4RecordingPreset ofxVlc4::getRecordingPreset() const {
@@ -1156,8 +1185,16 @@ std::pair<int, int> ofxVlc4::getRecordingOutputSizePreset() const {
 }
 
 void ofxVlc4::setRecordingMuxProfile(ofxVlc4RecordingMuxProfile profile) {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.preset.muxProfile = profile;
+	ofxVlc4RecordingVideoCodecPreset codecPreset = ofxVlc4RecordingVideoCodecPreset::H264;
+	{
+		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
+		recordingSessionRuntime.preset.muxProfile = profile;
+		codecPreset = recordingSessionRuntime.preset.videoCodecPreset;
+	}
+	if (const std::string compatibilityMessage = recordingMuxProfileCompatibilityMessage(profile, codecPreset);
+		!compatibilityMessage.empty()) {
+		setStatus(compatibilityMessage);
+	}
 }
 
 ofxVlc4RecordingMuxProfile ofxVlc4::getRecordingMuxProfile() const {
@@ -1788,5 +1825,4 @@ bool ofxVlc4::isMidiSyncToWatchTimeEnabled() const {
 	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
 	return midiRuntime.syncToWatchTime;
 }
-
 

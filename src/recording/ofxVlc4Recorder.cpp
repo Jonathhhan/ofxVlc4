@@ -314,6 +314,18 @@ bool ofxVlc4::startRecordingSession(const ofxVlc4RecordingSessionConfig & config
 		return false;
 	}
 
+	if (config.muxOnStop) {
+		const ofxVlc4RecordingVideoCodecPreset videoCodecPreset = getVideoRecordingCodecPreset();
+		const ofxVlc4RecordingMuxProfile muxProfile = getRecordingMuxProfile();
+		if (const std::string compatibilityMessage =
+				recordingMuxProfileCompatibilityMessage(muxProfile, videoCodecPreset);
+			!compatibilityMessage.empty()) {
+			clearRecordingSessionConfig();
+			setError(compatibilityMessage);
+			return false;
+		}
+	}
+
 	ofxVlc4RecordingStartOptions options;
 	options.includeAudioCapture = config.audioSource != ofxVlc4RecordingAudioSource::None;
 
@@ -774,8 +786,18 @@ void ofxVlc4::setVideoRecordingCodec(const std::string & codec) {
 		return;
 	}
 
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.preset.videoCodecPreset = recordingVideoCodecPresetForCodec(codec);
+	ofxVlc4RecordingVideoCodecPreset codecPreset = ofxVlc4RecordingVideoCodecPreset::H264;
+	ofxVlc4RecordingMuxProfile muxProfile = ofxVlc4RecordingMuxProfile::Mp4Aac;
+	{
+		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
+		recordingSessionRuntime.preset.videoCodecPreset = recordingVideoCodecPresetForCodec(codec);
+		codecPreset = recordingSessionRuntime.preset.videoCodecPreset;
+		muxProfile = recordingSessionRuntime.preset.muxProfile;
+	}
+	if (const std::string compatibilityMessage = recordingMuxProfileCompatibilityMessage(muxProfile, codecPreset);
+		!compatibilityMessage.empty()) {
+		setStatus(compatibilityMessage);
+	}
 }
 
 void ofxVlc4::setVideoRecordingCodecPreset(ofxVlc4RecordingVideoCodecPreset preset) {
@@ -1108,24 +1130,26 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 
 	const int textureWidth = static_cast<int>(texture.getWidth());
 	const int textureHeight = static_cast<int>(texture.getHeight());
-	auto normalizeEncodedDimension = [](int requested, int source, bool requireEven) -> int {
+	const std::string normalizedVideoCodec = ofToUpper(videoCodec);
+	const bool requiresHevcAlignment =
+		normalizedVideoCodec == "X265" ||
+		normalizedVideoCodec == "H265" ||
+		normalizedVideoCodec == "HEVC";
+	const int widthAlignment = requiresHevcAlignment ? 16 : 2;
+	const int heightAlignment = requiresHevcAlignment ? 8 : 2;
+	auto normalizeEncodedDimension = [](int requested, int source, int alignment) -> int {
 		int resolved = requested > 0 ? requested : source;
 		if (resolved <= 0) {
 			return 0;
 		}
-		if (requireEven && resolved > 2 && (resolved % 2) != 0) {
-			--resolved;
-		}
-		if (requireEven) {
-			resolved = std::max(2, resolved);
+		if (alignment > 1) {
+			resolved -= resolved % alignment;
+			resolved = std::max(alignment, resolved);
 		}
 		return resolved;
 	};
-	const bool requiresEvenDimensions =
-		ofToUpper(videoCodec) == "H264" ||
-		ofToUpper(videoCodec) == "MP4V";
-	const int encodedWidth = normalizeEncodedDimension(outputWidth, textureWidth, requiresEvenDimensions);
-	const int encodedHeight = normalizeEncodedDimension(outputHeight, textureHeight, requiresEvenDimensions);
+	const int encodedWidth = normalizeEncodedDimension(outputWidth, textureWidth, widthAlignment);
+	const int encodedHeight = normalizeEncodedDimension(outputHeight, textureHeight, heightAlignment);
 	if (encodedWidth <= 0 || encodedHeight <= 0) {
 		errorOut = "Video recording output dimensions are invalid.";
 		return nullptr;
@@ -1159,9 +1183,19 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		videoWaitCount = 0;
 		videoTotalWaitMicros = 0;
 		videoMaxWaitMicros = 0;
-		recordingTexture.allocate(textureWidth, textureHeight, GL_RGB);
-		recordingTexture.setUseExternalTextureID(texture.getTextureData().textureID);
-		recordingPixels.allocate(textureWidth, textureHeight, OF_PIXELS_RGB);
+		recordingSourceTexture.clear();
+		recordingResizeFbo.clear();
+		recordingTexture.clear();
+		const bool requiresResizedCapture = encodedWidth != textureWidth || encodedHeight != textureHeight;
+		if (requiresResizedCapture) {
+			recordingSourceTexture.allocate(textureWidth, textureHeight, GL_RGB);
+			recordingSourceTexture.setUseExternalTextureID(texture.getTextureData().textureID);
+			recordingResizeFbo.allocate(encodedWidth, encodedHeight, GL_RGB);
+		} else {
+			recordingTexture.allocate(textureWidth, textureHeight, GL_RGB);
+			recordingTexture.setUseExternalTextureID(texture.getTextureData().textureID);
+		}
+		recordingPixels.allocate(encodedWidth, encodedHeight, OF_PIXELS_RGB);
 		recordingPixels.set(0);
 		recordingFrameSize = recordingPixels.size();
 		videoOutputPath = videoPath;
@@ -1174,6 +1208,11 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 			// the callback stream and leave VLC with only the primed frame.
 			destroyVideoReadbackBuffersLocked();
 			const uint64_t captureStartUs = ofGetElapsedTimeMicros();
+			if (!updateCaptureTextureLocked()) {
+				clearVideoRecording();
+				errorOut = "Failed to prepare capture texture.";
+				return nullptr;
+			}
 			recordingTexture.readToPixels(recordingPixels);
 			videoLastCaptureMicros = ofGetElapsedTimeMicros() - captureStartUs;
 			videoTotalCaptureMicros += videoLastCaptureMicros;
@@ -1199,16 +1238,18 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		return nullptr;
 	}
 
-	const std::string width = "rawvid-width=" + ofToString(textureWidth);
-	const std::string height = "rawvid-height=" + ofToString(textureHeight);
-	const std::string bufferSize = "prefetch-buffer-size=" + ofToString(textureWidth * textureHeight * 3);
+	const int captureWidth = static_cast<int>(recordingPixels.getWidth());
+	const int captureHeight = static_cast<int>(recordingPixels.getHeight());
+	const std::string width = "rawvid-width=" + ofToString(captureWidth);
+	const std::string height = "rawvid-height=" + ofToString(captureHeight);
+	const std::string bufferSize = "prefetch-buffer-size=" + ofToString(captureWidth * captureHeight * 3);
 	const std::string rawFrameRate = "rawvid-fps=" + ofToString(videoFrameRate);
 	std::string streamSpec = "sout=#transcode{vcodec=" + videoCodec;
 	if (videoBitrateKbps > 0) {
 		streamSpec += ",vb=" + ofToString(videoBitrateKbps);
 	}
 	if (encodedWidth > 0 && encodedHeight > 0 &&
-		(encodedWidth != textureWidth || encodedHeight != textureHeight)) {
+		(encodedWidth != captureWidth || encodedHeight != captureHeight)) {
 		streamSpec += ",width=" + ofToString(encodedWidth);
 		streamSpec += ",height=" + ofToString(encodedHeight);
 	}
@@ -1319,6 +1360,26 @@ void ofxVlc4Recorder::destroyVideoReadbackBuffersLocked() {
 		glDeleteBuffers(static_cast<GLsizei>(pixelPackBuffers.size()), pixelPackBuffers.data());
 	}
 #endif
+}
+
+bool ofxVlc4Recorder::updateCaptureTextureLocked() {
+	if (recordingResizeFbo.isAllocated()) {
+		if (!recordingSourceTexture.isAllocated()) {
+			return false;
+		}
+		recordingResizeFbo.begin();
+		ofClear(0, 0, 0, 255);
+		ofSetColor(255);
+		recordingSourceTexture.draw(
+			0.0f,
+			0.0f,
+			static_cast<float>(recordingResizeFbo.getWidth()),
+			static_cast<float>(recordingResizeFbo.getHeight()));
+		recordingResizeFbo.end();
+		recordingTexture = recordingResizeFbo.getTexture();
+		return recordingTexture.isAllocated();
+	}
+	return recordingTexture.isAllocated();
 }
 
 bool ofxVlc4Recorder::waitForSubmittedReadbackLocked(size_t bufferIndex, uint64_t & waitMicrosOut) {
@@ -1458,6 +1519,10 @@ void ofxVlc4Recorder::captureVideoFrameLocked() {
 
 	recordingFrameSize = recordingPixels.size();
 	const uint64_t captureStartUs = ofGetElapsedTimeMicros();
+	if (!updateCaptureTextureLocked()) {
+		++videoDroppedFrames;
+		return;
+	}
 
 #ifndef TARGET_OPENGLES
 	if (recordingPboEnabled && glfwGetCurrentContext() != nullptr) {
@@ -1664,6 +1729,10 @@ void ofxVlc4Recorder::clearVideoRecording() {
 	lastVideoCaptureTimeUs = 0;
 	recordingPixels.clear();
 	destroyVideoReadbackBuffersLocked();
+	recordingResizeFbo.clear();
+	if (!(recordingSourceTexture.isAllocated() && glfwGetCurrentContext() == nullptr)) {
+		recordingSourceTexture.clear();
+	}
 	if (!(recordingTexture.isAllocated() && glfwGetCurrentContext() == nullptr)) {
 		recordingTexture.clear();
 	}

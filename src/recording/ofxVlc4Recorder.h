@@ -91,6 +91,7 @@ private:
 	bool initializeVideoReadbackBuffersLocked(size_t frameBytes);
 	void destroyVideoReadbackBuffersLocked();
 	void publishCapturedFrameLocked();
+	bool updateCaptureTextureLocked();
 	void captureVideoFrameLocked();
 	bool waitForSubmittedReadbackLocked(size_t bufferIndex, uint64_t & waitMicrosOut);
 	bool consumeReadbackBufferLocked(size_t bufferIndex);
@@ -133,7 +134,9 @@ private:
 	std::atomic<bool> videoRecordingActive { false };
 	std::atomic<bool> audioRecordingActive { false };
 	std::atomic<bool> errorPending { false };
+	ofTexture recordingSourceTexture;
 	ofTexture recordingTexture;
+	ofFbo recordingResizeFbo;
 	ofPixels recordingPixels;
 	mutable std::mutex recordingMutex;
 	mutable std::mutex audioRecordingMutex;
