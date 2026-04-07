@@ -2,10 +2,40 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <set>
 
 namespace {
 	constexpr float kDefaultFov = 80.0f;
 	constexpr float kPreviewOutlineAlpha = 34.0f;
+
+	std::vector<std::filesystem::path> defaultSeedMediaCandidates() {
+		const std::filesystem::path sharedMoviesDirectory =
+			std::filesystem::path(ofFilePath::getCurrentExeDir()) /
+			"..\\..\\..\\..\\examples\\video\\videoPlayerExample\\bin\\data\\movies";
+
+		return {
+			ofToDataPath("finger.mp4", true),
+			ofToDataPath("fingers.mp4", true),
+			ofToDataPath("movie.mp4", true),
+			ofToDataPath("sample.mp4", true),
+			sharedMoviesDirectory / "finger.mp4",
+			sharedMoviesDirectory / "fingers.mp4",
+			sharedMoviesDirectory / "movie.mp4"
+		};
+	}
+
+	bool isLikelySupportedMediaPath(const std::filesystem::path & path) {
+		static const std::set<std::string> extensions = {
+			".wav", ".mp3", ".flac", ".ogg", ".opus",
+			".m4a", ".aac", ".aiff", ".wma", ".mid", ".midi",
+			".mp4", ".mov", ".mkv", ".avi", ".wmv", ".asf",
+			".webm", ".m4v", ".mpg", ".mpeg", ".ts", ".mts",
+			".m2ts", ".m2v", ".vob", ".ogv", ".3gp", ".m3u8",
+			".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"
+		};
+		const std::string extension = ofToLower(path.extension().string());
+		return !extension.empty() && extensions.count(extension) > 0;
+	}
 }
 
 void ofApp::setup() {
@@ -24,6 +54,7 @@ void ofApp::setup() {
 	ImGui::GetIO().IniFilename = "imgui_360.ini";
 
 	infoStatus = "Open or drop a 360 / panoramic video to begin.";
+	loadSeedMedia();
 }
 
 void ofApp::update() {
@@ -32,6 +63,12 @@ void ofApp::update() {
 	}
 
 	player.update();
+
+	if (startupMediaPending && !pendingStartupMediaPath.empty()) {
+		startupMediaPending = false;
+		loadMediaPath(pendingStartupMediaPath, startupMediaAutoPlay);
+		pendingStartupMediaPath.clear();
+	}
 }
 
 void ofApp::draw() {
@@ -299,10 +336,28 @@ void ofApp::drawControlPanel() {
 	ImGui::End();
 }
 
+void ofApp::loadSeedMedia() {
+	for (const auto & candidate : defaultSeedMediaCandidates()) {
+		if (std::filesystem::exists(candidate)) {
+			queueStartupMediaPath(candidate.string(), true);
+			return;
+		}
+	}
+}
+
+void ofApp::queueStartupMediaPath(const std::string & path, bool autoPlay) {
+	pendingStartupMediaPath = path;
+	startupMediaAutoPlay = autoPlay;
+	startupMediaPending = !pendingStartupMediaPath.empty();
+}
+
 void ofApp::loadMediaPath(const std::string & path, bool autoPlay) {
 	if (path.empty() || shuttingDown) {
 		return;
 	}
+
+	startupMediaPending = false;
+	pendingStartupMediaPath.clear();
 
 	replacePlaylistFromPaths({ path }, autoPlay);
 }
@@ -312,11 +367,17 @@ void ofApp::replacePlaylistFromPaths(const std::vector<std::string> & paths, boo
 		return;
 	}
 
+	const std::vector<std::string> supportedPaths = collectSupportedPaths(paths);
+	if (supportedPaths.empty()) {
+		infoStatus = "No supported media found in the selected paths.";
+		return;
+	}
+
 	player.stop();
 	player.clearPlaylist();
 
 	int addedCount = 0;
-	for (const std::string & path : paths) {
+	for (const std::string & path : supportedPaths) {
 		addedCount += player.addPathToPlaylist(path);
 	}
 
@@ -325,16 +386,29 @@ void ofApp::replacePlaylistFromPaths(const std::vector<std::string> & paths, boo
 		return;
 	}
 
-	const std::string firstPath = paths.front();
+	const std::string firstPath = supportedPaths.front();
 	if (addedCount == 1) {
 		infoStatus = "Loaded: " + ofFilePath::getFileName(firstPath);
 	} else {
 		infoStatus = "Loaded playlist items: " + ofToString(addedCount);
 	}
 
+	resetViewpoint();
 	if (autoPlay) {
 		player.playIndex(0);
 	}
+}
+
+std::vector<std::string> ofApp::collectSupportedPaths(const std::vector<std::string> & paths) const {
+	std::vector<std::string> supportedPaths;
+	supportedPaths.reserve(paths.size());
+	for (const auto & rawPath : paths) {
+		const std::filesystem::path path(rawPath);
+		if (std::filesystem::exists(path) && isLikelySupportedMediaPath(path)) {
+			supportedPaths.push_back(path.string());
+		}
+	}
+	return supportedPaths;
 }
 
 void ofApp::openMediaDialog() {

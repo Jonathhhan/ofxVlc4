@@ -22,8 +22,11 @@ public:
 private:
 	void drawPreview();
 	void drawControlPanel();
+	void loadSeedMedia();
+	void queueStartupMediaPath(const std::string & path, bool autoPlay = true);
 	void loadMediaPath(const std::string & path, bool autoPlay = true);
 	void replacePlaylistFromPaths(const std::vector<std::string> & paths, bool autoPlay = true);
+	std::vector<std::string> collectSupportedPaths(const std::vector<std::string> & paths) const;
 	void openMediaDialog();
 	void resetViewpoint();
 	void nudgeViewpoint(float deltaYaw, float deltaPitch, float deltaRoll, float deltaFov);
@@ -35,8 +38,11 @@ private:
 	ofxImGui::Gui gui;
 
 	bool shuttingDown = false;
+	bool startupMediaPending = false;
+	bool startupMediaAutoPlay = true;
 	float previewMargin = 24.0f;
 	std::string infoStatus;
+	std::string pendingStartupMediaPath;
 
 	std::array<const char *, 4> projectionModeLabels = {
 		"Auto",

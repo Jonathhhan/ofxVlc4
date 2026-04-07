@@ -28,6 +28,7 @@ What it shows:
   - FOV
 - drag-and-drop loading
 - ImGui control surface instead of keyboard-only navigation
+- startup seed loading from `bin/data` or the shared openFrameworks sample movie folder when `finger.mp4`, `fingers.mp4`, or `movie.mp4` is available
 - optional helper script for downloading a free 360 sample into the example data folder
 
 Controls:
