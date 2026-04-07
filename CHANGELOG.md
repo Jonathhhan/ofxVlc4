@@ -8,16 +8,19 @@
 - restored the bundled `vlc-help.txt` asset
 - `Help` now derives from `vlc-help.txt`
 - `FullHelp` derives from `vlc-full-help.txt`
-- Windows installs now keep one shared `libs/libvlc/runtime/vs/x64` runtime and link examples to it locally
+- Windows installs now keep one shared `runtime/vs/x64` runtime and link examples to it locally
 - added first-class `addSubtitleSlave(...)` and `addAudioSlave(...)` helpers on top of the generic media-slave path
 - `ofxVlc4Example` now includes a subtitle picker plus consistent subtitle-file handling through path entry and drag/drop
-- `ofxVlc4Example` now includes dedicated `DVD / Disc` controls for title/chapter/program navigation, menu actions, and teletext page/color-key controls
+- `ofxVlc4Example` now includes dedicated `DVD / Disc` controls for title/chapter/program navigation and menu actions, while teletext controls live under `Tracks & Subtitles`
 - added a high-level `executePlayerCommand(...)` API for common transport, disc navigation, and teletext command dispatch
 - added `setPreferredDecoderDevice(...)` / `getPreferredDecoderDevice()` for Windows hardware-decoder preference (`Auto`, `D3D11`, `DXVA2`, `NVDEC`, `None`)
 - added pre-init VLC subtitle text-renderer settings for renderer choice, font family, color, opacity, and bold styling
 - added advanced raw-init escape hatches through `setExtraInitArgs(...)`, `addExtraInitArg(...)`, and the existing `init(argc, argv)` path, with raw args applied after typed addon-generated init settings
 - added first-class recording presets for `H265 / HEVC`, `MKV / Opus`, and `MKV / LPCM`
 - `H265 / HEVC` recording now enforces `MKV` mux profiles and normalizes capture sizes to the bundled x265 encoder alignment (`width % 16 == 0`, `height % 8 == 0`)
+- hardened playback-time diagnostics and track queries so `Diagnostics` and `Tracks & Subtitles` stay stable during active playback
+- moved the example anaglyph shader files into addon-owned `src/video/shaders`
+- simplified and stabilized `ofxVlc4360Example` around `Crystal Shower.mp4`, with `Sphere` as the default renderer and `libVLC 360` kept as the reference/native path
 
 ## 1.0.1
 

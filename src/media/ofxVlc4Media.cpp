@@ -798,6 +798,7 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 		owner.audioStateInfo.tracksAvailable = false;
 	}
 	owner.cachedVideoTrackCount.store(0);
+	owner.cachedVideoTrackFps.store(0.0);
 	resetSubtitleStateInfo();
 	resetNavigationStateInfo();
 	owner.syncLegacyStateFromCoreSession();
@@ -2125,6 +2126,16 @@ bool ofxVlc4::hasWatchTimeCallback() const {
 }
 
 double ofxVlc4::getPlaybackClockFramesPerSecond() const {
+	const double cachedFps = cachedVideoTrackFps.load();
+	if (std::isfinite(cachedFps) && cachedFps > 0.0) {
+		return cachedFps;
+	}
+
+	libvlc_media_player_t * player = sessionPlayer();
+	if (player && libvlc_media_player_is_playing(player)) {
+		return 0.0;
+	}
+
 	const auto tracks = getVideoTracks();
 	auto resolveFps = [](const MediaTrackInfo & track) -> double {
 		if (track.frameRateNum == 0 || track.frameRateDen == 0) {
@@ -2146,6 +2157,7 @@ double ofxVlc4::getPlaybackClockFramesPerSecond() const {
 	for (const auto & track : tracks) {
 		const double fps = resolveFps(track);
 		if (std::isfinite(fps) && fps > 0.0) {
+			cachedVideoTrackFps.store(fps);
 			return fps;
 		}
 	}
@@ -2516,7 +2528,34 @@ void ofxVlc4::MediaComponent::resetNavigationStateInfo() {
 
 void ofxVlc4::MediaComponent::refreshPrimaryTrackStateInfo() {
 	const int audioTrackCount = static_cast<int>(getAudioTracks().size());
-	const int videoTrackCount = static_cast<int>(getVideoTracks().size());
+	const std::vector<MediaTrackInfo> videoTracks = getVideoTracks();
+	const int videoTrackCount = static_cast<int>(videoTracks.size());
+	auto resolveTrackFps = [](const MediaTrackInfo & track) -> double {
+		if (track.frameRateNum == 0 || track.frameRateDen == 0) {
+			return 0.0;
+		}
+		return static_cast<double>(track.frameRateNum) / static_cast<double>(track.frameRateDen);
+	};
+	double resolvedVideoFps = 0.0;
+	for (const auto & track : videoTracks) {
+		if (!track.selected) {
+			continue;
+		}
+		const double fps = resolveTrackFps(track);
+		if (std::isfinite(fps) && fps > 0.0) {
+			resolvedVideoFps = fps;
+			break;
+		}
+	}
+	if (!(std::isfinite(resolvedVideoFps) && resolvedVideoFps > 0.0)) {
+		for (const auto & track : videoTracks) {
+			const double fps = resolveTrackFps(track);
+			if (std::isfinite(fps) && fps > 0.0) {
+				resolvedVideoFps = fps;
+				break;
+			}
+		}
+	}
 
 	{
 		std::lock_guard<std::mutex> lock(owner.audioStateMutex);
@@ -2525,6 +2564,7 @@ void ofxVlc4::MediaComponent::refreshPrimaryTrackStateInfo() {
 	}
 
 	owner.cachedVideoTrackCount.store(std::max(0, videoTrackCount));
+	owner.cachedVideoTrackFps.store((std::isfinite(resolvedVideoFps) && resolvedVideoFps > 0.0) ? resolvedVideoFps : 0.0);
 }
 
 void ofxVlc4::refreshRendererStateInfo() {

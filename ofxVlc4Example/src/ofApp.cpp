@@ -46,6 +46,28 @@ bool looksLikeUri(const std::string & path) {
 	return path.find("://") != std::string::npos;
 }
 
+std::vector<std::string> exampleShaderCandidatePaths(const std::string & fileName) {
+	const std::string exeDir = ofFilePath::getCurrentExeDir();
+	const std::string dataDir = ofToDataPath("", true);
+	const std::string workingDir = ofFilePath::getCurrentWorkingDirectory();
+	return {
+		ofFilePath::getAbsolutePath(ofFilePath::join(dataDir, ofFilePath::join("shaders", fileName)), true),
+		ofFilePath::getAbsolutePath(ofFilePath::join(exeDir, ofFilePath::join("../../src/video/shaders", fileName)), true),
+		ofFilePath::getAbsolutePath(ofFilePath::join(exeDir, ofFilePath::join("../src/video/shaders", fileName)), true),
+		ofFilePath::getAbsolutePath(ofFilePath::join(workingDir, ofFilePath::join("src/video/shaders", fileName)), true),
+	};
+}
+
+std::string resolveExampleShaderPath(const std::string & fileName) {
+	const std::vector<std::string> candidatePaths = exampleShaderCandidatePaths(fileName);
+	for (const std::string & candidatePath : candidatePaths) {
+		if (ofFile::doesFileExist(candidatePath, true)) {
+			return candidatePath;
+		}
+	}
+	return {};
+}
+
 bool isSubtitlePath(const std::string & path) {
 	const std::string extension = ofToLower(ofFilePath::getFileExt(path));
 	if (extension.empty()) {
@@ -361,10 +383,19 @@ std::pair<glm::vec3, glm::vec3> getAnaglyphTints(AnaglyphColorMode mode) {
 
 bool loadShaderProgram(ofShader & shader, const std::string & fragmentBaseName) {
 	const bool programmable = ofIsGLProgrammableRenderer();
-	const std::string vertexPath = programmable ? "shaders/passthrough_gl3.vert" : "shaders/passthrough_gl2.vert";
-	const std::string fragmentPath = programmable
-		? ("shaders/" + fragmentBaseName + "_gl3.frag")
-		: ("shaders/" + fragmentBaseName + "_gl2.frag");
+	const std::string vertexFileName = programmable ? "passthrough_gl3.vert" : "passthrough_gl2.vert";
+	const std::string fragmentFileName = programmable
+		? (fragmentBaseName + "_gl3.frag")
+		: (fragmentBaseName + "_gl2.frag");
+	const std::string vertexPath = resolveExampleShaderPath(vertexFileName);
+	const std::string fragmentPath = resolveExampleShaderPath(fragmentFileName);
+	if (vertexPath.empty() || fragmentPath.empty()) {
+		ofLogError("ofxVlc4") << "Missing example shader(s): "
+			<< (vertexPath.empty() ? vertexFileName : "")
+			<< ((vertexPath.empty() && fragmentPath.empty()) ? ", " : "")
+			<< (fragmentPath.empty() ? fragmentFileName : "");
+		return false;
+	}
 
 	bool ready =
 		shader.setupShaderFromFile(GL_VERTEX_SHADER, vertexPath) &&

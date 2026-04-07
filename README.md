@@ -204,16 +204,17 @@ git clone --branch develop https://github.com/jvcleave/ofxImGui.git
 ## Examples
 
 - `ofxVlc4Example`
-    - full GUI, previews, projectM integration, diagnostics, subtitle loading/track control, and an optional OF-drawn `.srt` overlay with selectable TTF fonts
-    - includes a dedicated `DVD / Disc` control section for title/chapter/program navigation and menu buttons, while teletext lives under `Tracks & Subtitles`
+  - full GUI, previews, projectM integration, diagnostics, subtitle loading/track control, and an optional OF-drawn `.srt` overlay with selectable TTF fonts
+  - includes a dedicated `DVD / Disc` control section for title/chapter/program navigation and menu buttons, while teletext lives under `Tracks & Subtitles`
+  - example anaglyph shaders are now owned by the addon under `src/video/shaders` instead of the example `bin/data` tree
 - `ofxVlc4360Example`
   - focused ImGui-based 360 / panoramic playback example with projection, stereo mode, live viewpoint controls, and lightweight playlist/folder drop support
   - includes a helper download script for free 360 sample media
 - `ofxVlc4MidiExample`
   - smaller ImGui-based MIDI/media example with local MIDI transport, sync, export, and `ofxMidiOut` routing
   - expects the `ofxMidi` addon for device output
-  - `ofxVlc4RecorderExample`
-    - focused recording example with an ImGui recorder panel, native record, session-based texture/window capture, muxing, and recorder readback metrics
+- `ofxVlc4RecorderExample`
+  - focused recording example with an ImGui recorder panel, native record, session-based texture/window capture, muxing, and recorder readback metrics
   - includes recording presets for `H265 / HEVC`, `MKV / Opus`, and `MKV / LPCM`
   - `H265 / HEVC` recording currently requires one of the `MKV` mux profiles
   - `H265 / HEVC` recording normalizes capture sizes to the bundled x265 alignment before encoding (`width % 16 == 0`, `height % 8 == 0`)
@@ -468,6 +469,12 @@ Place them like this:
 - the safest real-time video-adjustment path is still the addon fallback on `Texture`; libVLC-native live effect changes belong on `NativeWindow / HWND`
 - recorder workflows are stable, but they are still the most timing-sensitive subsystem and benefit from real app-level testing when you change size, FPS, codec, mux profile, or backend
 - Windows-specific alternate backends like `NativeWindow / HWND` and `D3D11` are feature paths, not the addon's default portability story
+
+## Critical paths
+
+- playback-time diagnostics, timecode/FPS formatting, and track refreshes are the most sensitive live-query paths during active playback; the addon now prefers cached state there instead of probing libVLC aggressively every frame
+- recorder shutdown and capture cleanup are still worth treating carefully because they combine libVLC teardown, texture ownership, and GL context lifetime
+- `ofxVlc4360Example` now keeps the simpler `Sphere` path as the default and leaves `libVLC 360` available as the reference/native path
 
 ## Startup State Model
 

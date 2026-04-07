@@ -992,6 +992,7 @@ private:
 
 	struct StateCacheRuntimeState {
 		std::atomic<int> cachedVideoTrackCount { 0 };
+		std::atomic<double> cachedVideoTrackFps { 0.0 };
 		AudioStateInfo audio;
 		SubtitleStateInfo subtitle;
 		NavigationStateInfo navigation;
@@ -1409,6 +1410,7 @@ private:
 	int64_t & watchTimePauseSystemDateUs;
 	uint64_t & watchTimeUpdateSequence;
 	std::atomic<int> & cachedVideoTrackCount;
+	std::atomic<double> & cachedVideoTrackFps;
 	AudioStateInfo & audioStateInfo;
 	SubtitleStateInfo & subtitleStateInfo;
 	NavigationStateInfo & navigationStateInfo;
