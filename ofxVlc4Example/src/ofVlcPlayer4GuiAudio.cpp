@@ -189,42 +189,6 @@ void ofVlcPlayer4GuiAudio::drawContent(
 			: ofVlcPlayer4GuiControls::beginSectionSubMenu(label, policy, false);
 	};
 
-	if (beginSubMenu("Playback", MenuContentPolicy::Leaf)) {
-		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(wideSliderWidth));
-		if (ImGui::SliderInt("Volume", &volume, 0, 100)) {
-			player.setVolume(volume);
-		}
-		if (ofVlcPlayer4GuiControls::applyHoveredWheelStep(volume, 0, 100, 5, 1)) {
-			player.setVolume(volume);
-		}
-
-		bool muted = audioState.mutedKnown ? audioState.muted : player.isMuted();
-		if (ImGui::Checkbox("Mute", &muted)) {
-			player.toggleMute();
-			volume = player.getVolume();
-		}
-
-		bool captureEnabled = player.isAudioCaptureEnabled();
-		if (ImGui::Checkbox("Audio Capture", &captureEnabled)) {
-			player.setAudioCaptureEnabled(captureEnabled);
-		}
-
-		ImGui::Separator();
-		ImGui::TextDisabled(
-			"State: %s%s",
-			audioState.ready ? "ready" : "waiting",
-			audioState.paused ? " (paused)" : "");
-		ImGui::TextDisabled(
-			"Tracks: %d%s",
-			audioState.trackCount,
-			audioState.tracksAvailable ? "" : " (pending)");
-		if (audioState.deviceKnown && !audioState.deviceId.empty()) {
-			ImGui::TextDisabled("Active device: %s", audioState.deviceId.c_str());
-		}
-
-		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
-	}
-
 	if (beginSubMenu("Live Controls", MenuContentPolicy::Leaf)) {
 		if (ofVlcPlayer4GuiControls::drawComboWithWheel("Mixmode", mixModeIndex, mixModes, IM_ARRAYSIZE(mixModes))) {
 			player.setAudioMixMode(static_cast<ofxVlc4::AudioMixMode>(mixModeIndex));
