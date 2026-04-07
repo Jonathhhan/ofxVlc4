@@ -917,16 +917,20 @@ void ofVlcPlayer4Gui::drawPlaybackOptionsSection(
 	}
 
 	drawExtendedSections(player, mediaDisplayState, false);
-	ImGui::Dummy(ImVec2(0.0f, kSectionSpacing));
+	ImGui::Dummy(ImVec2(0.0f, kButtonSpacing));
 	ImGui::Separator();
 	ImGui::Dummy(ImVec2(0.0f, kButtonSpacing));
 
 	const bool hasDetachedSections = ofVlcPlayer4GuiControls::hasDetachedSections();
+	const float closeDetachedWidth = 160.0f;
+	const float centeredButtonX = std::max(0.0f, (ImGui::GetContentRegionAvail().x - closeDetachedWidth) * 0.5f);
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + centeredButtonX);
 	ImGui::BeginDisabled(!hasDetachedSections);
-	if (ImGui::Button("Close Detached Menus", ImVec2(layout.actionButtonWidth * 1.35f, 0.0f))) {
+	if (ImGui::Button("Close Detached Menus", ImVec2(closeDetachedWidth, 0.0f))) {
 		ofVlcPlayer4GuiControls::closeAllDetachedSections();
 	}
 	ImGui::EndDisabled();
+	ImGui::Separator();
 
 }
 
