@@ -57,6 +57,12 @@ In practice this means:
 - install `ofxImGui` on its `develop` branch
 - add preset and texture assets if you want the `projectM` parts to be useful
 
+For the `projectM` assets, use:
+
+```bash
+bash ofxVlc4Example/scripts/download-projectm-assets.sh
+```
+
 This example does not ship a sample movie in `bin/data`. On startup it will first look for `finger.mp4` / `fingers.mp4` in its own `bin/data`, then fall back to the standard openFrameworks sample video in `examples/video/videoPlayerExample/bin/data/movies/fingers.mp4` when that file exists.
 
 ## GUI overview
@@ -70,6 +76,36 @@ The main GUI contains:
 - `Advanced`
 
 Most sections use compact submenus. Menus and submenus can be dragged out into separate windows. When a detached window is closed, it returns collapsed to the main GUI.
+
+## projectM assets
+
+For the `ofxProjectM`-powered parts of this example, these packs are recommended:
+
+- [presets-cream-of-the-crop](https://github.com/projectM-visualizer/presets-cream-of-the-crop)
+- [presets-milkdrop-texture-pack](https://github.com/projectM-visualizer/presets-milkdrop-texture-pack)
+
+Install both with:
+
+```bash
+bash scripts/download-projectm-assets.sh
+```
+
+Useful variants:
+
+```bash
+bash scripts/download-projectm-assets.sh --presets
+bash scripts/download-projectm-assets.sh --textures
+```
+
+The script installs into:
+
+- `bin/data/presets`
+- `bin/data/textures`
+
+Manual layout if you prefer:
+
+- presets from `presets-cream-of-the-crop` go in the `presets` folder
+- textures from `presets-milkdrop-texture-pack` go in the `textures` folder
 
 Inside `Advanced` the example now also exposes:
 

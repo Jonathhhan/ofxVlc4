@@ -432,6 +432,12 @@ For the `ofxProjectM`-powered parts of the full example, these packs are recomme
 - [presets-cream-of-the-crop](https://github.com/projectM-visualizer/presets-cream-of-the-crop)
 - [presets-milkdrop-texture-pack](https://github.com/projectM-visualizer/presets-milkdrop-texture-pack)
 
+Download them with:
+
+```bash
+bash ofxVlc4Example/scripts/download-projectm-assets.sh
+```
+
 Place them like this:
 
 - presets from `presets-cream-of-the-crop` go in the `presets` folder
