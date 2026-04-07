@@ -21,6 +21,7 @@
 - hardened playback-time diagnostics and track queries so `Diagnostics` and `Tracks & Subtitles` stay stable during active playback
 - moved the example anaglyph shader files into addon-owned `src/video/shaders`
 - simplified and stabilized `ofxVlc4360Example` around `Crystal Shower.mp4`, with `Sphere` as the default renderer and `libVLC 360` kept as the reference/native path
+- marked bundled VLC visualizer-module support in `ofxVlc4Example` as experimental; `ofxProjectM` remains the primary integrated visualization path
 
 ## 1.0.1
 

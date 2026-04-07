@@ -5,6 +5,7 @@
 #include "ofxVlc4.h"
 
 #include <array>
+#include <functional>
 #include <vector>
 
 class ofVlcPlayer4GuiVisualizer {
@@ -24,11 +25,22 @@ public:
 		Wide
 	};
 
-	void drawContent(ofxVlc4 & player, const ImVec2 & labelInnerSpacing, float compactControlWidth);
+	void drawContent(
+		ofxVlc4 & player,
+		const ImVec2 & labelInnerSpacing,
+		float compactControlWidth);
+	void drawVlcModuleControls(
+		ofxVlc4 & player,
+		const ImVec2 & labelInnerSpacing,
+		float compactControlWidth,
+		const std::function<void()> & applyAudioVisualizerSettings);
 
 private:
 	DisplayStyle displayStyle = DisplayStyle::Studio;
 	DbScale dbScale = DbScale::Broadcast;
+	bool vlcVisualizerStateInitialized = false;
+	ofxVlc4AudioVisualizerSettings pendingVlcVisualizerSettings;
+	char projectMPresetPath[1024] = "";
 	std::vector<float> peakHoldLevels;
 	std::vector<float> peakHoldTimers;
 	double lastUpdateTime = 0.0;

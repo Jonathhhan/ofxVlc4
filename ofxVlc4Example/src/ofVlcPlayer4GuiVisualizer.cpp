@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstring>
 #include <iomanip>
 #include <limits>
 #include <sstream>
@@ -67,6 +68,69 @@ const char * dbScaleLabel(ofVlcPlayer4GuiVisualizer::DbScale scale) {
 	case ofVlcPlayer4GuiVisualizer::DbScale::Studio:
 	default:
 		return "-72 to 0 dBFS";
+	}
+}
+
+const char * audioVisualizerModuleLabel(ofxVlc4AudioVisualizerModule module) {
+	switch (module) {
+	case ofxVlc4AudioVisualizerModule::Visual:
+		return "Visual";
+	case ofxVlc4AudioVisualizerModule::Goom:
+		return "Goom";
+	case ofxVlc4AudioVisualizerModule::Glspectrum:
+		return "GL Spectrum";
+	case ofxVlc4AudioVisualizerModule::ProjectM:
+		return "VLC projectM";
+	case ofxVlc4AudioVisualizerModule::None:
+	default:
+		return "None";
+	}
+}
+
+const char * audioVisualizerEffectLabel(ofxVlc4AudioVisualizerEffect effect) {
+	switch (effect) {
+	case ofxVlc4AudioVisualizerEffect::Scope:
+		return "Scope";
+	case ofxVlc4AudioVisualizerEffect::Spectrometer:
+		return "Spectrometer";
+	case ofxVlc4AudioVisualizerEffect::VuMeter:
+		return "VU Meter";
+	case ofxVlc4AudioVisualizerEffect::Spectrum:
+	default:
+		return "Spectrum";
+	}
+}
+
+std::string defaultProjectMPresetPath() {
+	const std::string presetPath = ofToDataPath("presets", true);
+	if (ofDirectory::doesDirectoryExist(presetPath, true)) {
+		return ofFilePath::getAbsolutePath(presetPath, true);
+	}
+	return "";
+}
+
+void applyModuleSpecificVisualizerDefaults(ofxVlc4AudioVisualizerSettings & settings) {
+	switch (settings.module) {
+	case ofxVlc4AudioVisualizerModule::Goom:
+		settings.width = 640;
+		settings.height = 480;
+		settings.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
+		break;
+	case ofxVlc4AudioVisualizerModule::ProjectM:
+		settings.width = 1280;
+		settings.height = 720;
+		if (settings.projectMPresetPath.empty()) {
+			settings.projectMPresetPath = defaultProjectMPresetPath();
+		}
+		break;
+	case ofxVlc4AudioVisualizerModule::Visual:
+	case ofxVlc4AudioVisualizerModule::Glspectrum:
+		settings.width = 1280;
+		settings.height = 720;
+		break;
+	case ofxVlc4AudioVisualizerModule::None:
+	default:
+		break;
 	}
 }
 
@@ -190,12 +254,123 @@ std::string formatMicroseconds(double microseconds) {
 }
 }
 
+void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
+	ofxVlc4 & player,
+	const ImVec2 & labelInnerSpacing,
+	float compactControlWidth,
+	const std::function<void()> & applyAudioVisualizerSettings) {
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
+	ImGui::PushItemWidth(compactControlWidth);
+
+	if (!vlcVisualizerStateInitialized) {
+		pendingVlcVisualizerSettings = player.getAudioVisualizerSettings();
+		vlcVisualizerStateInitialized = true;
+	}
+
+	if (projectMPresetPath[0] == '\0' && !pendingVlcVisualizerSettings.projectMPresetPath.empty()) {
+		strncpy_s(
+			projectMPresetPath,
+			sizeof(projectMPresetPath),
+			pendingVlcVisualizerSettings.projectMPresetPath.c_str(),
+			_TRUNCATE);
+	}
+
+	int moduleIndex = static_cast<int>(pendingVlcVisualizerSettings.module);
+	const auto previousModule = pendingVlcVisualizerSettings.module;
+	if (ImGui::BeginCombo("VLC Module", audioVisualizerModuleLabel(pendingVlcVisualizerSettings.module))) {
+		for (int candidateIndex = static_cast<int>(ofxVlc4AudioVisualizerModule::None);
+			candidateIndex <= static_cast<int>(ofxVlc4AudioVisualizerModule::ProjectM);
+			++candidateIndex) {
+			const auto candidate = static_cast<ofxVlc4AudioVisualizerModule>(candidateIndex);
+			const bool selected = (pendingVlcVisualizerSettings.module == candidate);
+			if (ImGui::Selectable(audioVisualizerModuleLabel(candidate), selected)) {
+				moduleIndex = candidateIndex;
+			}
+			if (selected) {
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	pendingVlcVisualizerSettings.module = static_cast<ofxVlc4AudioVisualizerModule>(moduleIndex);
+	if (pendingVlcVisualizerSettings.module != previousModule) {
+		applyModuleSpecificVisualizerDefaults(pendingVlcVisualizerSettings);
+		if (pendingVlcVisualizerSettings.module == ofxVlc4AudioVisualizerModule::ProjectM) {
+			strncpy_s(
+				projectMPresetPath,
+				sizeof(projectMPresetPath),
+				pendingVlcVisualizerSettings.projectMPresetPath.c_str(),
+				_TRUNCATE);
+		}
+	}
+
+	if (pendingVlcVisualizerSettings.module == ofxVlc4AudioVisualizerModule::Visual) {
+		int effectIndex = static_cast<int>(pendingVlcVisualizerSettings.visualEffect);
+		if (ImGui::BeginCombo("Visual Effect", audioVisualizerEffectLabel(pendingVlcVisualizerSettings.visualEffect))) {
+			for (int candidateIndex = static_cast<int>(ofxVlc4AudioVisualizerEffect::Spectrum);
+				candidateIndex <= static_cast<int>(ofxVlc4AudioVisualizerEffect::VuMeter);
+				++candidateIndex) {
+				const auto candidate = static_cast<ofxVlc4AudioVisualizerEffect>(candidateIndex);
+				const bool selected = (pendingVlcVisualizerSettings.visualEffect == candidate);
+				if (ImGui::Selectable(audioVisualizerEffectLabel(candidate), selected)) {
+					effectIndex = candidateIndex;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+		pendingVlcVisualizerSettings.visualEffect = static_cast<ofxVlc4AudioVisualizerEffect>(effectIndex);
+	}
+
+	if (pendingVlcVisualizerSettings.module != ofxVlc4AudioVisualizerModule::None) {
+		int width = pendingVlcVisualizerSettings.width;
+		int height = pendingVlcVisualizerSettings.height;
+		ImGui::InputInt("Module Width", &width);
+		ImGui::InputInt("Module Height", &height);
+		pendingVlcVisualizerSettings.width = std::max(64, width);
+		pendingVlcVisualizerSettings.height = std::max(64, height);
+
+		if (pendingVlcVisualizerSettings.module == ofxVlc4AudioVisualizerModule::Goom) {
+			int goomSpeed = pendingVlcVisualizerSettings.goomSpeed;
+			ImGui::SliderInt("Goom Speed", &goomSpeed, 1, 10);
+			pendingVlcVisualizerSettings.goomSpeed = goomSpeed;
+		}
+
+		if (pendingVlcVisualizerSettings.module == ofxVlc4AudioVisualizerModule::ProjectM) {
+			if (pendingVlcVisualizerSettings.projectMPresetPath.empty()) {
+				pendingVlcVisualizerSettings.projectMPresetPath = defaultProjectMPresetPath();
+				strncpy_s(
+					projectMPresetPath,
+					sizeof(projectMPresetPath),
+					pendingVlcVisualizerSettings.projectMPresetPath.c_str(),
+					_TRUNCATE);
+			}
+			ImGui::InputText("Preset Path", projectMPresetPath, IM_ARRAYSIZE(projectMPresetPath));
+			pendingVlcVisualizerSettings.projectMPresetPath = ofTrim(std::string(projectMPresetPath));
+		}
+	}
+
+	if (ImGui::Button("Apply VLC Visualizer", ImVec2(compactControlWidth, 0.0f))) {
+		player.setAudioVisualizerSettings(pendingVlcVisualizerSettings);
+		if (applyAudioVisualizerSettings) {
+			applyAudioVisualizerSettings();
+		}
+	}
+	ImGui::TextDisabled("Reinitializes the VLC player. 'None' disables VLC visualizer modules.");
+	ImGui::PopItemWidth();
+	ImGui::PopStyleVar();
+}
+
 void ofVlcPlayer4GuiVisualizer::drawContent(
 	ofxVlc4 & player,
 	const ImVec2 & labelInnerSpacing,
 	float compactControlWidth) {
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
 	ImGui::PushItemWidth(compactControlWidth);
+
+	ImGui::Separator();
 
 	int styleIndex = static_cast<int>(displayStyle);
 	if (ImGui::BeginCombo("Style", displayStyleLabel(displayStyle))) {

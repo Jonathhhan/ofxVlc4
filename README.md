@@ -219,7 +219,7 @@ git clone --branch develop https://github.com/jvcleave/ofxImGui.git
   - `H265 / HEVC` recording currently requires one of the `MKV` mux profiles
   - `H265 / HEVC` recording normalizes capture sizes to the bundled x265 alignment before encoding (`width % 16 == 0`, `height % 8 == 0`)
 
-For audio-visualization workflows, the addon treats `ofxProjectM` as the primary integrated path. Bundled VLC visualization plugins remain available through the staged runtime, but they are better treated as optional libVLC runtime extras than as the main addon feature path.
+For audio-visualization workflows, the addon treats `ofxProjectM` as the primary integrated path. Bundled VLC visualization plugins remain available through the staged runtime, but they should currently be treated as experimental libVLC runtime extras rather than as the main addon feature path.
 
 For the examples, also see:
 

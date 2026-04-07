@@ -63,6 +63,7 @@ public:
 		const std::function<void()> & reloadProjectMTextures,
 		const std::function<void()> & loadPlayerProjectMTexture,
 		const std::function<bool(const std::string &)> & loadCustomProjectMTexture,
+		const std::function<void()> & applyAudioVisualizerSettings,
 		const std::function<bool(const std::string &)> & loadCustomSubtitle,
 		const std::function<void()> & clearCustomSubtitle,
 		const std::function<std::string()> & customSubtitleStatus,
@@ -92,6 +93,7 @@ private:
 		const std::function<void()> & reloadProjectMTextures,
 		const std::function<void()> & loadPlayerProjectMTexture,
 		const std::function<bool(const std::string &)> & loadCustomProjectMTexture,
+		const std::function<void()> & applyAudioVisualizerSettings,
 		const std::function<bool(const std::string &)> & loadCustomSubtitle,
 		const std::function<void()> & clearCustomSubtitle,
 		const std::function<std::string()> & customSubtitleStatus,
@@ -112,11 +114,11 @@ private:
 		ofxVlc4 & player,
 		bool projectMInitialized,
 		const std::function<void()> & randomProjectMPreset);
-	void drawAudioSection(ofxVlc4 & player, bool detachedOnly = false);
+	void drawAudioSection(ofxVlc4 & player, const std::function<void()> & applyAudioVisualizerSettings, bool detachedOnly = false);
 	void drawMediaSection(ofxVlc4 & player, bool detachedOnly = false);
 	void drawVlcHelpSection(ofxVlc4 & player, bool detachedOnly = false);
 	void drawEqualizerSection(ofxVlc4 & player);
-	void drawVisualizerSection(ofxVlc4 & player);
+	void drawVisualizerSection(ofxVlc4 & player, const std::function<void()> & applyAudioVisualizerSettings);
 	void drawVideoViewSection(ofxVlc4 & player, bool detachedOnly = false);
 	void drawVideoAdjustmentsSection(ofxVlc4 & player, bool detachedOnly = false);
 	void drawVideo3DSection(ofxVlc4 & player, bool detachedOnly = false);
@@ -132,6 +134,7 @@ private:
 	void drawExtendedSections(
 		ofxVlc4 & player,
 		const MediaDisplayState & mediaDisplayState,
+		const std::function<void()> & applyAudioVisualizerSettings,
 		bool detachedOnly = false);
 	void drawPlaybackOptionsSection(
 		ofxVlc4 & player,
@@ -144,7 +147,8 @@ private:
 		const std::function<void()> & reloadProjectMPresets,
 		const std::function<void()> & reloadProjectMTextures,
 		const std::function<void()> & loadPlayerProjectMTexture,
-		const std::function<bool(const std::string &)> & loadCustomProjectMTexture);
+		const std::function<bool(const std::string &)> & loadCustomProjectMTexture,
+		const std::function<void()> & applyAudioVisualizerSettings);
 	void drawMediaInfoSection(const MediaDisplayState & mediaDisplayState, bool detachedOnly = false);
 	void updateMediaFileInfoCache(const MediaDisplayState & mediaDisplayState);
 	void drawPlaylistSection(ofxVlc4 & player);

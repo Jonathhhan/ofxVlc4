@@ -150,6 +150,30 @@ enum class ofxVlc4SubtitleTextRenderer {
 	None
 };
 
+enum class ofxVlc4AudioVisualizerModule {
+	None = 0,
+	Visual,
+	Goom,
+	Glspectrum,
+	ProjectM
+};
+
+enum class ofxVlc4AudioVisualizerEffect {
+	Spectrum = 0,
+	Scope,
+	Spectrometer,
+	VuMeter
+};
+
+struct ofxVlc4AudioVisualizerSettings {
+	ofxVlc4AudioVisualizerModule module = ofxVlc4AudioVisualizerModule::None;
+	ofxVlc4AudioVisualizerEffect visualEffect = ofxVlc4AudioVisualizerEffect::Spectrum;
+	int width = 1280;
+	int height = 720;
+	int goomSpeed = 6;
+	std::string projectMPresetPath;
+};
+
 class ofxVlc4 {
 public:
 	static ofxVlc4AddonVersionInfo getAddonVersionInfo();
@@ -1083,6 +1107,7 @@ private:
 		bool keyInputEnabled = true;
 		bool mouseInputEnabled = true;
 		std::vector<std::string> extraInitArgs;
+		ofxVlc4AudioVisualizerSettings audioVisualizerSettings;
 	};
 
 	struct AudioRuntimeState {
@@ -1489,6 +1514,7 @@ private:
 	bool & keyInputEnabled;
 	bool & mouseInputEnabled;
 	std::vector<std::string> & extraInitArgs;
+	ofxVlc4AudioVisualizerSettings & audioVisualizerSettings;
 	std::atomic<int> & channels;
 	std::atomic<int> & sampleRate;
 	std::atomic<bool> & isAudioReady;
@@ -1841,6 +1867,8 @@ public:
 	void setExtraInitArgs(const std::vector<std::string> & args);
 	void addExtraInitArg(const std::string & arg);
 	void clearExtraInitArgs();
+	ofxVlc4AudioVisualizerSettings getAudioVisualizerSettings() const;
+	void setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & settings);
 	bool startRecordingSession(const ofxVlc4RecordingSessionConfig & config);
 	bool startTextureRecordingSession(
 		std::string name,

@@ -142,6 +142,95 @@ void appendPrefixedInitArg(std::vector<std::string> & initArgs, const char * pre
 	initArgs.emplace_back(std::string(prefix) + value);
 }
 
+const char * audioVisualizerModuleOptionName(ofxVlc4AudioVisualizerModule module) {
+	switch (module) {
+	case ofxVlc4AudioVisualizerModule::Visual:
+		return "visual";
+	case ofxVlc4AudioVisualizerModule::Goom:
+		return "goom";
+	case ofxVlc4AudioVisualizerModule::Glspectrum:
+		return "glspectrum";
+	case ofxVlc4AudioVisualizerModule::ProjectM:
+		return "projectm";
+	case ofxVlc4AudioVisualizerModule::None:
+	default:
+		return "";
+	}
+}
+
+const char * audioVisualizerFilterOptionName(ofxVlc4AudioVisualizerModule module) {
+	switch (module) {
+	case ofxVlc4AudioVisualizerModule::Visual:
+		return "visual";
+	case ofxVlc4AudioVisualizerModule::Goom:
+		return "goom";
+	case ofxVlc4AudioVisualizerModule::Glspectrum:
+		return "glspectrum";
+	case ofxVlc4AudioVisualizerModule::ProjectM:
+		return "projectm";
+	case ofxVlc4AudioVisualizerModule::None:
+	default:
+		return "";
+	}
+}
+
+const char * audioVisualizerEffectOptionName(ofxVlc4AudioVisualizerEffect effect) {
+	switch (effect) {
+	case ofxVlc4AudioVisualizerEffect::Scope:
+		return "scope";
+	case ofxVlc4AudioVisualizerEffect::Spectrometer:
+		return "spectrometer";
+	case ofxVlc4AudioVisualizerEffect::VuMeter:
+		return "vuMeter";
+	case ofxVlc4AudioVisualizerEffect::Spectrum:
+	default:
+		return "spectrum";
+	}
+}
+
+void appendAudioVisualizerInitArgs(
+	std::vector<std::string> & initArgs,
+	const ofxVlc4AudioVisualizerSettings & settings) {
+	const char * moduleName = audioVisualizerModuleOptionName(settings.module);
+	if (moduleName[0] == '\0') {
+		return;
+	}
+
+	const int width = std::max(64, settings.width);
+	const int height = std::max(64, settings.height);
+	// VLC visualization modules are configured through the audio-visual hook.
+	// Pushing them again through audio-filter can create an unreliable filter
+	// chain on Windows, which showed up as gray/blank Goom and projectM output.
+	initArgs.emplace_back(std::string("--audio-visual=") + moduleName);
+
+	switch (settings.module) {
+	case ofxVlc4AudioVisualizerModule::Visual:
+		initArgs.emplace_back(std::string("--effect-list=") + audioVisualizerEffectOptionName(settings.visualEffect));
+		initArgs.emplace_back(std::string("--effect-width=") + ofToString(width));
+		initArgs.emplace_back(std::string("--effect-height=") + ofToString(height));
+		break;
+	case ofxVlc4AudioVisualizerModule::Goom:
+		initArgs.emplace_back(std::string("--goom-width=") + ofToString(width));
+		initArgs.emplace_back(std::string("--goom-height=") + ofToString(height));
+		initArgs.emplace_back(std::string("--goom-speed=") + ofToString(ofClamp(settings.goomSpeed, 1, 10)));
+		break;
+	case ofxVlc4AudioVisualizerModule::Glspectrum:
+		initArgs.emplace_back(std::string("--glspectrum-width=") + ofToString(width));
+		initArgs.emplace_back(std::string("--glspectrum-height=") + ofToString(height));
+		break;
+	case ofxVlc4AudioVisualizerModule::ProjectM:
+		initArgs.emplace_back(std::string("--projectm-width=") + ofToString(width));
+		initArgs.emplace_back(std::string("--projectm-height=") + ofToString(height));
+		appendPrefixedInitArg(initArgs, "--projectm-preset-path=", settings.projectMPresetPath);
+		initArgs.emplace_back("--projectm-menu-font=Arial");
+		initArgs.emplace_back("--projectm-title-font=Arial");
+		break;
+	case ofxVlc4AudioVisualizerModule::None:
+	default:
+		break;
+	}
+}
+
 template <typename FilterInfo>
 void appendFilterList(std::ostringstream & output, const std::string & title, const std::vector<FilterInfo> & filters) {
 	output << title << "\n";
@@ -403,6 +492,7 @@ ofxVlc4::ofxVlc4()
 	, keyInputEnabled(playerConfigRuntime.keyInputEnabled)
 	, mouseInputEnabled(playerConfigRuntime.mouseInputEnabled)
 	, extraInitArgs(playerConfigRuntime.extraInitArgs)
+	, audioVisualizerSettings(playerConfigRuntime.audioVisualizerSettings)
 	, channels(audioRuntime.channels)
 	, sampleRate(audioRuntime.sampleRate)
 	, isAudioReady(audioRuntime.ready)
@@ -993,6 +1083,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	initArgs.emplace_back(std::string("--freetype-color=") + ofToString(ofClamp(subtitleTextColor, 0, 16777215)));
 	initArgs.emplace_back(std::string("--freetype-opacity=") + ofToString(ofClamp(subtitleTextOpacity, 0, 255)));
 	initArgs.emplace_back(subtitleBold ? "--freetype-bold" : "--no-freetype-bold");
+	appendAudioVisualizerInitArgs(initArgs, audioVisualizerSettings);
 
 	for (int i = 0; i < vlc_argc; ++i) {
 		if (vlc_argv != nullptr && vlc_argv[i] != nullptr) {
@@ -1112,6 +1203,20 @@ void ofxVlc4::clearExtraInitArgs() {
 	}
 	extraInitArgs.clear();
 	setStatus("Extra init args cleared for the next init.");
+}
+
+ofxVlc4AudioVisualizerSettings ofxVlc4::getAudioVisualizerSettings() const {
+	return audioVisualizerSettings;
+}
+
+void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & settings) {
+	audioVisualizerSettings.module = settings.module;
+	audioVisualizerSettings.visualEffect = settings.visualEffect;
+	audioVisualizerSettings.width = std::max(64, settings.width);
+	audioVisualizerSettings.height = std::max(64, settings.height);
+	audioVisualizerSettings.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
+	audioVisualizerSettings.projectMPresetPath = settings.projectMPresetPath;
+	setStatus("Audio visualizer settings updated for the next init.");
 }
 
 ofxVlc4SubtitleTextRenderer ofxVlc4::getSubtitleTextRenderer() const {
