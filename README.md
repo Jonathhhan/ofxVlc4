@@ -96,13 +96,13 @@ On Windows, that script now prepares each example directly for Project Generator
 - `bin/libvlc.dll` and `bin/libvlccore.dll`
 - `bin/plugins/`
 - `bin/lua/`
-- `dll/x64/` with only the root VLC DLLs needed by generated post-build copy steps
+- `dll/x64/` with only the root VLC DLLs for generated-project staging
 
 The examples do not ship a bundled sample movie in `bin/data`. Drop your own media into an example's `bin/data`, drag a file in at runtime, or use the standard openFrameworks sample video from `examples/video/videoPlayerExample/bin/data/movies/fingers.mp4`.
 
 ## Installing libVLC
 
-The addon ships with a single cross-platform shell entry point that installs `libVLC` into the addon-local `libs/libvlc` layout.
+The addon ships with a single cross-platform shell entry point that installs `libVLC` headers/import libs into `libs/libvlc` and the shared Windows runtime into `runtime/vs/x64`.
 
 If you want one shell entry point across supported environments, use:
 
@@ -128,9 +128,9 @@ This installs:
 
 - headers into `libs/libvlc/include`
 - import library into `libs/libvlc/lib/vs`
-- one shared runtime into `libs/libvlc/runtime/vs/x64`
+- one shared runtime into `runtime/vs/x64`
 - linked file-tree runtime views into the example `bin` folders
-- linked file-tree `dll/x64` staging folders used by the Visual Studio post-build copy step
+- linked file-tree `dll/x64` staging folders for generated project workflows
 
 For the Windows examples, the intended runtime layout in `bin` includes:
 
@@ -140,7 +140,7 @@ For the Windows examples, the intended runtime layout in `bin` includes:
 
 If you ever see all VLC plugin DLLs flattened directly into `bin`, that is a staging/build-layout problem rather than the intended release layout.
 
-For normal addon development, keep the shared Windows runtime in `libs/libvlc/runtime/vs/x64` and let the examples link to it locally. Only copy the VLC runtime into your app output if you want a truly standalone distribution.
+For normal addon development, keep the shared Windows runtime in `runtime/vs/x64` and let the examples link to it locally. Only copy the VLC runtime into your app output if you want a truly standalone distribution.
 
 The installer works in a temporary directory outside the addon tree, which is helpful when the addon lives in a synced or otherwise path-sensitive folder.
 
@@ -205,7 +205,7 @@ git clone --branch develop https://github.com/jvcleave/ofxImGui.git
 
 - `ofxVlc4Example`
     - full GUI, previews, projectM integration, diagnostics, subtitle loading/track control, and an optional OF-drawn `.srt` overlay with selectable TTF fonts
-    - includes a dedicated `DVD / Disc` control section for title/chapter/program navigation, menu buttons, and teletext controls when libVLC exposes them
+    - includes a dedicated `DVD / Disc` control section for title/chapter/program navigation and menu buttons, while teletext lives under `Tracks & Subtitles`
 - `ofxVlc4360Example`
   - focused ImGui-based 360 / panoramic playback example with projection, stereo mode, live viewpoint controls, and lightweight playlist/folder drop support
   - includes a helper download script for free 360 sample media

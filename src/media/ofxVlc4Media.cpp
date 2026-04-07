@@ -1959,13 +1959,28 @@ ofxVlc4::WatchTimeInfo buildWatchTimeInfoSnapshot(
 		return info;
 	}
 
+	const bool pointLooksValid =
+		std::isfinite(point.position) &&
+		std::isfinite(point.rate) &&
+		point.ts_us >= 0 &&
+		point.length_us >= 0 &&
+		(point.system_date_us > 0 || (paused && pausedSystemDateUs > 0));
+	if (!pointLooksValid) {
+		return info;
+	}
+
 	const int64_t systemNowUs =
 		(info.paused && pausedSystemDateUs > 0) ? pausedSystemDateUs : libvlc_clock();
+	if (systemNowUs <= 0 || systemNowUs == INT64_MAX) {
+		return info;
+	}
 	int64_t interpolatedTimeUs = point.ts_us;
 	double interpolatedPosition = point.position;
 	if (libvlc_media_player_time_point_interpolate(&point, systemNowUs, &interpolatedTimeUs, &interpolatedPosition) == 0) {
-		info.interpolatedTimeUs = interpolatedTimeUs;
-		info.interpolatedPosition = interpolatedPosition;
+		if (std::isfinite(interpolatedPosition) && interpolatedTimeUs >= 0) {
+			info.interpolatedTimeUs = interpolatedTimeUs;
+			info.interpolatedPosition = interpolatedPosition;
+		}
 	}
 
 	return info;
@@ -2698,6 +2713,7 @@ ofxVlc4::SubtitleStateInfo ofxVlc4::MediaComponent::buildSubtitleStateInfo(bool 
 	info.textScale = audio().getSubtitleTextScale();
 	info.teletextPage = video().getTeletextPage();
 	info.teletextTransparencyEnabled = video().isTeletextTransparencyEnabled();
+	info.teletextAvailable = info.teletextPage > 0;
 
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	info.trackListAvailable = player != nullptr;
@@ -2705,9 +2721,19 @@ ofxVlc4::SubtitleStateInfo ofxVlc4::MediaComponent::buildSubtitleStateInfo(bool 
 		return info;
 	}
 
-	const auto tracks = getSubtitleTracks();
-	info.trackCount = static_cast<int>(tracks.size());
-	for (const MediaTrackInfo & track : tracks) {
+	info.tracks = getSubtitleTracks();
+	info.trackCount = static_cast<int>(info.tracks.size());
+	for (const MediaTrackInfo & track : info.tracks) {
+		const std::string id = ofToLower(track.id);
+		const std::string name = ofToLower(track.name);
+		const std::string description = ofToLower(track.description);
+		if (id.find("teletext") != std::string::npos ||
+			name.find("teletext") != std::string::npos ||
+			description.find("teletext") != std::string::npos) {
+			info.teletextAvailable = true;
+		}
+	}
+	for (const MediaTrackInfo & track : info.tracks) {
 		if (!track.selected) {
 			continue;
 		}
@@ -4406,15 +4432,21 @@ bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
 std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::MediaComponent::getTrackInfos(libvlc_track_type_t type) const {
 	std::vector<MediaTrackInfo> trackInfos;
 	libvlc_media_player_t * player = owner.sessionPlayer();
-	libvlc_media_t * sourceMedia = mediaLibrary().retainCurrentOrLoadedMedia();
-	if (!sourceMedia) {
-		return trackInfos;
+	libvlc_media_t * sourceMedia = nullptr;
+	libvlc_media_tracklist_t * tracklist = nullptr;
+	if (player) {
+		tracklist = libvlc_media_player_get_tracklist(player, type, false);
 	}
-
-	libvlc_media_tracklist_t * tracklist = libvlc_media_get_tracklist(sourceMedia, type);
-	libvlc_media_release(sourceMedia);
 	if (!tracklist) {
-		return trackInfos;
+		sourceMedia = mediaLibrary().retainCurrentOrLoadedMedia();
+		if (!sourceMedia) {
+			return trackInfos;
+		}
+		tracklist = libvlc_media_get_tracklist(sourceMedia, type);
+		if (!tracklist) {
+			libvlc_media_release(sourceMedia);
+			return trackInfos;
+		}
 	}
 
 	const std::set<std::string> selectedTrackIds = collectSelectedTrackIds(player, type);
@@ -4467,6 +4499,9 @@ std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::MediaComponent::getTrackInfos(libv
 	}
 
 	libvlc_media_tracklist_delete(tracklist);
+	if (sourceMedia) {
+		libvlc_media_release(sourceMedia);
+	}
 	return trackInfos;
 }
 

@@ -15,10 +15,18 @@ public:
 	void exit();
 
 	void keyPressed(int key);
+	void mousePressed(int x, int y, int button);
+	void mouseDragged(int x, int y, int button);
+	void mouseReleased(int x, int y, int button);
 	void dragEvent(ofDragInfo dragInfo);
 	void windowResized(int w, int h);
 
 private:
+	enum class RenderMode {
+		LibVlc360,
+		Sphere
+	};
+
 	void drawPreview();
 	void drawControlPanel();
 	void loadSeedMedia();
@@ -28,6 +36,11 @@ private:
 	void openMediaDialog();
 	void resetCameraView();
 	void applyCameraFov();
+	void applyRenderModeBackend();
+	void applyLibVlc360Viewpoint(bool force = false);
+	void releaseLibVlc360Viewpoint();
+	void rebuildSphereTexCoords(const ofTexture & texture);
+	void startPlayback();
 	std::string currentMediaLabel() const;
 
 	ofxVlc4 player;
@@ -39,5 +52,19 @@ private:
 	float previewMargin = 24.0f;
 	float sphereRadius = 900.0f;
 	float cameraFov = 80.0f;
+	float mappedTextureWidth = 0.0f;
+	float mappedTextureHeight = 0.0f;
+	float libVlcYaw = 0.0f;
+	float libVlcPitch = 0.0f;
+	float libVlcRoll = 0.0f;
+	int lastMouseX = 0;
+	int lastMouseY = 0;
+	RenderMode renderMode = RenderMode::Sphere;
+	bool libVlc360Applied = false;
+	bool libVlcViewDirty = false;
+	bool libVlcMouseDragging = false;
+	bool startupSeedPending = false;
+	int startupSeedDelayFrames = 0;
+	std::string pendingSeedPath;
 	std::string infoStatus;
 };

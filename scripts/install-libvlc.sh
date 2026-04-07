@@ -671,7 +671,7 @@ Write-Step 'Preparing install paths'
 $LibVlcRoot = Join-Path $AddonRoot 'libs\libvlc'
 $TargetIncludeDirectory = Join-Path $LibVlcRoot 'include'
 $TargetLibraryDirectory = Join-Path $LibVlcRoot 'lib\vs'
-$TargetRuntimeDirectory = Join-Path $LibVlcRoot 'runtime\vs\x64'
+$TargetRuntimeDirectory = Join-Path $AddonRoot 'runtime\vs\x64'
 $ExampleRuntimeTargets = Get-ExampleRuntimeTargets $AddonRoot
 
 $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('ofxVlc4-libvlc-' + [guid]::NewGuid().ToString('N'))

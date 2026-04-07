@@ -860,6 +860,7 @@ public:
 	struct SubtitleStateInfo {
 		bool trackListAvailable = false;
 		size_t trackCount = 0;
+		std::vector<MediaTrackInfo> tracks;
 		bool trackSelected = false;
 		std::string selectedTrackId;
 		std::string selectedTrackLabel;
@@ -867,6 +868,7 @@ public:
 		float textScale = 1.0f;
 		int teletextPage = 0;
 		bool teletextTransparencyEnabled = false;
+		bool teletextAvailable = false;
 	};
 
 	struct NavigationStateInfo {

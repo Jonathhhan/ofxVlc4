@@ -564,7 +564,13 @@ libvlc_media_t * MediaLibrary::retainCurrentOrLoadedMedia() const {
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	libvlc_media_t * currentMedia = owner.sessionMedia();
 	if (player) {
-		return libvlc_media_player_get_media(player);
+		libvlc_media_t * playerMedia = libvlc_media_player_get_media(player);
+		if (!playerMedia) {
+			return nullptr;
+		}
+
+		libvlc_media_retain(playerMedia);
+		return playerMedia;
 	}
 
 	if (!currentMedia) {

@@ -671,7 +671,6 @@ void ofVlcPlayer4Gui::drawImGui(
 			videoPreviewWidth,
 			videoPreviewHeight);
 	}
-
 	ImGui::PopStyleVar(9);
 }
 

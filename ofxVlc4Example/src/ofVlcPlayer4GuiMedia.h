@@ -25,6 +25,7 @@ public:
 		std::function<std::vector<std::string>()> fontLabelsCallback,
 		std::function<int()> selectedFontIndexCallback,
 		std::function<void(int)> setFontIndexCallback);
+	bool hasDetachedDiagnosticsWindow() const;
 
 private:
 	void drawDiagnosticsSubMenu(

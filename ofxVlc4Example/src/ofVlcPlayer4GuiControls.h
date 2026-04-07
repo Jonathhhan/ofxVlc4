@@ -87,6 +87,7 @@ inline bool hasDetachedSections() {
 	return false;
 }
 
+
 inline void closeAllDetachedSections() {
 	for (auto & [_, state] : detachedSectionStates()) {
 		state.detached = false;
@@ -124,6 +125,21 @@ inline void addMenuContentPadding() {
 
 inline std::string makeDetachedSectionKey(const char * prefix, const char * label) {
 	return std::string(prefix) + label;
+}
+
+inline bool isDetachedSubMenuOpen(const char * label) {
+	const auto & states = detachedSectionStates();
+	const auto it = states.find(makeDetachedSectionKey("submenu:", label));
+	return it != states.end() && (it->second.detached || it->second.detachPending);
+}
+
+inline bool isAnyDetachedSubMenuOpen(std::initializer_list<const char *> labels) {
+	for (const char * label : labels) {
+		if (isDetachedSubMenuOpen(label)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 inline std::string makeDetachedWindowTitle(const char * prefix, const char * label) {
@@ -446,6 +462,30 @@ inline bool beginCompactSubMenu(const char * label, bool defaultOpen = true) {
 	return open;
 }
 
+inline bool beginInlineSubMenuNoDetach(const char * label, bool defaultOpen = true) {
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth;
+	if (defaultOpen) {
+		flags |= ImGuiTreeNodeFlags_DefaultOpen;
+	}
+
+	const ImVec2 itemSpacing = ImGui::GetStyle().ItemSpacing;
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(7.0f, 6.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(itemSpacing.x, 0.0f));
+	ImGui::PushStyleColor(ImGuiCol_Header, ofVlcPlayer4GuiStyle::themedMenuHeaderColor());
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ofVlcPlayer4GuiStyle::themedMenuHeaderHoverColor());
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, ofVlcPlayer4GuiStyle::themedMenuHeaderActiveColor());
+	const std::string inlineLabel = makeDetachedWindowTitle("inline_nested_submenu_", label);
+	const bool open = ImGui::TreeNodeEx(inlineLabel.c_str(), flags);
+	ImGui::PopStyleColor(3);
+	ImGui::PopStyleVar(3);
+	if (open) {
+		detachedSubMenuScopes().push_back({ false, true, nullptr, ImGui::GetItemRectMin(), ImGui::GetItemRectMax().x });
+		ImGui::Indent(kMenuContentInsetX);
+	}
+	return open;
+}
+
 inline bool beginSectionSubMenu(
 	const char * label,
 	MenuContentPolicy policy = MenuContentPolicy::Leaf,
@@ -462,6 +502,19 @@ inline bool beginSectionSubMenu(
 inline bool beginDetachedOnlySubMenu(
 	const char * label,
 	MenuContentPolicy policy = MenuContentPolicy::Leaf) {
+	const bool insideDetachedParent =
+		(!detachedMenuScopes().empty() && detachedMenuScopes().back().detached) ||
+		(!detachedSubMenuScopes().empty() && detachedSubMenuScopes().back().detached);
+	if (insideDetachedParent) {
+		if (!beginInlineSubMenuNoDetach(label, false)) {
+			return false;
+		}
+		if (menuPolicyAddsTopPadding(policy)) {
+			addMenuContentPadding();
+		}
+		return true;
+	}
+
 	auto & state = detachedSectionStates()[makeDetachedSectionKey("submenu:", label)];
 	state.autoHeight = true;
 	if (!beginDetachedSectionWindow(state, label, "detached_submenu_", detachedSubMenuScopes())) {

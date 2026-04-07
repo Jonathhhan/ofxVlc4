@@ -41,7 +41,7 @@ msys2:
 
 vs:
 	# install-libvlc.sh installs one shared Windows runtime under
-	# libs/libvlc/runtime/vs/x64 and links examples to it locally.
+	# runtime/vs/x64 and links examples to it locally.
 	ADDON_LIBS += libs/libvlc/lib/vs/libvlc.lib
 
 android/armeabi:

@@ -111,7 +111,7 @@ Inside `Advanced` the example now also exposes:
 
 - audio routing, devices, callback capture settings, filters, sync, and diagnostics
 - media info, tracks, subtitles, navigation, bookmarks, renderer/discovery, and capture/record status
-- a dedicated `DVD / Disc` section for title, chapter, program, menu navigation, and teletext controls when disc-style media exposes them
+- a dedicated `DVD / Disc` section for title, chapter, program, and menu navigation, while teletext lives in `Tracks & Subtitles`
 - video output, filters, adjustments, 3D/stereo options, crop/aspect/fit, and backend state
 - decoder-hardware selection next to `Video Output`, with NVDEC/DXVA2/D3D11 choices applied on the next init
 - live audio callback timing counters so conversion/copy costs can be checked under load
