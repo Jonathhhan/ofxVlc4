@@ -50,6 +50,13 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 		"Native Window / HWND",
 		"D3D11 / HDR Metadata"
 	};
+	static const char * preferredDecoderDevices[] = {
+		"Auto",
+		"D3D11",
+		"DXVA2",
+		"NVDEC",
+		"None"
+	};
 	static const char * aspectRatioModes[] = {
 		"Default", "Fill", "16:9", "16:10", "4:3", "1:1", "21:9", "2.35:1"
 	};
@@ -70,6 +77,7 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 
 	if (beginSubMenu("Geometry", MenuContentPolicy::Leaf)) {
 		int videoOutputBackendIndex = static_cast<int>(videoState.outputBackend);
+		int preferredDecoderDeviceIndex = static_cast<int>(videoState.preferredDecoderDevice);
 		if (ofVlcPlayer4GuiControls::drawComboWithWheel(
 				"Video Output",
 				videoOutputBackendIndex,
@@ -77,8 +85,26 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 				IM_ARRAYSIZE(videoOutputBackends))) {
 			player.setVideoOutputBackend(static_cast<ofxVlc4::VideoOutputBackend>(videoOutputBackendIndex));
 		}
+		if (ofVlcPlayer4GuiControls::drawComboWithWheel(
+				"Decoder Hardware",
+				preferredDecoderDeviceIndex,
+				preferredDecoderDevices,
+				IM_ARRAYSIZE(preferredDecoderDevices))) {
+			player.setPreferredDecoderDevice(static_cast<ofxVlc4::PreferredDecoderDevice>(preferredDecoderDeviceIndex));
+		}
 		if (player.isInitialized() && videoState.outputBackend != videoState.activeOutputBackend) {
 			ImGui::TextDisabled("Backend changes apply on the next init.");
+		}
+		if (player.isInitialized()) {
+			ImGui::TextDisabled("Decoder hardware changes apply on the next init.");
+		}
+		if (videoState.outputBackend == ofxVlc4::VideoOutputBackend::NativeWindow) {
+			ImGui::TextDisabled("Native mode uses the separate VLC window.");
+		} else if (videoState.outputBackend == ofxVlc4::VideoOutputBackend::D3D11Metadata) {
+			ImGui::TextDisabled("D3D11 mode captures HDR metadata and disables OF texture preview.");
+		}
+		if (videoState.preferredDecoderDevice == ofxVlc4::PreferredDecoderDevice::Nvdec) {
+			ImGui::TextDisabled("NVDEC requires a supported NVIDIA GPU, driver, and compatible media.");
 		}
 		if (visualizerSection) {
 			ImGui::Separator();

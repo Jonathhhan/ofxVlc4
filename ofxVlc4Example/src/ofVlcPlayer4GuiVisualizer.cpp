@@ -352,7 +352,7 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 		}
 	}
 
-	ImGui::TextDisabled("Apply from Video > Geometry after choosing the output backend.");
+	ImGui::TextDisabled("Apply from Video > Geometry after choosing renderer settings.");
 	ImGui::PopItemWidth();
 	ImGui::PopStyleVar();
 }
@@ -366,7 +366,7 @@ void ofVlcPlayer4GuiVisualizer::drawVlcApplyButton(
 		vlcVisualizerStateInitialized = true;
 	}
 
-	if (ImGui::Button("Apply VLC Visualizer", ImVec2(compactControlWidth, 0.0f))) {
+	if (ImGui::Button("Apply Video Settings", ImVec2(compactControlWidth, 0.0f))) {
 		player.setAudioVisualizerSettings(pendingVlcVisualizerSettings);
 		if (applyAudioVisualizerSettings) {
 			applyAudioVisualizerSettings();
