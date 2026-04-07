@@ -930,7 +930,6 @@ void ofVlcPlayer4Gui::drawPlaybackOptionsSection(
 		ofVlcPlayer4GuiControls::closeAllDetachedSections();
 	}
 	ImGui::EndDisabled();
-	ImGui::Separator();
 
 }
 
