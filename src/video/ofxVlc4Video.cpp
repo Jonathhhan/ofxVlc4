@@ -8,6 +8,14 @@
 #include <d3d11.h>
 #include "GLFW/glfw3native.h"
 #pragma comment(lib, "d3d11.lib")
+#elif defined(TARGET_OSX)
+#define GLFW_EXPOSE_NATIVE_COCOA
+#include <objc/message.h>
+#include <objc/runtime.h>
+#include "GLFW/glfw3native.h"
+#elif defined(TARGET_LINUX)
+#define GLFW_EXPOSE_NATIVE_X11
+#include "GLFW/glfw3native.h"
 #endif
 
 #include <algorithm>
@@ -845,8 +853,46 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 	owner.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
 	updateNativeVideoWindowVisibility();
 	return true;
+#elif defined(TARGET_LINUX)
+	if (!owner.vlcWindow || !owner.vlcWindow->getGLFWWindow()) {
+		owner.setError("Native video window is unavailable.");
+		return false;
+	}
+
+	Window xwindow = glfwGetX11Window(owner.vlcWindow->getGLFWWindow());
+	if (xwindow == 0) {
+		owner.setError("X11 native window handle is unavailable.");
+		return false;
+	}
+
+	libvlc_media_player_set_xwindow(player, static_cast<uint32_t>(xwindow));
+	owner.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
+	updateNativeVideoWindowVisibility();
+	return true;
+#elif defined(TARGET_OSX)
+	if (!owner.vlcWindow || !owner.vlcWindow->getGLFWWindow()) {
+		owner.setError("Native video window is unavailable.");
+		return false;
+	}
+
+	id cocoaWindow = glfwGetCocoaWindow(owner.vlcWindow->getGLFWWindow());
+	if (!cocoaWindow) {
+		owner.setError("Cocoa native window handle is unavailable.");
+		return false;
+	}
+
+	id cocoaView = ((id(*)(id, SEL))objc_msgSend)(cocoaWindow, sel_registerName("contentView"));
+	if (!cocoaView) {
+		owner.setError("Cocoa content view is unavailable.");
+		return false;
+	}
+
+	libvlc_media_player_set_nsobject(player, cocoaView);
+	owner.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
+	updateNativeVideoWindowVisibility();
+	return true;
 #else
-	owner.setError("Native window video output is only supported on Windows.");
+	owner.setError("Native window video output is only supported on Windows, Cocoa, and X11.");
 	return false;
 #endif
 }
