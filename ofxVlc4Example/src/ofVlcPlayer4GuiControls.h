@@ -92,7 +92,7 @@ inline void closeAllDetachedSections() {
 	for (auto & [_, state] : detachedSectionStates()) {
 		state.detached = false;
 		state.detachPending = false;
-		state.collapseInlineOnReturn = true;
+		state.collapseInlineOnReturn = false;
 		state.applyInitialWindowPos = false;
 	}
 }
