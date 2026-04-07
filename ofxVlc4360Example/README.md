@@ -59,13 +59,13 @@ Useful API calls demonstrated:
 
 Helper script:
 
-- [download-360-example-media.sh](download-360-example-media.sh)
+- [scripts/download-360-example-media.sh](scripts/download-360-example-media.sh)
 - downloads a free 360 sample from Wikimedia Commons into `bin/data`
   - presets:
     - `oceanside-4k`
     - `dji-mini-2`
   - example:
-    - `bash download-360-example-media.sh`
+    - `bash scripts/download-360-example-media.sh`
 
 Notes:
 

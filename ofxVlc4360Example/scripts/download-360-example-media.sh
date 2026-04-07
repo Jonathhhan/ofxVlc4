@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EXAMPLE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PRESET="oceanside-4k"
 OUTPUT_DIR=""
 FORCE=0
@@ -18,7 +19,7 @@ die() {
 usage() {
 	cat <<'EOF'
 Usage:
-  bash ofxVlc4360Example/download-360-example-media.sh [options]
+  bash ofxVlc4360Example/scripts/download-360-example-media.sh [options]
 
 Options:
   --preset NAME              Preset to download
@@ -28,9 +29,9 @@ Options:
   --help, -h                 Show this help text
 
 Examples:
-  bash ofxVlc4360Example/download-360-example-media.sh
-  bash ofxVlc4360Example/download-360-example-media.sh --preset dji-mini-2
-  bash ofxVlc4360Example/download-360-example-media.sh --output-dir ./bin/data --force
+  bash ofxVlc4360Example/scripts/download-360-example-media.sh
+  bash ofxVlc4360Example/scripts/download-360-example-media.sh --preset dji-mini-2
+  bash ofxVlc4360Example/scripts/download-360-example-media.sh --output-dir ./bin/data --force
 EOF
 }
 
@@ -100,7 +101,7 @@ case "$PRESET_KEY" in
 esac
 
 if [[ -z "$OUTPUT_DIR" ]]; then
-	OUTPUT_DIR="${SCRIPT_DIR}/bin/data"
+	OUTPUT_DIR="${EXAMPLE_DIR}/bin/data"
 fi
 
 mkdir -p "$OUTPUT_DIR"
