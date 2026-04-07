@@ -516,9 +516,6 @@ void ofApp::initializePlayer(
 			player.setAudioVisualizerSettings(visualizerSettings);
 		}
 	}
-	if (visualizerSettings.module != ofxVlc4AudioVisualizerModule::None) {
-		player.setVideoOutputBackend(ofxVlc4::VideoOutputBackend::NativeWindow);
-	}
 
 	player.setAudioCaptureEnabled(visualizerSettings.module == ofxVlc4AudioVisualizerModule::None);
 	player.init(vlc_argc, vlc_argv);

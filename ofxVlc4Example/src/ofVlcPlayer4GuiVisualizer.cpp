@@ -352,15 +352,27 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 		}
 	}
 
+	ImGui::TextDisabled("Apply from Video > Geometry after choosing the output backend.");
+	ImGui::PopItemWidth();
+	ImGui::PopStyleVar();
+}
+
+void ofVlcPlayer4GuiVisualizer::drawVlcApplyButton(
+	ofxVlc4 & player,
+	float compactControlWidth,
+	const std::function<void()> & applyAudioVisualizerSettings) {
+	if (!vlcVisualizerStateInitialized) {
+		pendingVlcVisualizerSettings = player.getAudioVisualizerSettings();
+		vlcVisualizerStateInitialized = true;
+	}
+
 	if (ImGui::Button("Apply VLC Visualizer", ImVec2(compactControlWidth, 0.0f))) {
 		player.setAudioVisualizerSettings(pendingVlcVisualizerSettings);
 		if (applyAudioVisualizerSettings) {
 			applyAudioVisualizerSettings();
 		}
 	}
-	ImGui::TextDisabled("Reinitializes the VLC player. 'None' disables VLC visualizer modules.");
-	ImGui::PopItemWidth();
-	ImGui::PopStyleVar();
+	ImGui::TextDisabled("Reinitializes the player. 'None' disables VLC visualizer modules.");
 }
 
 void ofVlcPlayer4GuiVisualizer::drawContent(

@@ -1100,21 +1100,23 @@ void ofVlcPlayer4Gui::drawVisualizerSection(
 	endContentMenuSection(MenuContentPolicy::Leaf);
 }
 
-void ofVlcPlayer4Gui::drawVideoViewSection(ofxVlc4 & player, bool detachedOnly) {
+void ofVlcPlayer4Gui::drawVideoViewSection(
+	ofxVlc4 & player,
+	const std::function<void()> & applyAudioVisualizerSettings,
+	bool detachedOnly) {
 	const auto & layout = layoutMetrics;
 	const bool open = detachedOnly
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Video", MenuContentPolicy::ContentThenNested)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Video", MenuContentPolicy::ContentThenNested, false);
 	if (!open) {
 		if (detachedOnly) {
-			videoSection.drawViewContent(player, kLabelInnerSpacing, layout.compactControlWidth, true);
+			videoSection.drawViewContent(player, kLabelInnerSpacing, layout.compactControlWidth, applyAudioVisualizerSettings, true);
 		}
 		return;
 	}
 
-	windowsSection.drawVideoOutputControls(player, kLabelInnerSpacing);
-	ImGui::Separator();
-	videoSection.drawViewContent(player, kLabelInnerSpacing, layout.compactControlWidth);
+	videoSection.setVisualizerSection(&visualizerSection);
+	videoSection.drawViewContent(player, kLabelInnerSpacing, layout.compactControlWidth, applyAudioVisualizerSettings);
 	ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::ContentThenNested);
 }
 
@@ -1172,7 +1174,7 @@ void ofVlcPlayer4Gui::drawExtendedSections(
 	drawAudioSection(player, applyAudioVisualizerSettings, detachedOnly);
 	drawMediaSection(player, detachedOnly);
 	drawVlcHelpSection(player, detachedOnly);
-	drawVideoViewSection(player, detachedOnly);
+	drawVideoViewSection(player, applyAudioVisualizerSettings, detachedOnly);
 	drawVideoAdjustmentsSection(player, detachedOnly);
 	drawVideo3DSection(player, detachedOnly);
 	drawMediaInfoSection(mediaDisplayState, detachedOnly);

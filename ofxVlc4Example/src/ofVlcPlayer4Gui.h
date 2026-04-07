@@ -119,7 +119,10 @@ private:
 	void drawVlcHelpSection(ofxVlc4 & player, bool detachedOnly = false);
 	void drawEqualizerSection(ofxVlc4 & player);
 	void drawVisualizerSection(ofxVlc4 & player, const std::function<void()> & applyAudioVisualizerSettings);
-	void drawVideoViewSection(ofxVlc4 & player, bool detachedOnly = false);
+	void drawVideoViewSection(
+		ofxVlc4 & player,
+		const std::function<void()> & applyAudioVisualizerSettings,
+		bool detachedOnly = false);
 	void drawVideoAdjustmentsSection(ofxVlc4 & player, bool detachedOnly = false);
 	void drawVideo3DSection(ofxVlc4 & player, bool detachedOnly = false);
 	void drawProjectMSection(

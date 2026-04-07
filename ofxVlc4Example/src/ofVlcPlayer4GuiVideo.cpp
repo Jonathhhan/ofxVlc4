@@ -1,5 +1,6 @@
 #include "ofVlcPlayer4GuiVideo.h"
 #include "ofVlcPlayer4GuiControls.h"
+#include "ofVlcPlayer4GuiVisualizer.h"
 #include "ofMain.h"
 #include "ofxVlc4.h"
 
@@ -31,6 +32,7 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 	ofxVlc4 & player,
 	const ImVec2 & labelInnerSpacing,
 	float compactControlWidth,
+	const std::function<void()> & applyAudioVisualizerSettings,
 	bool detachedOnly) {
 	const ofxVlc4::VideoStateInfo videoState = player.getVideoStateInfo();
 	static const char * deinterlaceModes[] = {
@@ -42,6 +44,11 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 		"Width",
 		"Height",
 		"Scale"
+	};
+	static const char * videoOutputBackends[] = {
+		"Texture / OF",
+		"Native Window / HWND",
+		"D3D11 / HDR Metadata"
 	};
 	static const char * aspectRatioModes[] = {
 		"Default", "Fill", "16:9", "16:10", "4:3", "1:1", "21:9", "2.35:1"
@@ -62,6 +69,23 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 	};
 
 	if (beginSubMenu("Geometry", MenuContentPolicy::Leaf)) {
+		int videoOutputBackendIndex = static_cast<int>(videoState.outputBackend);
+		if (ofVlcPlayer4GuiControls::drawComboWithWheel(
+				"Video Output",
+				videoOutputBackendIndex,
+				videoOutputBackends,
+				IM_ARRAYSIZE(videoOutputBackends))) {
+			player.setVideoOutputBackend(static_cast<ofxVlc4::VideoOutputBackend>(videoOutputBackendIndex));
+		}
+		if (player.isInitialized() && videoState.outputBackend != videoState.activeOutputBackend) {
+			ImGui::TextDisabled("Backend changes apply on the next init.");
+		}
+		if (visualizerSection) {
+			ImGui::Separator();
+			visualizerSection->drawVlcApplyButton(player, compactControlWidth, applyAudioVisualizerSettings);
+		}
+		ImGui::Separator();
+
 		int deinterlaceModeIndex = static_cast<int>(videoState.deinterlaceMode);
 		if (ofVlcPlayer4GuiControls::drawComboWithWheel("Deinterlace", deinterlaceModeIndex, deinterlaceModes, IM_ARRAYSIZE(deinterlaceModes))) {
 			player.setVideoDeinterlaceMode(static_cast<ofxVlc4::VideoDeinterlaceMode>(deinterlaceModeIndex));
