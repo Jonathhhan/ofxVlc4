@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <filesystem>
 #include <set>
+#include <system_error>
 
 namespace {
-	constexpr float kDefaultFov = 80.0f;
 	constexpr float kPreviewOutlineAlpha = 34.0f;
 
 	std::vector<std::filesystem::path> defaultSeedMediaCandidates() {
@@ -33,15 +33,21 @@ namespace {
 			".m2ts", ".m2v", ".vob", ".ogv", ".3gp", ".m3u8",
 			".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"
 		};
+
 		const std::string extension = ofToLower(path.extension().string());
 		return !extension.empty() && extensions.count(extension) > 0;
 	}
 }
 
 void ofApp::setup() {
+	ofDisableArbTex();
 	ofSetWindowTitle("ofxVlc4360Example");
 	ofSetFrameRate(60);
 	ofBackground(10, 12, 16);
+
+	sphere.setRadius(sphereRadius);
+	sphere.setResolution(64);
+	resetCameraView();
 
 	ofxVlc4::setLogLevel(OF_LOG_NOTICE);
 	player.setAudioCaptureEnabled(false);
@@ -53,7 +59,7 @@ void ofApp::setup() {
 	gui.setup(nullptr, true, ImGuiConfigFlags_None, true);
 	ImGui::GetIO().IniFilename = "imgui_360.ini";
 
-	infoStatus = "Open or drop a 360 / panoramic video to begin.";
+	infoStatus = "Open or drop a panoramic video, then drag the mouse to look around.";
 	loadSeedMedia();
 }
 
@@ -63,12 +69,6 @@ void ofApp::update() {
 	}
 
 	player.update();
-
-	if (startupMediaPending && !pendingStartupMediaPath.empty()) {
-		startupMediaPending = false;
-		loadMediaPath(pendingStartupMediaPath, startupMediaAutoPlay);
-		pendingStartupMediaPath.clear();
-	}
 }
 
 void ofApp::draw() {
@@ -111,25 +111,15 @@ void ofApp::keyPressed(int key) {
 		break;
 	case 'r':
 	case 'R':
-		resetViewpoint();
-		break;
-	case OF_KEY_LEFT:
-		nudgeViewpoint(-5.0f, 0.0f, 0.0f, 0.0f);
-		break;
-	case OF_KEY_RIGHT:
-		nudgeViewpoint(5.0f, 0.0f, 0.0f, 0.0f);
-		break;
-	case OF_KEY_UP:
-		nudgeViewpoint(0.0f, 5.0f, 0.0f, 0.0f);
-		break;
-	case OF_KEY_DOWN:
-		nudgeViewpoint(0.0f, -5.0f, 0.0f, 0.0f);
+		resetCameraView();
 		break;
 	case '[':
-		nudgeViewpoint(0.0f, 0.0f, 0.0f, -3.0f);
+		cameraFov = std::max(30.0f, cameraFov - 3.0f);
+		applyCameraFov();
 		break;
 	case ']':
-		nudgeViewpoint(0.0f, 0.0f, 0.0f, 3.0f);
+		cameraFov = std::min(120.0f, cameraFov + 3.0f);
+		applyCameraFov();
 		break;
 	default:
 		break;
@@ -160,27 +150,29 @@ void ofApp::drawPreview() {
 
 	const ofxVlc4::VideoStateInfo videoState = player.getVideoStateInfo();
 	const ofxVlc4::MediaReadinessInfo readiness = player.getMediaReadinessInfo();
+	const bool hasFrame = (readiness.hasReceivedVideoFrame || player.hasVideoOutput()) &&
+		player.getTexture().isAllocated();
 
-	const float availableWidth = std::max(1.0f, static_cast<float>(ofGetWidth()) - (previewMargin * 2.0f));
-	const float availableHeight = std::max(1.0f, static_cast<float>(ofGetHeight()) - (previewMargin * 2.0f));
-	float sourceWidth = static_cast<float>(videoState.sourceWidth);
-	float sourceHeight = static_cast<float>(videoState.sourceHeight);
-	if (sourceWidth <= 0.0f || sourceHeight <= 0.0f) {
-		sourceWidth = 16.0f;
-		sourceHeight = 9.0f;
-	}
-
-	const float scale = std::min(availableWidth / sourceWidth, availableHeight / sourceHeight);
-	const float drawWidth = std::max(1.0f, sourceWidth * scale);
-	const float drawHeight = std::max(1.0f, sourceHeight * scale);
-	const float drawX = (static_cast<float>(ofGetWidth()) - drawWidth) * 0.5f;
-	const float drawY = (static_cast<float>(ofGetHeight()) - drawHeight) * 0.5f;
-
-	const bool hasFrame = readiness.hasReceivedVideoFrame || player.hasVideoOutput();
 	if (hasFrame) {
+		ofEnableDepthTest();
+		camera.begin();
+		ofPushMatrix();
+		ofScale(-1.0f, 1.0f, 1.0f);
 		ofSetColor(255);
-		player.draw(drawX, drawY, drawWidth, drawHeight);
+		player.getTexture().bind();
+		sphere.draw();
+		player.getTexture().unbind();
+		ofPopMatrix();
+		camera.end();
+		ofDisableDepthTest();
 	} else {
+		const float availableWidth = std::max(1.0f, static_cast<float>(ofGetWidth()) - (previewMargin * 2.0f));
+		const float availableHeight = std::max(1.0f, static_cast<float>(ofGetHeight()) - (previewMargin * 2.0f));
+		const float drawWidth = availableWidth;
+		const float drawHeight = availableHeight;
+		const float drawX = (static_cast<float>(ofGetWidth()) - drawWidth) * 0.5f;
+		const float drawY = (static_cast<float>(ofGetHeight()) - drawHeight) * 0.5f;
+
 		ofPushStyle();
 		ofSetColor(24, 29, 40);
 		ofDrawRectangle(drawX, drawY, drawWidth, drawHeight);
@@ -193,17 +185,22 @@ void ofApp::drawPreview() {
 		}
 		ofSetColor(210);
 		const std::string placeholder =
-			"Drop a 360 or panoramic video here\n"
-			"or use the Open button in the panel.\n\n"
-			"Projection, stereo mode, and viewpoint are controlled in the ImGui UI.";
+			"Drop a panoramic video here\n"
+			"or use Open in the ImGui panel.\n\n"
+			"Play media, then drag the mouse to look around.\n"
+			"Use [ and ] to change the camera FOV.";
 		ofDrawBitmapStringHighlight(placeholder, drawX + 24.0f, drawY + 36.0f);
+		ofSetColor(255, 255, 255, static_cast<int>(kPreviewOutlineAlpha));
+		ofNoFill();
+		ofDrawRectangle(drawX, drawY, drawWidth, drawHeight);
+		ofFill();
 		ofPopStyle();
 	}
 
-	ofNoFill();
-	ofSetColor(255, 255, 255, static_cast<int>(kPreviewOutlineAlpha));
-	ofDrawRectangle(drawX, drawY, drawWidth, drawHeight);
-	ofFill();
+	ofSetColor(255);
+	ofDrawBitmapStringHighlight("FPS: " + ofToString(ofGetFrameRate(), 1), 18.0f, 22.0f);
+	ofDrawBitmapStringHighlight("Timecode: " + player.formatCurrentPlaybackTimecode(), 18.0f, 44.0f);
+	ofDrawBitmapStringHighlight("Source: " + ofToString(videoState.sourceWidth) + "x" + ofToString(videoState.sourceHeight), 18.0f, 66.0f);
 }
 
 void ofApp::drawControlPanel() {
@@ -211,18 +208,16 @@ void ofApp::drawControlPanel() {
 	const ofxVlc4::MediaReadinessInfo readiness = player.getMediaReadinessInfo();
 	const ofxVlc4::PlaylistStateInfo playlistState = player.getPlaylistStateInfo();
 
-	ImGui::SetNextWindowSize(ImVec2(430.0f, 720.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(430.0f, 620.0f), ImGuiCond_FirstUseEver);
 	if (!ImGui::Begin("360 Controls", nullptr, ImGuiWindowFlags_NoCollapse)) {
 		ImGui::End();
 		return;
 	}
 
 	ImGui::TextWrapped("%s", currentMediaLabel().c_str());
-	ImGui::Text("Timecode: %s", player.formatCurrentPlaybackTimecode().c_str());
-	ImGui::Text("Projection: %s", projectionLabel(videoState.projectionMode).c_str());
-	ImGui::Text("Stereo: %s", stereoLabel(videoState.stereoMode).c_str());
-	ImGui::Text("Source: %dx%d", videoState.sourceWidth, videoState.sourceHeight);
 	ImGui::Text("Playback: %s", player.isPlaying() ? "Playing" : (player.isStopped() ? "Stopped" : "Idle / Paused"));
+	ImGui::Text("Timecode: %s", player.formatCurrentPlaybackTimecode().c_str());
+	ImGui::Text("Source: %dx%d", videoState.sourceWidth, videoState.sourceHeight);
 	ImGui::Separator();
 
 	if (ImGui::Button("Open...", ImVec2(92.0f, 0.0f))) {
@@ -242,7 +237,7 @@ void ofApp::drawControlPanel() {
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Reset View", ImVec2(120.0f, 0.0f))) {
-		resetViewpoint();
+		resetCameraView();
 	}
 
 	if (playlistState.size > 1) {
@@ -255,74 +250,20 @@ void ofApp::drawControlPanel() {
 		}
 	}
 
-	ImGui::SeparatorText("Projection");
-
-	int projectionIndex = 0;
-	for (size_t i = 0; i < projectionModes.size(); ++i) {
-		if (projectionModes[i] == videoState.projectionMode) {
-			projectionIndex = static_cast<int>(i);
-			break;
-		}
+	ImGui::SeparatorText("Camera");
+	if (ImGui::SliderFloat("FOV", &cameraFov, 30.0f, 120.0f, "%.0f deg")) {
+		applyCameraFov();
 	}
-	if (ImGui::Combo("Mode", &projectionIndex, projectionModeLabels.data(), static_cast<int>(projectionModeLabels.size()))) {
-		player.setVideoProjectionMode(projectionModes[static_cast<size_t>(projectionIndex)]);
-	}
-
-	int stereoIndex = 0;
-	for (size_t i = 0; i < stereoModes.size(); ++i) {
-		if (stereoModes[i] == videoState.stereoMode) {
-			stereoIndex = static_cast<int>(i);
-			break;
-		}
-	}
-	if (ImGui::Combo("Stereo", &stereoIndex, stereoModeLabels.data(), static_cast<int>(stereoModeLabels.size()))) {
-		player.setVideoStereoMode(stereoModes[static_cast<size_t>(stereoIndex)]);
-	}
-
-	ImGui::TextDisabled("Use equirectangular or cubemap for real 360 sources.");
-
-	ImGui::SeparatorText("Viewpoint");
-
-	float yaw = videoState.yaw;
-	float pitch = videoState.pitch;
-	float roll = videoState.roll;
-	float fov = videoState.fov;
-	if (ImGui::SliderFloat("Yaw", &yaw, -180.0f, 180.0f, "%.0f deg")) {
-		player.setVideoViewpoint(yaw, pitch, roll, fov);
-	}
-	if (ImGui::SliderFloat("Pitch", &pitch, -90.0f, 90.0f, "%.0f deg")) {
-		player.setVideoViewpoint(yaw, pitch, roll, fov);
-	}
-	if (ImGui::SliderFloat("Roll", &roll, -180.0f, 180.0f, "%.0f deg")) {
-		player.setVideoViewpoint(yaw, pitch, roll, fov);
-	}
-	if (ImGui::SliderFloat("FOV", &fov, 1.0f, 179.0f, "%.0f deg")) {
-		player.setVideoViewpoint(yaw, pitch, roll, fov);
-	}
-
-	if (ImGui::Button("Yaw -15", ImVec2(92.0f, 0.0f))) {
-		nudgeViewpoint(-15.0f, 0.0f, 0.0f, 0.0f);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Yaw +15", ImVec2(92.0f, 0.0f))) {
-		nudgeViewpoint(15.0f, 0.0f, 0.0f, 0.0f);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Pitch +10", ImVec2(92.0f, 0.0f))) {
-		nudgeViewpoint(0.0f, 10.0f, 0.0f, 0.0f);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Pitch -10", ImVec2(92.0f, 0.0f))) {
-		nudgeViewpoint(0.0f, -10.0f, 0.0f, 0.0f);
-	}
-
-	ImGui::TextDisabled("Arrow keys nudge yaw/pitch. [ and ] change FOV.");
+	ImGui::TextDisabled("Drag with the mouse to look around inside the sphere.");
+	ImGui::TextDisabled("Use R to reset view. [ and ] adjust FOV.");
 
 	ImGui::SeparatorText("Diagnostics");
 	ImGui::Text("Frame attached: %s", readiness.mediaAttached ? "yes" : "no");
 	ImGui::Text("Prepared: %s", readiness.startupPrepared ? "yes" : "no");
 	ImGui::Text("Video frame: %s", readiness.hasReceivedVideoFrame ? "yes" : "no");
+	ImGui::Text("Video output: %s", player.hasVideoOutput() ? "yes" : "no");
 	ImGui::Text("Playlist items: %d", static_cast<int>(playlistState.size));
+
 	if (!infoStatus.empty()) {
 		ImGui::Separator();
 		ImGui::TextWrapped("%s", infoStatus.c_str());
@@ -338,26 +279,18 @@ void ofApp::drawControlPanel() {
 
 void ofApp::loadSeedMedia() {
 	for (const auto & candidate : defaultSeedMediaCandidates()) {
-		if (std::filesystem::exists(candidate)) {
-			queueStartupMediaPath(candidate.string(), true);
+		std::error_code error;
+		if (std::filesystem::exists(candidate, error) && !error) {
+			loadMediaPath(candidate.string(), false);
 			return;
 		}
 	}
-}
-
-void ofApp::queueStartupMediaPath(const std::string & path, bool autoPlay) {
-	pendingStartupMediaPath = path;
-	startupMediaAutoPlay = autoPlay;
-	startupMediaPending = !pendingStartupMediaPath.empty();
 }
 
 void ofApp::loadMediaPath(const std::string & path, bool autoPlay) {
 	if (path.empty() || shuttingDown) {
 		return;
 	}
-
-	startupMediaPending = false;
-	pendingStartupMediaPath.clear();
 
 	replacePlaylistFromPaths({ path }, autoPlay);
 }
@@ -386,6 +319,7 @@ void ofApp::replacePlaylistFromPaths(const std::vector<std::string> & paths, boo
 		return;
 	}
 
+	resetCameraView();
 	const std::string firstPath = supportedPaths.front();
 	if (addedCount == 1) {
 		infoStatus = "Loaded: " + ofFilePath::getFileName(firstPath);
@@ -393,7 +327,6 @@ void ofApp::replacePlaylistFromPaths(const std::vector<std::string> & paths, boo
 		infoStatus = "Loaded playlist items: " + ofToString(addedCount);
 	}
 
-	resetViewpoint();
 	if (autoPlay) {
 		player.playIndex(0);
 	}
@@ -412,23 +345,24 @@ std::vector<std::string> ofApp::collectSupportedPaths(const std::vector<std::str
 }
 
 void ofApp::openMediaDialog() {
-	ofFileDialogResult result = ofSystemLoadDialog("Choose a 360 or panoramic media file");
+	ofFileDialogResult result = ofSystemLoadDialog("Choose a panoramic media file");
 	if (result.bSuccess) {
 		loadMediaPath(result.getPath(), true);
 	}
 }
 
-void ofApp::resetViewpoint() {
-	player.resetVideoViewpoint();
-	player.setVideoViewpoint(0.0f, 0.0f, 0.0f, kDefaultFov);
+void ofApp::resetCameraView() {
+	camera.reset();
+	camera.setAutoDistance(false);
+	camera.setPosition(0.0f, 0.0f, 0.0f);
+	camera.lookAt(glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	camera.setNearClip(0.05f);
+	camera.setFarClip(sphereRadius * 4.0f);
+	applyCameraFov();
 }
 
-void ofApp::nudgeViewpoint(float deltaYaw, float deltaPitch, float deltaRoll, float deltaFov) {
-	const float yaw = player.getVideoYaw() + deltaYaw;
-	const float pitch = player.getVideoPitch() + deltaPitch;
-	const float roll = player.getVideoRoll() + deltaRoll;
-	const float fov = player.getVideoFov() + deltaFov;
-	player.setVideoViewpoint(yaw, pitch, roll, fov);
+void ofApp::applyCameraFov() {
+	camera.setFov(cameraFov);
 }
 
 std::string ofApp::currentMediaLabel() const {
@@ -440,34 +374,4 @@ std::string ofApp::currentMediaLabel() const {
 		return ofFilePath::getFileName(player.getCurrentPath());
 	}
 	return "No media loaded";
-}
-
-std::string ofApp::projectionLabel(ofxVlc4::VideoProjectionMode mode) const {
-	switch (mode) {
-	case ofxVlc4::VideoProjectionMode::Rectangular:
-		return "Rectangular";
-	case ofxVlc4::VideoProjectionMode::Equirectangular:
-		return "360 Equirectangular";
-	case ofxVlc4::VideoProjectionMode::CubemapStandard:
-		return "Cubemap";
-	case ofxVlc4::VideoProjectionMode::Auto:
-	default:
-		return "Auto";
-	}
-}
-
-std::string ofApp::stereoLabel(ofxVlc4::VideoStereoMode mode) const {
-	switch (mode) {
-	case ofxVlc4::VideoStereoMode::Stereo:
-		return "Stereo";
-	case ofxVlc4::VideoStereoMode::LeftEye:
-		return "Left Eye";
-	case ofxVlc4::VideoStereoMode::RightEye:
-		return "Right Eye";
-	case ofxVlc4::VideoStereoMode::SideBySide:
-		return "Side By Side";
-	case ofxVlc4::VideoStereoMode::Auto:
-	default:
-		return "Auto";
-	}
 }

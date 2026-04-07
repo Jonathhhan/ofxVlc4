@@ -4,7 +4,6 @@
 #include "ofxImGui.h"
 #include "ofxVlc4.h"
 
-#include <array>
 #include <string>
 #include <vector>
 
@@ -23,52 +22,22 @@ private:
 	void drawPreview();
 	void drawControlPanel();
 	void loadSeedMedia();
-	void queueStartupMediaPath(const std::string & path, bool autoPlay = true);
 	void loadMediaPath(const std::string & path, bool autoPlay = true);
 	void replacePlaylistFromPaths(const std::vector<std::string> & paths, bool autoPlay = true);
 	std::vector<std::string> collectSupportedPaths(const std::vector<std::string> & paths) const;
 	void openMediaDialog();
-	void resetViewpoint();
-	void nudgeViewpoint(float deltaYaw, float deltaPitch, float deltaRoll, float deltaFov);
+	void resetCameraView();
+	void applyCameraFov();
 	std::string currentMediaLabel() const;
-	std::string projectionLabel(ofxVlc4::VideoProjectionMode mode) const;
-	std::string stereoLabel(ofxVlc4::VideoStereoMode mode) const;
 
 	ofxVlc4 player;
 	ofxImGui::Gui gui;
+	ofEasyCam camera;
+	ofSpherePrimitive sphere;
 
 	bool shuttingDown = false;
-	bool startupMediaPending = false;
-	bool startupMediaAutoPlay = true;
 	float previewMargin = 24.0f;
+	float sphereRadius = 900.0f;
+	float cameraFov = 80.0f;
 	std::string infoStatus;
-	std::string pendingStartupMediaPath;
-
-	std::array<const char *, 4> projectionModeLabels = {
-		"Auto",
-		"Rectangular",
-		"360 Equirectangular",
-		"Cubemap"
-	};
-	std::array<ofxVlc4::VideoProjectionMode, 4> projectionModes = {
-		ofxVlc4::VideoProjectionMode::Auto,
-		ofxVlc4::VideoProjectionMode::Rectangular,
-		ofxVlc4::VideoProjectionMode::Equirectangular,
-		ofxVlc4::VideoProjectionMode::CubemapStandard
-	};
-
-	std::array<const char *, 5> stereoModeLabels = {
-		"Auto",
-		"Stereo",
-		"Left Eye",
-		"Right Eye",
-		"Side By Side"
-	};
-	std::array<ofxVlc4::VideoStereoMode, 5> stereoModes = {
-		ofxVlc4::VideoStereoMode::Auto,
-		ofxVlc4::VideoStereoMode::Stereo,
-		ofxVlc4::VideoStereoMode::LeftEye,
-		ofxVlc4::VideoStereoMode::RightEye,
-		ofxVlc4::VideoStereoMode::SideBySide
-	};
 };

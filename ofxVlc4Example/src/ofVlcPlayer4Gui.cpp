@@ -700,11 +700,6 @@ void ofVlcPlayer4Gui::drawHeaderSection(
 	if (hasPlaylist && ImGui::IsItemClicked(0)) {
 		showRemainingTime = !showRemainingTime;
 	}
-	if (ofVlcPlayer4GuiControls::hasDetachedSections()) {
-		if (ImGui::Button("Close Detached Menus")) {
-			ofVlcPlayer4GuiControls::closeAllDetachedSections();
-		}
-	}
 	ImGui::Separator();
 }
 
@@ -922,6 +917,16 @@ void ofVlcPlayer4Gui::drawPlaybackOptionsSection(
 	}
 
 	drawExtendedSections(player, mediaDisplayState, false);
+	ImGui::Dummy(ImVec2(0.0f, kSectionSpacing));
+	ImGui::Separator();
+	ImGui::Dummy(ImVec2(0.0f, kButtonSpacing));
+
+	const bool hasDetachedSections = ofVlcPlayer4GuiControls::hasDetachedSections();
+	ImGui::BeginDisabled(!hasDetachedSections);
+	if (ImGui::Button("Close Detached Menus", ImVec2(layout.actionButtonWidth * 1.35f, 0.0f))) {
+		ofVlcPlayer4GuiControls::closeAllDetachedSections();
+	}
+	ImGui::EndDisabled();
 
 }
 
