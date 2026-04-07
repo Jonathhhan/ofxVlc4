@@ -75,6 +75,7 @@ public:
 		ofxVlc4 & player,
 		const std::function<int(const std::string &)> & addPathToPlaylist);
 	bool shouldRenderProjectMPreview() const;
+	ofRectangle getVideoPreviewScreenRect() const;
 	const ofVlcPlayer4GuiVideo & getVideoSection() const;
 
 private:

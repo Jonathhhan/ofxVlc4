@@ -142,6 +142,14 @@ enum class ofxVlc4VlcHelpMode {
 	FullHelp
 };
 
+enum class ofxVlc4SubtitleTextRenderer {
+	Auto = 0,
+	Freetype,
+	Sapi,
+	Dummy,
+	None
+};
+
 class ofxVlc4 {
 public:
 	static ofxVlc4AddonVersionInfo getAddonVersionInfo();
@@ -661,6 +669,14 @@ public:
 		D3D11Metadata
 	};
 
+	enum class PreferredDecoderDevice {
+		Any = 0,
+		D3D11,
+		DXVA2,
+		Nvdec,
+		None
+	};
+
 	enum class VideoAdjustmentEngine {
 		Auto = 0,
 		LibVlc,
@@ -724,6 +740,7 @@ public:
 		VideoDisplayFitMode displayFitMode = VideoDisplayFitMode::Smaller;
 		VideoOutputBackend outputBackend = VideoOutputBackend::Texture;
 		VideoOutputBackend activeOutputBackend = VideoOutputBackend::Texture;
+		PreferredDecoderDevice preferredDecoderDevice = PreferredDecoderDevice::Any;
 		VideoProjectionMode projectionMode = VideoProjectionMode::Auto;
 		VideoStereoMode stereoMode = VideoStereoMode::Auto;
 		VideoHdrMetadataInfo hdrMetadata;
@@ -1027,6 +1044,7 @@ private:
 		VideoDisplayFitMode videoDisplayFitMode = VideoDisplayFitMode::Smaller;
 		VideoOutputBackend videoOutputBackend = VideoOutputBackend::Texture;
 		VideoOutputBackend activeVideoOutputBackend = VideoOutputBackend::Texture;
+		PreferredDecoderDevice preferredDecoderDevice = PreferredDecoderDevice::Any;
 		float videoScale = 0.0f;
 		VideoProjectionMode videoProjectionMode = VideoProjectionMode::Auto;
 		VideoStereoMode videoStereoMode = VideoStereoMode::Auto;
@@ -1053,9 +1071,15 @@ private:
 		int64_t audioDelayUs = 0;
 		int64_t subtitleDelayUs = 0;
 		float subtitleTextScale = 1.0f;
+		ofxVlc4SubtitleTextRenderer subtitleTextRenderer = ofxVlc4SubtitleTextRenderer::Auto;
+		std::string subtitleFontFamily;
+		int subtitleTextColor = 16777215;
+		int subtitleTextOpacity = 255;
+		bool subtitleBold = false;
 		MediaPlayerRole mediaPlayerRole = MediaPlayerRole::None;
 		bool keyInputEnabled = true;
 		bool mouseInputEnabled = true;
+		std::vector<std::string> extraInitArgs;
 	};
 
 	struct AudioRuntimeState {
@@ -1428,6 +1452,7 @@ private:
 	VideoDisplayFitMode & videoDisplayFitMode;
 	VideoOutputBackend & videoOutputBackend;
 	VideoOutputBackend & activeVideoOutputBackend;
+	PreferredDecoderDevice & preferredDecoderDevice;
 	float & videoScale;
 	VideoProjectionMode & videoProjectionMode;
 	VideoStereoMode & videoStereoMode;
@@ -1451,9 +1476,15 @@ private:
 	int64_t & audioDelayUs;
 	int64_t & subtitleDelayUs;
 	float & subtitleTextScale;
+	ofxVlc4SubtitleTextRenderer & subtitleTextRenderer;
+	std::string & subtitleFontFamily;
+	int & subtitleTextColor;
+	int & subtitleTextOpacity;
+	bool & subtitleBold;
 	MediaPlayerRole & mediaPlayerRole;
 	bool & keyInputEnabled;
 	bool & mouseInputEnabled;
+	std::vector<std::string> & extraInitArgs;
 	std::atomic<int> & channels;
 	std::atomic<int> & sampleRate;
 	std::atomic<bool> & isAudioReady;
@@ -1802,6 +1833,10 @@ public:
 	// init() owns the VLC instance/player lifetime for this wrapper and can safely be called again.
 	void update();
 	void init(int vlc_argc, char const * vlc_argv[]);
+	std::vector<std::string> getExtraInitArgs() const;
+	void setExtraInitArgs(const std::vector<std::string> & args);
+	void addExtraInitArg(const std::string & arg);
+	void clearExtraInitArgs();
 	bool startRecordingSession(const ofxVlc4RecordingSessionConfig & config);
 	bool startTextureRecordingSession(
 		std::string name,
@@ -2021,6 +2056,16 @@ public:
 	void setSubtitleDelayMs(int delayMs);
 	float getSubtitleTextScale() const;
 	void setSubtitleTextScale(float scale);
+	ofxVlc4SubtitleTextRenderer getSubtitleTextRenderer() const;
+	void setSubtitleTextRenderer(ofxVlc4SubtitleTextRenderer renderer);
+	std::string getSubtitleFontFamily() const;
+	void setSubtitleFontFamily(const std::string & family);
+	int getSubtitleTextColor() const;
+	void setSubtitleTextColor(int color);
+	int getSubtitleTextOpacity() const;
+	void setSubtitleTextOpacity(int opacity);
+	bool isSubtitleBold() const;
+	void setSubtitleBold(bool enabled);
 	bool isKeyInputEnabled() const;
 	void setKeyInputEnabled(bool enabled);
 	bool isMouseInputEnabled() const;
@@ -2211,6 +2256,8 @@ public:
 	VideoOutputBackend getVideoOutputBackend() const;
 	VideoOutputBackend getActiveVideoOutputBackend() const;
 	void setVideoOutputBackend(VideoOutputBackend backend);
+	PreferredDecoderDevice getPreferredDecoderDevice() const;
+	void setPreferredDecoderDevice(PreferredDecoderDevice device);
 	VideoHdrMetadataInfo getVideoHdrMetadata() const;
 	float getVideoScale() const;
 	void setVideoScale(float scale);

@@ -32,12 +32,9 @@ public:
 			return false;
 		}
 
-		std::string content = stream.str();
-		if (content.size() >= 3 &&
-			static_cast<unsigned char>(content[0]) == 0xEF &&
-			static_cast<unsigned char>(content[1]) == 0xBB &&
-			static_cast<unsigned char>(content[2]) == 0xBF) {
-			content.erase(0, 3);
+		std::string content;
+		if (!decodeTextContent(stream.str(), content, errorOut)) {
+			return false;
 		}
 
 		normalizeLineEndings(content);
@@ -113,8 +110,106 @@ public:
 	}
 
 private:
+	static bool decodeTextContent(const std::string & rawContent, std::string & decodedOut, std::string & errorOut) {
+		decodedOut.clear();
+
+		if (rawContent.size() >= 2) {
+			const unsigned char byte0 = static_cast<unsigned char>(rawContent[0]);
+			const unsigned char byte1 = static_cast<unsigned char>(rawContent[1]);
+			const bool isUtf16Le = byte0 == 0xFF && byte1 == 0xFE;
+			const bool isUtf16Be = byte0 == 0xFE && byte1 == 0xFF;
+			if (isUtf16Le || isUtf16Be) {
+				const size_t payloadOffset = 2;
+				const size_t payloadSize = rawContent.size() - payloadOffset;
+				if ((payloadSize % 2) != 0) {
+					errorOut = "Subtitle file has invalid UTF-16 byte length.";
+					return false;
+				}
+
+				std::u16string utf16Content;
+				utf16Content.reserve(payloadSize / 2);
+				for (size_t i = payloadOffset; i < rawContent.size(); i += 2) {
+					const unsigned char lowByte = static_cast<unsigned char>(rawContent[i]);
+					const unsigned char highByte = static_cast<unsigned char>(rawContent[i + 1]);
+					const char16_t codeUnit = isUtf16Le
+						? static_cast<char16_t>(lowByte | (highByte << 8))
+						: static_cast<char16_t>((lowByte << 8) | highByte);
+					utf16Content.push_back(codeUnit);
+				}
+
+				if (!appendUtf16AsUtf8(utf16Content, decodedOut)) {
+					errorOut = "Subtitle file uses an invalid UTF-16 encoding.";
+					return false;
+				}
+
+				return true;
+			}
+		}
+
+		decodedOut = rawContent;
+		if (decodedOut.size() >= 3 &&
+			static_cast<unsigned char>(decodedOut[0]) == 0xEF &&
+			static_cast<unsigned char>(decodedOut[1]) == 0xBB &&
+			static_cast<unsigned char>(decodedOut[2]) == 0xBF) {
+			decodedOut.erase(0, 3);
+		}
+
+		return true;
+	}
+
 	static void normalizeLineEndings(std::string & value) {
 		value.erase(std::remove(value.begin(), value.end(), '\r'), value.end());
+	}
+
+	static void appendUtf8Codepoint(uint32_t codepoint, std::string & output) {
+		if (codepoint <= 0x7F) {
+			output.push_back(static_cast<char>(codepoint));
+			return;
+		}
+		if (codepoint <= 0x7FF) {
+			output.push_back(static_cast<char>(0xC0 | (codepoint >> 6)));
+			output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+			return;
+		}
+		if (codepoint <= 0xFFFF) {
+			output.push_back(static_cast<char>(0xE0 | (codepoint >> 12)));
+			output.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+			output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+			return;
+		}
+
+		output.push_back(static_cast<char>(0xF0 | (codepoint >> 18)));
+		output.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
+		output.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+		output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+	}
+
+	static bool appendUtf16AsUtf8(const std::u16string & utf16Content, std::string & output) {
+		output.clear();
+		output.reserve(utf16Content.size());
+
+		for (size_t i = 0; i < utf16Content.size(); ++i) {
+			uint32_t codepoint = utf16Content[i];
+			if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
+				if (i + 1 >= utf16Content.size()) {
+					return false;
+				}
+
+				const uint32_t lowSurrogate = utf16Content[i + 1];
+				if (lowSurrogate < 0xDC00 || lowSurrogate > 0xDFFF) {
+					return false;
+				}
+
+				codepoint = 0x10000 + (((codepoint - 0xD800) << 10) | (lowSurrogate - 0xDC00));
+				++i;
+			} else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
+				return false;
+			}
+
+			appendUtf8Codepoint(codepoint, output);
+		}
+
+		return true;
 	}
 
 	static void trimLeft(std::string & value) {

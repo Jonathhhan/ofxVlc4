@@ -74,7 +74,8 @@ void ofVlcPlayer4GuiAudio::drawContent(
 	ofxVlc4 & player,
 	const ImVec2 & labelInnerSpacing,
 	float compactControlWidth,
-	float wideSliderWidth) {
+	float wideSliderWidth,
+	bool detachedOnly) {
 	static const char * mixModes[] = { "Auto", "Stereo", "Binaural", "4.0", "5.1", "7.1" };
 	static const char * stereoModes[] = { "Auto", "Stereo", "Reverse", "Left", "Right", "Dolby", "Mono" };
 	static const char * callbackFormats[] = { "Float32", "S16", "S32" };
@@ -182,8 +183,13 @@ void ofVlcPlayer4GuiAudio::drawContent(
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
 	ImGui::PushItemWidth(compactControlWidth);
+	const auto beginSubMenu = [detachedOnly](const char * label, MenuContentPolicy policy) {
+		return detachedOnly
+			? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu(label, policy)
+			: ofVlcPlayer4GuiControls::beginSectionSubMenu(label, policy, false);
+	};
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Playback", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Playback", MenuContentPolicy::Leaf)) {
 		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(wideSliderWidth));
 		if (ImGui::SliderInt("Volume", &volume, 0, 100)) {
 			player.setVolume(volume);
@@ -219,7 +225,7 @@ void ofVlcPlayer4GuiAudio::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Live Controls", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Live Controls", MenuContentPolicy::Leaf)) {
 		if (ofVlcPlayer4GuiControls::drawComboWithWheel("Mixmode", mixModeIndex, mixModes, IM_ARRAYSIZE(mixModes))) {
 			player.setAudioMixMode(static_cast<ofxVlc4::AudioMixMode>(mixModeIndex));
 		}
@@ -378,7 +384,7 @@ void ofVlcPlayer4GuiAudio::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Sync", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Sync", MenuContentPolicy::Leaf)) {
 		float playbackRate = player.getPlaybackRate();
 		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(wideSliderWidth));
 		if (ImGui::SliderFloat("Rate", &playbackRate, 0.25f, 4.0f, "%.2fx")) {

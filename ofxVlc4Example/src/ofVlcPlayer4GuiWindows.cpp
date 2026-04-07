@@ -50,7 +50,7 @@ float displayInnerBorder(bool fullscreen) {
 	return fullscreen ? 0.0f : 0.0f;
 }
 
-void drawTexturePreview(
+ofRectangle drawTexturePreview(
 	const ofTexture & texture,
 	float displayWidth,
 	float displayHeight,
@@ -111,9 +111,11 @@ void drawTexturePreview(
 	ImGui::Dummy(availableRegion);
 	ImGui::SetCursorPos(contentStart);
 	ImGui::Dummy(availableRegion);
+
+	return ofRectangle(previewMin.x, previewMin.y, previewWidth, previewHeight);
 }
 
-void drawPreviewWindow(
+ofRectangle drawPreviewWindow(
 	const char * title,
 	bool & openFlag,
 	const ofTexture & texture,
@@ -149,7 +151,7 @@ void drawPreviewWindow(
 	}
 
 	ImGui::Begin(title, &openFlag, flags);
-	drawTexturePreview(
+	const ofRectangle previewRect = drawTexturePreview(
 		texture,
 		sourceWidth,
 		sourceHeight,
@@ -170,6 +172,8 @@ void drawPreviewWindow(
 		ImGui::PopStyleColor();
 		ImGui::PopStyleVar(2);
 	}
+
+	return previewRect;
 }
 }
 
@@ -193,9 +197,17 @@ void ofVlcPlayer4GuiWindows::drawVideoOutputControls(ofxVlc4 & player, const ImV
 		"Native Window / HWND",
 		"D3D11 / HDR Metadata"
 	};
+	static const char * preferredDecoderDevices[] = {
+		"Auto",
+		"D3D11",
+		"DXVA2",
+		"NVDEC",
+		"None"
+	};
 
 	const ofxVlc4::VideoStateInfo videoState = player.getVideoStateInfo();
 	int videoOutputBackendIndex = static_cast<int>(videoState.outputBackend);
+	int preferredDecoderDeviceIndex = static_cast<int>(videoState.preferredDecoderDevice);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
 	ImGui::PushItemWidth(170.0f);
@@ -205,6 +217,13 @@ void ofVlcPlayer4GuiWindows::drawVideoOutputControls(ofxVlc4 & player, const ImV
 			videoOutputBackends,
 			IM_ARRAYSIZE(videoOutputBackends))) {
 		player.setVideoOutputBackend(static_cast<ofxVlc4::VideoOutputBackend>(videoOutputBackendIndex));
+	}
+	if (ofVlcPlayer4GuiControls::drawComboWithWheel(
+			"Decoder Hardware",
+			preferredDecoderDeviceIndex,
+			preferredDecoderDevices,
+			IM_ARRAYSIZE(preferredDecoderDevices))) {
+		player.setPreferredDecoderDevice(static_cast<ofxVlc4::PreferredDecoderDevice>(preferredDecoderDeviceIndex));
 	}
 	ImGui::PopItemWidth();
 	ImGui::PopStyleVar();
@@ -221,6 +240,13 @@ void ofVlcPlayer4GuiWindows::drawVideoOutputControls(ofxVlc4 & player, const ImV
 			videoState.outputBackend != videoState.activeOutputBackend) {
 			ImGui::TextDisabled("Backend changes apply on the next init.");
 		}
+	}
+
+	if (player.isInitialized()) {
+		ImGui::TextDisabled("Decoder hardware changes apply on the next init.");
+	}
+	if (videoState.preferredDecoderDevice == ofxVlc4::PreferredDecoderDevice::Nvdec) {
+		ImGui::TextDisabled("NVDEC requires a supported NVIDIA GPU, driver, and compatible media.");
 	}
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
@@ -281,9 +307,11 @@ void ofVlcPlayer4GuiWindows::drawWindows(
 	}
 	gWasVideoFullscreen = fullscreenVideo;
 	gWasProjectMFullscreen = fullscreenProjectM;
+	hasVideoPreviewScreenRect = false;
+	videoPreviewScreenRect = ofRectangle();
 
 	if (showNormalVideoWindow || fullscreenVideo) {
-		drawPreviewWindow(
+		videoPreviewScreenRect = drawPreviewWindow(
 			"Video Display",
 			gShowVideoWindow,
 			videoPreviewTexture,
@@ -296,6 +324,9 @@ void ofVlcPlayer4GuiWindows::drawWindows(
 			gLastVideoWindowPos,
 			gRestoreVideoWindowPosition,
 			kDefaultPreviewAspect);
+		hasVideoPreviewScreenRect =
+			videoPreviewScreenRect.getWidth() > 0.0f &&
+			videoPreviewScreenRect.getHeight() > 0.0f;
 	}
 
 	if (showNormalProjectMWindow || fullscreenProjectM) {
@@ -321,4 +352,8 @@ bool ofVlcPlayer4GuiWindows::shouldRenderProjectMPreview() const {
 
 bool ofVlcPlayer4GuiWindows::hasAnyVisibleWindow() const {
 	return gShowVideoWindow || gShowProjectMWindow || gShowDisplayFullscreen;
+}
+
+ofRectangle ofVlcPlayer4GuiWindows::getVideoPreviewScreenRect() const {
+	return hasVideoPreviewScreenRect ? videoPreviewScreenRect : ofRectangle();
 }

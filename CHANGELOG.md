@@ -13,6 +13,9 @@
 - `ofxVlc4Example` now includes a subtitle picker plus consistent subtitle-file handling through path entry and drag/drop
 - `ofxVlc4Example` now includes dedicated `DVD / Disc` controls for title/chapter/program navigation, menu actions, and teletext page/color-key controls
 - added a high-level `executePlayerCommand(...)` API for common transport, disc navigation, and teletext command dispatch
+- added `setPreferredDecoderDevice(...)` / `getPreferredDecoderDevice()` for Windows hardware-decoder preference (`Auto`, `D3D11`, `DXVA2`, `NVDEC`, `None`)
+- added pre-init VLC subtitle text-renderer settings for renderer choice, font family, color, opacity, and bold styling
+- added advanced raw-init escape hatches through `setExtraInitArgs(...)`, `addExtraInitArg(...)`, and the existing `init(argc, argv)` path, with raw args applied after typed addon-generated init settings
 - added first-class recording presets for `H265 / HEVC`, `MKV / Opus`, and `MKV / LPCM`
 - `H265 / HEVC` recording now enforces `MKV` mux profiles and normalizes capture sizes to the bundled x265 encoder alignment (`width % 16 == 0`, `height % 8 == 0`)
 

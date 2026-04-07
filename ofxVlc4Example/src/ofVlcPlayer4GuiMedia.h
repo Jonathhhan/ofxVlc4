@@ -16,7 +16,8 @@ public:
 		float compactControlWidth,
 		float inputLabelPadding,
 		float dualActionButtonWidth,
-		float buttonSpacing);
+		float buttonSpacing,
+		bool detachedOnly = false);
 	void setCustomSubtitleCallbacks(
 		std::function<bool(const std::string &)> loadCallback,
 		std::function<void()> clearCallback,
@@ -31,19 +32,22 @@ private:
 		float inputLabelPadding,
 		float singleActionButtonWidth,
 		float dualActionButtonWidth,
-		float buttonSpacing);
+		float buttonSpacing,
+		bool detachedOnly = false);
 	void drawMetadataSubMenu(
 		ofxVlc4 & player,
 		float inputLabelPadding,
 		float singleActionButtonWidth,
 		float dualActionButtonWidth,
-		float buttonSpacing);
+		float buttonSpacing,
+		bool detachedOnly = false);
 	void drawDialogsSubMenu(
 		ofxVlc4 & player,
 		float inputLabelPadding,
 		float singleActionButtonWidth,
 		float dualActionButtonWidth,
-		float buttonSpacing);
+		float buttonSpacing,
+		bool detachedOnly = false);
 	void resetMetadataEditor();
 	void syncMetadataEditor(ofxVlc4 & player, const std::string & currentMediaId, bool hasCurrentMedia);
 	void syncLibVlcLogFilePath(ofxVlc4 & player);

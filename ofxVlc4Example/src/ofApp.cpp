@@ -925,28 +925,31 @@ void ofApp::setCustomSubtitleFontSelection(int index) {
 }
 
 bool ofApp::loadCustomSubtitleFile(const std::string & rawPath) {
+	const auto failCustomSubtitleLoad = [this](const std::string & errorMessage) {
+		customSubtitlePath.clear();
+		customSubtitleCues.clear();
+		customSubtitleLoadError = errorMessage;
+		return false;
+	};
+
 	const std::string normalizedPath = normalizeInputPath(rawPath);
 	const std::string resolvedPath = resolveInputPath(normalizedPath);
 	if (resolvedPath.empty()) {
-		customSubtitleLoadError = "Custom subtitle path is empty.";
-		return false;
+		return failCustomSubtitleLoad("Custom subtitle path is empty.");
 	}
 
 	if (!pathExists(resolvedPath)) {
-		customSubtitleLoadError = "Custom subtitle file not found.";
-		return false;
+		return failCustomSubtitleLoad("Custom subtitle file not found.");
 	}
 
 	if (!isSrtPath(resolvedPath)) {
-		customSubtitleLoadError = "Custom subtitle overlay currently supports .srt files only.";
-		return false;
+		return failCustomSubtitleLoad("Custom subtitle overlay currently supports .srt files only.");
 	}
 
 	std::vector<SimpleSrtSubtitleCue> parsedCues;
 	std::string parseError;
 	if (!SimpleSrtSubtitleParser::parseFile(resolvedPath, parsedCues, parseError)) {
-		customSubtitleLoadError = parseError.empty() ? "Failed to parse subtitle file." : parseError;
-		return false;
+		return failCustomSubtitleLoad(parseError.empty() ? "Failed to parse subtitle file." : parseError);
 	}
 
 	customSubtitlePath = resolvedPath;
@@ -1009,6 +1012,11 @@ void ofApp::drawCustomSubtitleOverlay() const {
 		return;
 	}
 
+	const ofRectangle previewRect = remoteGui.getVideoPreviewScreenRect();
+	if (previewRect.getWidth() <= 1.0f || previewRect.getHeight() <= 1.0f) {
+		return;
+	}
+
 	std::vector<std::string> lines = ofSplitString(cue->text, "\n", false, false);
 	if (lines.empty()) {
 		return;
@@ -1016,23 +1024,48 @@ void ofApp::drawCustomSubtitleOverlay() const {
 
 	ofPushStyle();
 	ofEnableAlphaBlending();
+	const GLboolean wasScissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
+	GLint previousScissorBox[4] = { 0, 0, 0, 0 };
+	glGetIntegerv(GL_SCISSOR_BOX, previousScissorBox);
+
+	const GLint scissorX = static_cast<GLint>(std::max(0.0f, std::floor(previewRect.getX())));
+	const GLint scissorY = static_cast<GLint>(std::max(0.0f, std::floor(ofGetHeight() - previewRect.getBottom())));
+	const GLint scissorWidth = static_cast<GLint>(std::max(1.0f, std::ceil(previewRect.getWidth())));
+	const GLint scissorHeight = static_cast<GLint>(std::max(1.0f, std::ceil(previewRect.getHeight())));
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(scissorX, scissorY, scissorWidth, scissorHeight);
+
+	const float previewCenterX = previewRect.getX() + (previewRect.getWidth() * 0.5f);
+	const float previewBottom = previewRect.getBottom();
+	const float previewLeft = previewRect.getX();
+	const float previewRight = previewRect.getRight();
+	const float previewTop = previewRect.getY();
 
 	if (!customSubtitleFontLoaded) {
-		float y = ofGetHeight() - kCustomSubtitleBottomMargin - static_cast<float>((lines.size() - 1) * 18);
+		float y = previewBottom - kCustomSubtitleBottomMargin - static_cast<float>((lines.size() - 1) * 18);
+		y = std::max(previewTop + 18.0f, y);
 		for (const auto & line : lines) {
-			const float x = std::max(20.0f, (ofGetWidth() * 0.5f) - (line.size() * 4.0f));
+			const float lineWidth = static_cast<float>(line.size()) * 8.0f;
+			const float x = std::max(previewLeft + 20.0f, previewCenterX - (lineWidth * 0.5f));
 			ofDrawBitmapStringHighlight(line, x, y, ofColor(0, 0, 0, 180), ofColor::white);
 			y += 18.0f;
+		}
+		if (!wasScissorEnabled) {
+			glDisable(GL_SCISSOR_TEST);
+		} else {
+			glScissor(previousScissorBox[0], previousScissorBox[1], previousScissorBox[2], previousScissorBox[3]);
 		}
 		ofPopStyle();
 		return;
 	}
 
 	const float lineHeight = std::max(customSubtitleFont.getLineHeight(), 1.0f);
-	float baselineY = ofGetHeight() - kCustomSubtitleBottomMargin - lineHeight * static_cast<float>(lines.size() - 1);
+	float baselineY = previewBottom - kCustomSubtitleBottomMargin - lineHeight * static_cast<float>(lines.size() - 1);
+	baselineY = std::max(previewTop + lineHeight, baselineY);
 	for (const auto & line : lines) {
 		const ofRectangle bounds = customSubtitleFont.getStringBoundingBox(line, 0.0f, 0.0f);
-		const float drawX = (ofGetWidth() - bounds.width) * 0.5f;
+		const float maxDrawX = previewRight - bounds.width - 12.0f;
+		const float drawX = std::max(previewLeft + 12.0f, std::min(previewCenterX - (bounds.width * 0.5f), maxDrawX));
 		const float drawY = baselineY;
 
 		ofSetColor(0, 0, 0, 200);
@@ -1044,6 +1077,12 @@ void ofApp::drawCustomSubtitleOverlay() const {
 		ofSetColor(255);
 		customSubtitleFont.drawString(line, drawX, drawY);
 		baselineY += lineHeight;
+	}
+
+	if (!wasScissorEnabled) {
+		glDisable(GL_SCISSOR_TEST);
+	} else {
+		glScissor(previousScissorBox[0], previousScissorBox[1], previousScissorBox[2], previousScissorBox[3]);
 	}
 
 	ofPopStyle();

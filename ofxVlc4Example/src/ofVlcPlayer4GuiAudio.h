@@ -10,7 +10,8 @@ public:
 		ofxVlc4 & player,
 		const ImVec2 & labelInnerSpacing,
 		float compactControlWidth,
-		float wideSliderWidth);
+		float wideSliderWidth,
+		bool detachedOnly = false);
 
 private:
 	int volume = 50;

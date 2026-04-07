@@ -4304,6 +4304,11 @@ void ofxVlc4::navigate(NavigationMode mode) {
 }
 
 bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
+	const auto seekByMilliseconds = [this](int deltaMs) {
+		const int currentTimeMs = std::max(0, getTime());
+		setTime(std::max(0, currentTimeMs + deltaMs));
+	};
+
 	switch (command) {
 	case PlayerCommand::PlayPause:
 		if (isPlaying()) {
@@ -4328,16 +4333,16 @@ bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
 		previousMediaListItem();
 		return true;
 	case PlayerCommand::SeekForwardSmall:
-		setTime(getTime() + 5000);
+		seekByMilliseconds(5000);
 		return true;
 	case PlayerCommand::SeekBackwardSmall:
-		setTime(getTime() - 5000);
+		seekByMilliseconds(-5000);
 		return true;
 	case PlayerCommand::SeekForwardLarge:
-		setTime(getTime() + 30000);
+		seekByMilliseconds(30000);
 		return true;
 	case PlayerCommand::SeekBackwardLarge:
-		setTime(getTime() - 30000);
+		seekByMilliseconds(-30000);
 		return true;
 	case PlayerCommand::VolumeUp:
 		setVolume(getVolume() + 5);

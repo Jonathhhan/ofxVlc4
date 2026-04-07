@@ -932,7 +932,7 @@ void ofVlcPlayer4Gui::drawAudioSection(ofxVlc4 & player, bool detachedOnly) {
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Audio", MenuContentPolicy::NestedOnly, false);
 	if (!open) {
 		if (detachedOnly) {
-			audioSection.drawContent(player, kLabelInnerSpacing, layout.compactControlWidth, kWideSliderWidth);
+			audioSection.drawContent(player, kLabelInnerSpacing, layout.compactControlWidth, kWideSliderWidth, true);
 		}
 		return;
 	}
@@ -954,7 +954,8 @@ void ofVlcPlayer4Gui::drawMediaSection(ofxVlc4 & player, bool detachedOnly) {
 				layout.compactControlWidth,
 				layout.inputLabelPadding,
 				layout.dualActionButtonWidth,
-				kButtonSpacing);
+				kButtonSpacing,
+				true);
 		}
 		return;
 	}
@@ -1061,7 +1062,7 @@ void ofVlcPlayer4Gui::drawVideoViewSection(ofxVlc4 & player, bool detachedOnly) 
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Video", MenuContentPolicy::ContentThenNested, false);
 	if (!open) {
 		if (detachedOnly) {
-			videoSection.drawViewContent(player, kLabelInnerSpacing, layout.compactControlWidth);
+			videoSection.drawViewContent(player, kLabelInnerSpacing, layout.compactControlWidth, true);
 		}
 		return;
 	}
@@ -1078,9 +1079,6 @@ void ofVlcPlayer4Gui::drawVideoAdjustmentsSection(ofxVlc4 & player, bool detache
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Adjustments", MenuContentPolicy::Leaf)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Adjustments", MenuContentPolicy::Leaf, false);
 	if (!open) {
-		if (detachedOnly) {
-			videoSection.drawAdjustmentsContent(player, kLabelInnerSpacing, layout.actionButtonWidth, kWideSliderWidth);
-		}
 		return;
 	}
 
@@ -1094,9 +1092,6 @@ void ofVlcPlayer4Gui::drawVideo3DSection(ofxVlc4 & player, bool detachedOnly) {
 		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("3D", MenuContentPolicy::Leaf)
 		: ofVlcPlayer4GuiControls::beginSectionSubMenu("3D", MenuContentPolicy::Leaf, false);
 	if (!open) {
-		if (detachedOnly) {
-			videoSection.draw3DContent(player, kLabelInnerSpacing, layout.compactControlWidth, layout.actionButtonWidth);
-		}
 		return;
 	}
 
@@ -1744,6 +1739,10 @@ void ofVlcPlayer4Gui::handleDragEvent(
 
 bool ofVlcPlayer4Gui::shouldRenderProjectMPreview() const {
 	return windowsSection.shouldRenderProjectMPreview();
+}
+
+ofRectangle ofVlcPlayer4Gui::getVideoPreviewScreenRect() const {
+	return windowsSection.getVideoPreviewScreenRect();
 }
 
 const ofVlcPlayer4GuiVideo & ofVlcPlayer4Gui::getVideoSection() const {

@@ -31,6 +31,8 @@ Parts of this addon, its examples, GUI structure, and documentation were develop
 - optional Windows backends:
   - native window output (`HWND`)
   - D3D11 HDR metadata path
+- optional Windows decoder-hardware preference for `Auto`, `D3D11`, `DXVA2`, `NVDEC`, or `None`
+- optional pre-init libVLC text-renderer settings for VLC-rendered subtitles
 - playlist and playback helpers
 - audio devices, audio output module selection, delays, EQ, mixmode
 - video adjustments, deinterlace, crop, aspect, fit, overlays
@@ -40,6 +42,8 @@ Parts of this addon, its examples, GUI structure, and documentation were develop
 - texture recording helpers plus automatic current-window capture helpers
 - watch-time, stats, logging, dialog callbacks, metadata editing
 - optional high-level player-command dispatch for transport, disc navigation, and teletext color-key actions
+- pre-init decoder hardware preference through `setPreferredDecoderDevice(...)`
+- advanced pre-init override args through `setExtraInitArgs(...)`, `addExtraInitArg(...)`, or raw `init(argc, argv)` arguments
 - MIDI analysis, bridge, and local transport helpers
 
 ## Source layout
@@ -238,6 +242,23 @@ void ofApp::exit() {
 }
 ```
 
+For advanced libVLC startup overrides, the addon now supports both typed pre-init settings and raw argument escape hatches:
+
+- typed settings first:
+  - `setPreferredDecoderDevice(...)`
+  - `setSubtitleTextRenderer(...)`
+  - `setSubtitleFontFamily(...)`
+  - `setSubtitleTextColor(...)`
+  - `setSubtitleTextOpacity(...)`
+  - `setSubtitleBold(...)`
+- raw `init(argc, argv)` arguments after the typed settings
+- stored extra args last through:
+  - `setExtraInitArgs(...)`
+  - `addExtraInitArg(...)`
+  - `clearExtraInitArgs()`
+
+That ordering is intentional: typed settings stay discoverable and documented, while raw args remain available as an advanced override path when you need a libVLC option the addon does not model directly yet.
+
 Useful state getters:
 
 - `getMediaReadinessInfo()`
@@ -359,9 +380,10 @@ Useful newer API groups:
     - `getSubtitleStateInfo()`
     - `getNavigationStateInfo()`
 - subtitle rendering
-      - subtitle tracks can be selected and displayed inside the OF app through libVLC's subtitle renderer
-      - external subtitle/audio attachments can be added through `addSubtitleSlave(...)`, `addAudioSlave(...)`, or the generic `addMediaSlave(...)`
-      - `ofxVlc4Example` also includes an optional `.srt` parser + OF overlay path when you want subtitle strings rendered with OF fonts instead of VLC's own subtitle renderer
+    - subtitle tracks can be selected and displayed inside the OF app through libVLC's subtitle renderer
+    - external subtitle/audio attachments can be added through `addSubtitleSlave(...)`, `addAudioSlave(...)`, or the generic `addMediaSlave(...)`
+    - VLC-rendered subtitle styling can be configured before init through `setSubtitleTextRenderer(...)`, `setSubtitleFontFamily(...)`, `setSubtitleTextColor(...)`, `setSubtitleTextOpacity(...)`, and `setSubtitleBold(...)`
+    - `ofxVlc4Example` also includes an optional `.srt` parser + OF overlay path when you want subtitle strings rendered with OF fonts instead of VLC's own subtitle renderer
 - texture workflow
     - `getTexture()`
     - `getRenderTexture()`

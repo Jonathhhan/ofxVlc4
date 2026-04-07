@@ -73,6 +73,15 @@ std::string metadataSizeSuffix(bool available, uint64_t bytes) {
 	return "   " + ofToString(bytes) + " B";
 }
 
+ofFloatColor subtitleColorToFloatColor(int value) {
+	return ofFloatColor::fromHex(static_cast<unsigned int>(ofClamp(value, 0, 0xFFFFFF)));
+}
+
+int subtitleColorFromFloatColor(const ofFloatColor & color) {
+	ofColor converted = color;
+	return static_cast<int>(converted.getHex() & 0xFFFFFFu);
+}
+
 std::string formatMediaTrackLabel(const ofxVlc4::MediaTrackInfo & track) {
 	if (!track.name.empty()) {
 		return track.name;
@@ -720,12 +729,18 @@ void ofVlcPlayer4GuiMedia::drawContent(
 	float compactControlWidth,
 	float inputLabelPadding,
 	float dualActionButtonWidth,
-	float buttonSpacing) {
+	float buttonSpacing,
+	bool detachedOnly) {
 	const float singleActionButtonWidth = compactControlWidth * kSingleActionButtonWidthRatio;
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
 	ImGui::PushItemWidth(compactControlWidth);
+	const auto beginSubMenu = [detachedOnly](const char * label, MenuContentPolicy policy) {
+		return detachedOnly
+			? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu(label, policy)
+			: ofVlcPlayer4GuiControls::beginSectionSubMenu(label, policy, false);
+	};
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Capture & Record", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Capture & Record", MenuContentPolicy::Leaf)) {
 		const ofxVlc4::PlaybackStateInfo playbackState = player.getPlaybackStateInfo();
 		const std::string snapshotSizeSuffix = metadataSizeSuffix(
 			playbackState.snapshot.lastSavedMetadataAvailable,
@@ -793,7 +808,7 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("DVD / Disc", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("DVD / Disc", MenuContentPolicy::Leaf)) {
 		const ofxVlc4::NavigationStateInfo navigationState = player.getNavigationStateInfo();
 		if (navigationState.available) {
 			ImGui::TextDisabled(
@@ -944,7 +959,7 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Navigation & Input", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Navigation & Input", MenuContentPolicy::Leaf)) {
 
 		if (ImGui::Button("Next Frame", ImVec2(singleActionButtonWidth, 0.0f))) {
 			player.nextFrame();
@@ -971,12 +986,12 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	drawDiagnosticsSubMenu(player, inputLabelPadding, singleActionButtonWidth, dualActionButtonWidth, buttonSpacing);
+	drawDiagnosticsSubMenu(player, inputLabelPadding, singleActionButtonWidth, dualActionButtonWidth, buttonSpacing, detachedOnly);
 
-	drawMetadataSubMenu(player, inputLabelPadding, singleActionButtonWidth, dualActionButtonWidth, buttonSpacing);
-	drawDialogsSubMenu(player, inputLabelPadding, singleActionButtonWidth, dualActionButtonWidth, buttonSpacing);
+	drawMetadataSubMenu(player, inputLabelPadding, singleActionButtonWidth, dualActionButtonWidth, buttonSpacing, detachedOnly);
+	drawDialogsSubMenu(player, inputLabelPadding, singleActionButtonWidth, dualActionButtonWidth, buttonSpacing, detachedOnly);
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Tracks & Subtitles", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Tracks & Subtitles", MenuContentPolicy::Leaf)) {
 		const std::vector<ofxVlc4::MediaTrackInfo> videoTracks = player.getVideoTracks();
 		const std::vector<ofxVlc4::MediaTrackInfo> audioTracks = player.getAudioTracks();
 		const std::vector<ofxVlc4::MediaTrackInfo> subtitleTracks = player.getSubtitleTracks();
@@ -1083,6 +1098,66 @@ void ofVlcPlayer4GuiMedia::drawContent(
 			player.setSubtitleTextScale(subtitleTextScale);
 		}
 
+		static const char * subtitleRendererLabels[] = {
+			"Auto",
+			"Freetype",
+			"SAPI",
+			"Dummy",
+			"None"
+		};
+		int subtitleRendererIndex = static_cast<int>(player.getSubtitleTextRenderer());
+		if (ofVlcPlayer4GuiControls::drawComboWithWheel(
+				"Subtitle Renderer",
+				subtitleRendererIndex,
+				subtitleRendererLabels,
+				IM_ARRAYSIZE(subtitleRendererLabels))) {
+			player.setSubtitleTextRenderer(static_cast<ofxVlc4SubtitleTextRenderer>(subtitleRendererIndex));
+		}
+
+		const bool freetypeStylingPreferred =
+			player.getSubtitleTextRenderer() == ofxVlc4SubtitleTextRenderer::Auto ||
+			player.getSubtitleTextRenderer() == ofxVlc4SubtitleTextRenderer::Freetype;
+
+		std::string subtitleFontFamily = player.getSubtitleFontFamily();
+		ImGui::BeginDisabled(!freetypeStylingPreferred);
+		ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - inputLabelPadding);
+		if (ImGui::InputText("Subtitle Font", &subtitleFontFamily)) {
+			player.setSubtitleFontFamily(subtitleFontFamily);
+		}
+		ImGui::PopItemWidth();
+
+		ofFloatColor subtitleTextColor = subtitleColorToFloatColor(player.getSubtitleTextColor());
+		float subtitleColorComponents[3] = { subtitleTextColor.r, subtitleTextColor.g, subtitleTextColor.b };
+		if (ImGui::ColorEdit3("Subtitle Color", subtitleColorComponents)) {
+			player.setSubtitleTextColor(subtitleColorFromFloatColor(ofFloatColor(
+				subtitleColorComponents[0],
+				subtitleColorComponents[1],
+				subtitleColorComponents[2],
+				1.0f)));
+		}
+
+		int subtitleTextOpacity = player.getSubtitleTextOpacity();
+		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(compactControlWidth));
+		if (ImGui::SliderInt("Subtitle Opacity", &subtitleTextOpacity, 0, 255)) {
+			player.setSubtitleTextOpacity(subtitleTextOpacity);
+		}
+		if (ofVlcPlayer4GuiControls::applyHoveredWheelStep(subtitleTextOpacity, 0, 255, 5, 1)) {
+			player.setSubtitleTextOpacity(subtitleTextOpacity);
+		}
+
+		bool subtitleBold = player.isSubtitleBold();
+		if (ImGui::Checkbox("Subtitle Bold", &subtitleBold)) {
+			player.setSubtitleBold(subtitleBold);
+		}
+		ImGui::EndDisabled();
+
+		if (player.isInitialized()) {
+			ImGui::TextDisabled("VLC subtitle renderer changes apply on the next init.");
+		}
+		if (!freetypeStylingPreferred) {
+			ImGui::TextDisabled("Font, color, opacity, and bold mainly affect the Freetype renderer.");
+		}
+
 		drawTrackDetailsBlock("Video Details", videoTracks, "Video");
 		drawTrackDetailsBlock("Audio Details", audioTracks, "Audio");
 		drawTrackDetailsBlock("Subtitle Details", subtitleTracks, "Subtitle");
@@ -1090,7 +1165,7 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Loop & Bookmarks", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Loop & Bookmarks", MenuContentPolicy::Leaf)) {
 		const ofxVlc4::AbLoopInfo abLoop = player.getAbLoop();
 		const float abLoopButtonWidth =
 			(ImGui::GetContentRegionAvail().x - (buttonSpacing * 2.0f)) / 3.0f;
@@ -1157,7 +1232,7 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("External Media", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("External Media", MenuContentPolicy::Leaf)) {
 		static const char * slaveTypes[] = { "Subtitle", "Audio" };
 		ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - inputLabelPadding);
 		const bool submitSlavePath = ImGui::InputText("Path", &mediaSlavePath, ImGuiInputTextFlags_EnterReturnsTrue);
@@ -1203,7 +1278,7 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Renderer & Discovery", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Renderer & Discovery", MenuContentPolicy::Leaf)) {
 		const ofxVlc4::RendererStateInfo rendererState = player.getRendererStateInfo();
 		const std::vector<ofxVlc4::RendererDiscovererInfo> discoverers = player.getRendererDiscoverers();
 		std::vector<std::string> discovererLabels;
@@ -1410,8 +1485,12 @@ void ofVlcPlayer4GuiMedia::drawDiagnosticsSubMenu(
 	float inputLabelPadding,
 	float singleActionButtonWidth,
 	float dualActionButtonWidth,
-	float buttonSpacing) {
-	if (!ofVlcPlayer4GuiControls::beginSectionSubMenu("Diagnostics", MenuContentPolicy::Leaf, false)) {
+	float buttonSpacing,
+	bool detachedOnly) {
+	const bool open = detachedOnly
+		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Diagnostics", MenuContentPolicy::Leaf)
+		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Diagnostics", MenuContentPolicy::Leaf, false);
+	if (!open) {
 		return;
 	}
 
@@ -1597,13 +1676,17 @@ void ofVlcPlayer4GuiMedia::drawMetadataSubMenu(
 	float inputLabelPadding,
 	float singleActionButtonWidth,
 	float dualActionButtonWidth,
-	float buttonSpacing) {
+	float buttonSpacing,
+	bool detachedOnly) {
 	const std::string currentPath = player.getCurrentPath();
 	const std::string currentMediaId = !currentPath.empty() ? currentPath : player.getCurrentFileName();
 	const bool hasCurrentMedia = !currentMediaId.empty();
 	syncMetadataEditor(player, currentMediaId, hasCurrentMedia);
 
-	if (!ofVlcPlayer4GuiControls::beginSectionSubMenu("Metadata", MenuContentPolicy::Leaf, false)) {
+	const bool open = detachedOnly
+		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Metadata", MenuContentPolicy::Leaf)
+		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Metadata", MenuContentPolicy::Leaf, false);
+	if (!open) {
 		return;
 	}
 
@@ -1665,8 +1748,12 @@ void ofVlcPlayer4GuiMedia::drawDialogsSubMenu(
 	float inputLabelPadding,
 	float singleActionButtonWidth,
 	float dualActionButtonWidth,
-	float buttonSpacing) {
-	if (!ofVlcPlayer4GuiControls::beginSectionSubMenu("Dialogs", MenuContentPolicy::Leaf, false)) {
+	float buttonSpacing,
+	bool detachedOnly) {
+	const bool open = detachedOnly
+		? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu("Dialogs", MenuContentPolicy::Leaf)
+		: ofVlcPlayer4GuiControls::beginSectionSubMenu("Dialogs", MenuContentPolicy::Leaf, false);
+	if (!open) {
 		return;
 	}
 

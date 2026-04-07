@@ -1729,7 +1729,9 @@ void ofxVlc4Recorder::clearVideoRecording() {
 	lastVideoCaptureTimeUs = 0;
 	recordingPixels.clear();
 	destroyVideoReadbackBuffersLocked();
-	recordingResizeFbo.clear();
+	if (!(recordingResizeFbo.isAllocated() && glfwGetCurrentContext() == nullptr)) {
+		recordingResizeFbo.clear();
+	}
 	if (!(recordingSourceTexture.isAllocated() && glfwGetCurrentContext() == nullptr)) {
 		recordingSourceTexture.clear();
 	}

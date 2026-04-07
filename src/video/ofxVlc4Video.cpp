@@ -408,6 +408,22 @@ const char * videoOutputBackendLabel(ofxVlc4::VideoOutputBackend backend) {
 	}
 }
 
+const char * preferredDecoderDeviceLabel(ofxVlc4::PreferredDecoderDevice device) {
+	switch (device) {
+	case ofxVlc4::PreferredDecoderDevice::D3D11:
+		return "D3D11";
+	case ofxVlc4::PreferredDecoderDevice::DXVA2:
+		return "DXVA2";
+	case ofxVlc4::PreferredDecoderDevice::Nvdec:
+		return "NVDEC";
+	case ofxVlc4::PreferredDecoderDevice::None:
+		return "None";
+	case ofxVlc4::PreferredDecoderDevice::Any:
+	default:
+		return "Auto";
+	}
+}
+
 std::pair<unsigned, unsigned> visibleVideoSourceSize(const ofxVlc4::VideoStateInfo & state) {
 	return {
 		std::min(state.sourceWidth, state.renderWidth),
@@ -2114,6 +2130,10 @@ ofxVlc4::VideoOutputBackend ofxVlc4::VideoComponent::getActiveVideoOutputBackend
 	return owner.activeVideoOutputBackend;
 }
 
+ofxVlc4::PreferredDecoderDevice ofxVlc4::VideoComponent::getPreferredDecoderDevice() const {
+	return owner.preferredDecoderDevice;
+}
+
 void ofxVlc4::VideoComponent::setVideoOutputBackend(VideoOutputBackend backend) {
 	if (owner.videoOutputBackend == backend) {
 		return;
@@ -2130,6 +2150,19 @@ void ofxVlc4::VideoComponent::setVideoOutputBackend(VideoOutputBackend backend) 
 	}
 
 	updateNativeVideoWindowVisibility();
+}
+
+void ofxVlc4::VideoComponent::setPreferredDecoderDevice(PreferredDecoderDevice device) {
+	if (owner.preferredDecoderDevice == device) {
+		return;
+	}
+
+	owner.preferredDecoderDevice = device;
+	if (owner.sessionPlayer()) {
+		owner.logWarning(std::string("Preferred decoder hardware changes apply on the next player initialization: ") +
+			preferredDecoderDeviceLabel(device) + ".");
+		owner.setStatus("Preferred decoder hardware updated for the next init.");
+	}
 }
 
 void ofxVlc4::VideoComponent::resetVideoAdjustments() {
@@ -2402,6 +2435,7 @@ ofxVlc4::VideoStateInfo ofxVlc4::VideoComponent::getVideoStateInfo() const {
 	state.displayFitMode = owner.videoDisplayFitMode;
 	state.outputBackend = owner.videoOutputBackend;
 	state.activeOutputBackend = owner.activeVideoOutputBackend;
+	state.preferredDecoderDevice = owner.preferredDecoderDevice;
 	state.projectionMode = owner.videoProjectionMode;
 	state.stereoMode = owner.videoStereoMode;
 	state.hdrMetadata = getVideoHdrMetadata();
@@ -2991,6 +3025,10 @@ ofxVlc4::VideoOutputBackend ofxVlc4::getActiveVideoOutputBackend() const {
 	return videoComponent->getActiveVideoOutputBackend();
 }
 
+ofxVlc4::PreferredDecoderDevice ofxVlc4::getPreferredDecoderDevice() const {
+	return videoComponent->getPreferredDecoderDevice();
+}
+
 ofxVlc4::VideoHdrMetadataInfo ofxVlc4::getVideoHdrMetadata() const {
 	return videoComponent->getVideoHdrMetadata();
 }
@@ -3069,6 +3107,10 @@ void ofxVlc4::setVideoOutputBackend(VideoOutputBackend backend) {
 	videoComponent->setVideoOutputBackend(backend);
 }
 
+void ofxVlc4::setPreferredDecoderDevice(PreferredDecoderDevice device) {
+	videoComponent->setPreferredDecoderDevice(device);
+}
+
 bool ofxVlc4::queryVideoTrackGeometry(unsigned & width, unsigned & height, unsigned & sarNum, unsigned & sarDen) const {
 	return videoComponent->queryVideoTrackGeometry(width, height, sarNum, sarDen);
 }
@@ -3080,4 +3122,3 @@ void ofxVlc4::refreshPixelAspectRatio() {
 void ofxVlc4::refreshDisplayAspectRatio() {
 	videoComponent->refreshDisplayAspectRatio();
 }
-

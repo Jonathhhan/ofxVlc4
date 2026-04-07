@@ -30,7 +30,8 @@ int float3ToPackedRgb(const float rgb[3]) {
 void ofVlcPlayer4GuiVideo::drawViewContent(
 	ofxVlc4 & player,
 	const ImVec2 & labelInnerSpacing,
-	float compactControlWidth) {
+	float compactControlWidth,
+	bool detachedOnly) {
 	const ofxVlc4::VideoStateInfo videoState = player.getVideoStateInfo();
 	static const char * deinterlaceModes[] = {
 		"Auto", "Off", "Blend", "Bob", "Linear", "X", "Yadif", "Yadif2x", "Phosphor", "IVTC"
@@ -54,8 +55,13 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
 	ImGui::PushItemWidth(compactControlWidth);
+	const auto beginSubMenu = [detachedOnly](const char * label, MenuContentPolicy policy) {
+		return detachedOnly
+			? ofVlcPlayer4GuiControls::beginDetachedOnlySubMenu(label, policy)
+			: ofVlcPlayer4GuiControls::beginSectionSubMenu(label, policy, false);
+	};
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Geometry", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Geometry", MenuContentPolicy::Leaf)) {
 		int deinterlaceModeIndex = static_cast<int>(videoState.deinterlaceMode);
 		if (ofVlcPlayer4GuiControls::drawComboWithWheel("Deinterlace", deinterlaceModeIndex, deinterlaceModes, IM_ARRAYSIZE(deinterlaceModes))) {
 			player.setVideoDeinterlaceMode(static_cast<ofxVlc4::VideoDeinterlaceMode>(deinterlaceModeIndex));
@@ -89,7 +95,7 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Native VLC Filters", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Native VLC Filters", MenuContentPolicy::Leaf)) {
 		const auto videoFilters = player.getVideoFilters();
 		if (videoFilters.empty()) {
 			ImGui::TextUnformatted("No video filters reported.");
@@ -148,7 +154,7 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Title Overlay", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Title Overlay", MenuContentPolicy::Leaf)) {
 		bool videoTitleEnabled = player.isVideoTitleDisplayEnabled();
 		if (ImGui::Checkbox("Show", &videoTitleEnabled)) {
 			player.setVideoTitleDisplayEnabled(videoTitleEnabled);
@@ -172,7 +178,7 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Marquee", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Marquee", MenuContentPolicy::Leaf)) {
 		bool marqueeEnabled = player.isMarqueeEnabled();
 		if (ImGui::Checkbox("Enable", &marqueeEnabled)) {
 			player.setMarqueeEnabled(marqueeEnabled);
@@ -245,7 +251,7 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Logo", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Logo", MenuContentPolicy::Leaf)) {
 		bool logoEnabled = player.isLogoEnabled();
 		if (ImGui::Checkbox("Enable", &logoEnabled)) {
 			player.setLogoEnabled(logoEnabled);
@@ -304,7 +310,7 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
-	if (ofVlcPlayer4GuiControls::beginSectionSubMenu("Teletext", MenuContentPolicy::Leaf, false)) {
+	if (beginSubMenu("Teletext", MenuContentPolicy::Leaf)) {
 		int teletextPage = videoState.teletextPage;
 		if (ImGui::SliderInt("Page", &teletextPage, 0, 999, teletextPage == 0 ? "Off" : "%03d")) {
 			player.setTeletextPage(teletextPage);

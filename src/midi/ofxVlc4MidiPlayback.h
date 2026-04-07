@@ -15,7 +15,7 @@ public:
 	void play(double nowSeconds);
 	void pause(double nowSeconds);
 	void stop();
-	void seek(double seconds);
+	void seek(double seconds, double nowSeconds = 0.0);
 	void setTempoMultiplier(double multiplier, double nowSeconds);
 	void setMessageCallback(MidiMessageCallback callback);
 	void clearMessageCallback();
@@ -47,6 +47,8 @@ private:
 	void sendSongPositionPointer();
 	void emitSyncBetween(double fromSeconds, double toSeconds);
 	double tempoAtSeconds(double seconds) const;
+	double tickAtSeconds(double seconds) const;
+	int songPositionAtSeconds(double seconds) const;
 	static std::vector<unsigned char> makeQuarterFrameMessage(double seconds, double fps, int piece);
 
 	std::string path;
@@ -60,6 +62,8 @@ private:
 	bool finished = false;
 	std::vector<MidiChannelMessage> messages;
 	std::vector<MidiTempoChange> tempoChanges;
+	bool usesSmpteTiming = false;
+	int ticksPerQuarterNote = 0;
 	size_t lastDispatchBegin = 0;
 	size_t lastDispatchEnd = 0;
 	MidiMessageCallback messageCallback;

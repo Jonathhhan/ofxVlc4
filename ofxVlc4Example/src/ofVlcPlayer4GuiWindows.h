@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ofMain.h"
 #include "ofxImGui.h"
 
 class ofTexture;
@@ -20,4 +21,9 @@ public:
 		float videoPreviewHeight);
 	bool shouldRenderProjectMPreview() const;
 	bool hasAnyVisibleWindow() const;
+	ofRectangle getVideoPreviewScreenRect() const;
+
+private:
+	ofRectangle videoPreviewScreenRect;
+	bool hasVideoPreviewScreenRect = false;
 };

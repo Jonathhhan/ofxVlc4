@@ -146,6 +146,8 @@ public:
 	VideoOutputBackend getVideoOutputBackend() const;
 	VideoOutputBackend getActiveVideoOutputBackend() const;
 	void setVideoOutputBackend(VideoOutputBackend backend);
+	PreferredDecoderDevice getPreferredDecoderDevice() const;
+	void setPreferredDecoderDevice(PreferredDecoderDevice device);
 	void resetVideoAdjustments();
 	std::vector<VideoFilterInfo> getVideoFilters() const;
 	std::string getVideoFilterChain() const;

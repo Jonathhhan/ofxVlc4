@@ -21,6 +21,8 @@ bool MidiPlaybackSession::load(const std::string & newPath, const MidiAnalysisRe
 	durationSeconds = std::max(0.0, report.durationSeconds);
 	messages = newMessages;
 	tempoChanges = report.tempoChanges;
+	usesSmpteTiming = report.usesSmpteTiming;
+	ticksPerQuarterNote = report.ticksPerQuarterNote;
 	cursor.reset(&messages);
 	syncSettings.timecodeFps = report.usesSmpteTiming && report.smpteFramesPerSecond > 0
 		? static_cast<double>(report.smpteFramesPerSecond)
@@ -42,6 +44,8 @@ void MidiPlaybackSession::clear() {
 	finished = false;
 	messages.clear();
 	tempoChanges.clear();
+	usesSmpteTiming = false;
+	ticksPerQuarterNote = 0;
 	lastDispatchBegin = 0;
 	lastDispatchEnd = 0;
 	nextSyncSeconds = 0.0;
@@ -126,13 +130,16 @@ void MidiPlaybackSession::stop() {
 	allNotesOff();
 }
 
-void MidiPlaybackSession::seek(double seconds) {
+void MidiPlaybackSession::seek(double seconds, double nowSeconds) {
 	if (!loaded) {
 		return;
 	}
 
 	playheadSeconds = std::clamp(seconds, 0.0, durationSeconds);
 	playbackStartPositionSeconds = playheadSeconds;
+	if (playing && nowSeconds > 0.0) {
+		playbackStartWallSeconds = nowSeconds;
+	}
 	cursor.seekSeconds(playheadSeconds);
 	lastDispatchBegin = cursor.position();
 	lastDispatchEnd = cursor.position();
@@ -304,7 +311,7 @@ void MidiPlaybackSession::sendSongPositionPointer() {
 		return;
 	}
 
-	const int songPosition = static_cast<int>(std::lround(std::max(0.0, playheadSeconds) * 2.0));
+	const int songPosition = songPositionAtSeconds(playheadSeconds);
 	MidiChannelMessage message;
 	message.type = MidiMessageType::SystemCommon;
 	message.kind = "song_position";
@@ -333,7 +340,7 @@ void MidiPlaybackSession::emitSyncBetween(double fromSeconds, double toSeconds) 
 
 			const double bpm = std::max(1.0, tempoAtSeconds(cursorSeconds));
 			const double intervalSeconds = 60.0 / (bpm * 24.0);
-			cursorSeconds += intervalSeconds / std::max(tempoMultiplier, 0.0001);
+			cursorSeconds += intervalSeconds;
 		}
 		nextSyncSeconds = cursorSeconds;
 		return;
@@ -367,6 +374,51 @@ double MidiPlaybackSession::tempoAtSeconds(double seconds) const {
 		}
 	}
 	return bpm;
+}
+
+double MidiPlaybackSession::tickAtSeconds(double seconds) const {
+	const double clampedSeconds = std::max(0.0, seconds);
+	if (usesSmpteTiming || ticksPerQuarterNote <= 0) {
+		return 0.0;
+	}
+
+	MidiTempoChange activeTempo;
+	activeTempo.tick = 0;
+	activeTempo.seconds = 0.0;
+	activeTempo.microsecondsPerQuarter = 500000;
+	activeTempo.bpm = 120.0;
+
+	for (const MidiTempoChange & change : tempoChanges) {
+		if (change.seconds <= clampedSeconds) {
+			activeTempo = change;
+		} else {
+			break;
+		}
+	}
+
+	const double ticksPerSecond =
+		static_cast<double>(ticksPerQuarterNote) * 1000000.0 /
+		static_cast<double>(std::max(1, activeTempo.microsecondsPerQuarter));
+	const double deltaSeconds = std::max(0.0, clampedSeconds - activeTempo.seconds);
+	return static_cast<double>(activeTempo.tick) + (deltaSeconds * ticksPerSecond);
+}
+
+int MidiPlaybackSession::songPositionAtSeconds(double seconds) const {
+	if (!usesSmpteTiming && ticksPerQuarterNote > 0) {
+		const double ticksPerSongPositionUnit = static_cast<double>(ticksPerQuarterNote) / 4.0;
+		if (ticksPerSongPositionUnit > 0.0) {
+			const double songPosition = tickAtSeconds(seconds) / ticksPerSongPositionUnit;
+			return static_cast<int>(std::clamp<long long>(
+				static_cast<long long>(std::llround(std::max(0.0, songPosition))),
+				0,
+				0x3FFF));
+		}
+	}
+
+	return static_cast<int>(std::clamp<long long>(
+		static_cast<long long>(std::llround(std::max(0.0, seconds) * 2.0)),
+		0,
+		0x3FFF));
 }
 
 std::vector<unsigned char> MidiPlaybackSession::makeQuarterFrameMessage(double seconds, double fps, int piece) {

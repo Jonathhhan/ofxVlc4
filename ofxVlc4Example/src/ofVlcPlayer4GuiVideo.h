@@ -22,7 +22,8 @@ public:
 	void drawViewContent(
 		ofxVlc4 & player,
 		const ImVec2 & labelInnerSpacing,
-		float compactControlWidth);
+		float compactControlWidth,
+		bool detachedOnly = false);
 	void drawAdjustmentsContent(
 		ofxVlc4 & player,
 		const ImVec2 & labelInnerSpacing,

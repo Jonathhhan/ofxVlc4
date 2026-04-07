@@ -119,6 +119,29 @@ std::string loadBundledVlcHelpText(const std::string & fileName) {
 	return "";
 }
 
+const char * subtitleTextRendererOptionName(ofxVlc4SubtitleTextRenderer renderer) {
+	switch (renderer) {
+	case ofxVlc4SubtitleTextRenderer::Freetype:
+		return "freetype";
+	case ofxVlc4SubtitleTextRenderer::Sapi:
+		return "sapi";
+	case ofxVlc4SubtitleTextRenderer::Dummy:
+		return "tdummy";
+	case ofxVlc4SubtitleTextRenderer::None:
+		return "none";
+	case ofxVlc4SubtitleTextRenderer::Auto:
+	default:
+		return "";
+	}
+}
+
+void appendPrefixedInitArg(std::vector<std::string> & initArgs, const char * prefix, const std::string & value) {
+	if (!prefix || value.empty()) {
+		return;
+	}
+	initArgs.emplace_back(std::string(prefix) + value);
+}
+
 template <typename FilterInfo>
 void appendFilterList(std::ostringstream & output, const std::string & title, const std::vector<FilterInfo> & filters) {
 	output << title << "\n";
@@ -346,6 +369,7 @@ ofxVlc4::ofxVlc4()
 	, videoDisplayFitMode(videoPresentationRuntime.videoDisplayFitMode)
 	, videoOutputBackend(videoPresentationRuntime.videoOutputBackend)
 	, activeVideoOutputBackend(videoPresentationRuntime.activeVideoOutputBackend)
+	, preferredDecoderDevice(videoPresentationRuntime.preferredDecoderDevice)
 	, videoScale(videoPresentationRuntime.videoScale)
 	, videoProjectionMode(videoPresentationRuntime.videoProjectionMode)
 	, videoStereoMode(videoPresentationRuntime.videoStereoMode)
@@ -369,9 +393,15 @@ ofxVlc4::ofxVlc4()
 	, audioDelayUs(playerConfigRuntime.audioDelayUs)
 	, subtitleDelayUs(playerConfigRuntime.subtitleDelayUs)
 	, subtitleTextScale(playerConfigRuntime.subtitleTextScale)
+	, subtitleTextRenderer(playerConfigRuntime.subtitleTextRenderer)
+	, subtitleFontFamily(playerConfigRuntime.subtitleFontFamily)
+	, subtitleTextColor(playerConfigRuntime.subtitleTextColor)
+	, subtitleTextOpacity(playerConfigRuntime.subtitleTextOpacity)
+	, subtitleBold(playerConfigRuntime.subtitleBold)
 	, mediaPlayerRole(playerConfigRuntime.mediaPlayerRole)
 	, keyInputEnabled(playerConfigRuntime.keyInputEnabled)
 	, mouseInputEnabled(playerConfigRuntime.mouseInputEnabled)
+	, extraInitArgs(playerConfigRuntime.extraInitArgs)
 	, channels(audioRuntime.channels)
 	, sampleRate(audioRuntime.sampleRate)
 	, isAudioReady(audioRuntime.ready)
@@ -925,7 +955,63 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	configureMacLibVlcEnvironment();
 #endif
 
-	libvlc = libvlc_new(vlc_argc, vlc_argv);
+	std::vector<std::string> initArgs;
+	initArgs.reserve(static_cast<size_t>(std::max(0, vlc_argc)) + extraInitArgs.size() + 8);
+
+#ifdef TARGET_WIN32
+	switch (preferredDecoderDevice) {
+	case PreferredDecoderDevice::D3D11:
+		initArgs.emplace_back("--dec-dev=d3d11_filters");
+		break;
+	case PreferredDecoderDevice::DXVA2:
+		initArgs.emplace_back("--dec-dev=d3d9_filters");
+		if (videoOutputBackend == VideoOutputBackend::Texture) {
+			initArgs.emplace_back("--glinterop=glinterop_dxva2");
+		}
+		break;
+	case PreferredDecoderDevice::Nvdec:
+		initArgs.emplace_back("--dec-dev=nvdec");
+		if (videoOutputBackend == VideoOutputBackend::Texture) {
+			initArgs.emplace_back("--glinterop=glinterop_nvdec");
+		}
+		break;
+	case PreferredDecoderDevice::None:
+		initArgs.emplace_back("--dec-dev=none");
+		break;
+	case PreferredDecoderDevice::Any:
+	default:
+		break;
+	}
+#endif
+
+	const char * textRendererName = subtitleTextRendererOptionName(subtitleTextRenderer);
+	if (textRendererName[0] != '\0') {
+		initArgs.emplace_back(std::string("--text-renderer=") + textRendererName);
+	}
+	appendPrefixedInitArg(initArgs, "--freetype-font=", subtitleFontFamily);
+	initArgs.emplace_back(std::string("--freetype-color=") + ofToString(ofClamp(subtitleTextColor, 0, 16777215)));
+	initArgs.emplace_back(std::string("--freetype-opacity=") + ofToString(ofClamp(subtitleTextOpacity, 0, 255)));
+	initArgs.emplace_back(subtitleBold ? "--freetype-bold" : "--no-freetype-bold");
+
+	for (int i = 0; i < vlc_argc; ++i) {
+		if (vlc_argv != nullptr && vlc_argv[i] != nullptr) {
+			initArgs.emplace_back(vlc_argv[i]);
+		}
+	}
+
+	for (const std::string & argument : extraInitArgs) {
+		if (!argument.empty()) {
+			initArgs.push_back(argument);
+		}
+	}
+
+	std::vector<const char *> initArgPointers;
+	initArgPointers.reserve(initArgs.size());
+	for (const std::string & argument : initArgs) {
+		initArgPointers.push_back(argument.c_str());
+	}
+
+	libvlc = libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data());
 	if (!libvlc) {
 		const char * error = libvlc_errmsg();
 		setError(error ? error : "libvlc_new failed");
@@ -995,6 +1081,98 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	applyCurrentMediaPlayerSettings();
 	applyEqualizerSettings();
 	logNotice("Player initialized.");
+}
+
+std::vector<std::string> ofxVlc4::getExtraInitArgs() const {
+	return extraInitArgs;
+}
+
+void ofxVlc4::setExtraInitArgs(const std::vector<std::string> & args) {
+	extraInitArgs.clear();
+	for (const std::string & arg : args) {
+		if (!arg.empty()) {
+			extraInitArgs.push_back(arg);
+		}
+	}
+	setStatus("Extra init args updated for the next init.");
+}
+
+void ofxVlc4::addExtraInitArg(const std::string & arg) {
+	if (arg.empty()) {
+		return;
+	}
+	extraInitArgs.push_back(arg);
+	setStatus("Extra init args updated for the next init.");
+}
+
+void ofxVlc4::clearExtraInitArgs() {
+	if (extraInitArgs.empty()) {
+		return;
+	}
+	extraInitArgs.clear();
+	setStatus("Extra init args cleared for the next init.");
+}
+
+ofxVlc4SubtitleTextRenderer ofxVlc4::getSubtitleTextRenderer() const {
+	return subtitleTextRenderer;
+}
+
+void ofxVlc4::setSubtitleTextRenderer(ofxVlc4SubtitleTextRenderer renderer) {
+	if (subtitleTextRenderer == renderer) {
+		return;
+	}
+	subtitleTextRenderer = renderer;
+	setStatus("Subtitle text renderer updated for the next init.");
+}
+
+std::string ofxVlc4::getSubtitleFontFamily() const {
+	return subtitleFontFamily;
+}
+
+void ofxVlc4::setSubtitleFontFamily(const std::string & family) {
+	if (subtitleFontFamily == family) {
+		return;
+	}
+	subtitleFontFamily = family;
+	setStatus("Subtitle font updated for the next init.");
+}
+
+int ofxVlc4::getSubtitleTextColor() const {
+	return subtitleTextColor;
+}
+
+void ofxVlc4::setSubtitleTextColor(int color) {
+	const int clampedColor = ofClamp(color, 0, 16777215);
+	if (subtitleTextColor == clampedColor) {
+		return;
+	}
+	subtitleTextColor = clampedColor;
+	setStatus("Subtitle text color updated for the next init.");
+}
+
+int ofxVlc4::getSubtitleTextOpacity() const {
+	return subtitleTextOpacity;
+}
+
+void ofxVlc4::setSubtitleTextOpacity(int opacity) {
+	const int clampedOpacity = ofClamp(opacity, 0, 255);
+	if (subtitleTextOpacity == clampedOpacity) {
+		return;
+	}
+	subtitleTextOpacity = clampedOpacity;
+	setStatus("Subtitle text opacity updated for the next init.");
+}
+
+bool ofxVlc4::isSubtitleBold() const {
+	return subtitleBold;
+}
+
+void ofxVlc4::setSubtitleBold(bool enabled) {
+	if (subtitleBold == enabled) {
+		return;
+	}
+	subtitleBold = enabled;
+	setStatus("Subtitle bold styling updated for the next init.");
 }
 
 void ofxVlc4::setError(const std::string & message) {
@@ -1637,7 +1815,7 @@ void ofxVlc4::updateMidiTransport(double nowSeconds) {
 			const bool drifted = std::abs(currentSeconds - targetSeconds) > 0.05;
 
 			if (watchTime.seeking || discontinuity || drifted) {
-				midiRuntime.playback.seek(targetSeconds);
+				midiRuntime.playback.seek(targetSeconds, nowSeconds);
 			}
 
 			if (watchTime.paused) {
@@ -1741,7 +1919,7 @@ void ofxVlc4::stopMidi() {
 
 void ofxVlc4::seekMidi(double seconds) {
 	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.seek(seconds);
+	midiRuntime.playback.seek(seconds, ofGetElapsedTimef());
 }
 
 void ofxVlc4::setMidiTempoMultiplier(double multiplier) {
@@ -1825,4 +2003,3 @@ bool ofxVlc4::isMidiSyncToWatchTimeEnabled() const {
 	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
 	return midiRuntime.syncToWatchTime;
 }
-
