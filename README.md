@@ -91,6 +91,13 @@ Then install the bundled `libVLC` layout:
 bash scripts/install-libvlc.sh
 ```
 
+On Windows, that script now prepares each example directly for Project Generator users:
+
+- `bin/libvlc.dll` and `bin/libvlccore.dll`
+- `bin/plugins/`
+- `bin/lua/`
+- `dll/x64/` with only the root VLC DLLs needed by generated post-build copy steps
+
 The examples do not ship a bundled sample movie in `bin/data`. Drop your own media into an example's `bin/data`, drag a file in at runtime, or use the standard openFrameworks sample video from `examples/video/videoPlayerExample/bin/data/movies/fingers.mp4`.
 
 ## Installing libVLC

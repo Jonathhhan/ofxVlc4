@@ -532,14 +532,18 @@ function New-HardLinkedDirectoryTreeOrCopy([string]$SourceDirectory, [string]$De
 function Link-SharedRuntimeToExampleTargets([string]$SharedRuntimeDirectory, [object[]]$ExampleRuntimeTargets) {
 	$SharedPluginsDirectory = Join-Path $SharedRuntimeDirectory 'plugins'
 	$SharedLuaDirectory = Join-Path $SharedRuntimeDirectory 'lua'
+	$SharedLibvlcDll = Join-Path $SharedRuntimeDirectory 'libvlc.dll'
+	$SharedLibvlccoreDll = Join-Path $SharedRuntimeDirectory 'libvlccore.dll'
 
 	foreach ($Target in $ExampleRuntimeTargets) {
 		Ensure-Directory $Target.BinDirectory
 		Ensure-Directory (Split-Path -Parent $Target.DllDirectory)
-		# Leave DLL copying to the generated VS post-build step to avoid copying onto prelinked files.
-		Get-ChildItem -LiteralPath $Target.BinDirectory -Filter '*.dll' -File -ErrorAction SilentlyContinue | Remove-Item -Force
-
-		New-HardLinkedDirectoryTreeOrCopy $SharedRuntimeDirectory $Target.DllDirectory
+		Reset-Directory $Target.DllDirectory
+		Get-ChildItem -LiteralPath $Target.BinDirectory -Filter '*_plugin.dll' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+		New-HardLinkOrCopyFile $SharedLibvlcDll (Join-Path $Target.DllDirectory 'libvlc.dll')
+		New-HardLinkOrCopyFile $SharedLibvlccoreDll (Join-Path $Target.DllDirectory 'libvlccore.dll')
+		New-HardLinkOrCopyFile $SharedLibvlcDll (Join-Path $Target.BinDirectory 'libvlc.dll')
+		New-HardLinkOrCopyFile $SharedLibvlccoreDll (Join-Path $Target.BinDirectory 'libvlccore.dll')
 		New-HardLinkedDirectoryTreeOrCopy $SharedPluginsDirectory (Join-Path $Target.BinDirectory 'plugins')
 		New-HardLinkedDirectoryTreeOrCopy $SharedLuaDirectory (Join-Path $Target.BinDirectory 'lua')
 	}
