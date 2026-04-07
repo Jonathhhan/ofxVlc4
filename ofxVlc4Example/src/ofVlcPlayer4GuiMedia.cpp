@@ -1046,58 +1046,6 @@ void ofVlcPlayer4GuiMedia::drawContent(
 			drawTrackDetailsBlock("Subtitle Details", subtitleTracks, "Subtitle");
 		}
 
-		ImGui::SeparatorText("Teletext");
-		int teletextPage = player.getTeletextPage();
-		ImGui::BeginDisabled(!subtitleState.teletextAvailable);
-		if (ImGui::InputInt("Teletext Page", &teletextPage, 1, 10)) {
-			player.setTeletextPage(teletextPage);
-		}
-		if (ofVlcPlayer4GuiControls::applyHoveredWheelStep(teletextPage, 0, 999, 1, 1)) {
-			player.setTeletextPage(teletextPage);
-		}
-
-		if (ImGui::Button("Teletext Off", ImVec2(dualActionButtonWidth, 0.0f))) {
-			player.setTeletextPage(0);
-		}
-		ImGui::SameLine(0.0f, buttonSpacing);
-		bool teletextTransparency = player.isTeletextTransparencyEnabled();
-		if (ImGui::Checkbox("Transparent", &teletextTransparency)) {
-			player.setTeletextTransparencyEnabled(teletextTransparency);
-		}
-
-		const float teletextButtonWidth =
-			(ImGui::GetContentRegionAvail().x - (buttonSpacing * 4.0f)) / 5.0f;
-		struct TeletextButtonSpec {
-			const char * label;
-			ofxVlc4::TeletextKey key;
-			ImVec4 color;
-		};
-		const TeletextButtonSpec teletextButtons[] = {
-			{ "Red", ofxVlc4::TeletextKey::Red, ImVec4(0.75f, 0.15f, 0.18f, 1.0f) },
-			{ "Green", ofxVlc4::TeletextKey::Green, ImVec4(0.16f, 0.55f, 0.24f, 1.0f) },
-			{ "Yellow", ofxVlc4::TeletextKey::Yellow, ImVec4(0.72f, 0.58f, 0.08f, 1.0f) },
-			{ "Blue", ofxVlc4::TeletextKey::Blue, ImVec4(0.18f, 0.34f, 0.75f, 1.0f) },
-			{ "Index", ofxVlc4::TeletextKey::Index, ImVec4(0.35f, 0.35f, 0.35f, 1.0f) }
-		};
-		for (int buttonIndex = 0; buttonIndex < IM_ARRAYSIZE(teletextButtons); ++buttonIndex) {
-			const auto & button = teletextButtons[buttonIndex];
-			ImGui::PushStyleColor(ImGuiCol_Button, button.color);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(
-				std::min(button.color.x + 0.10f, 1.0f),
-				std::min(button.color.y + 0.10f, 1.0f),
-				std::min(button.color.z + 0.10f, 1.0f),
-				1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, button.color);
-			if (ImGui::Button(button.label, ImVec2(teletextButtonWidth, 0.0f))) {
-				player.sendTeletextKey(button.key);
-			}
-			ImGui::PopStyleColor(3);
-			if (buttonIndex + 1 < IM_ARRAYSIZE(teletextButtons)) {
-				ImGui::SameLine(0.0f, buttonSpacing);
-			}
-		}
-		ImGui::EndDisabled();
-
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
