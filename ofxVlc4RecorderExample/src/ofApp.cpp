@@ -395,10 +395,16 @@ void ofApp::loadSeedMedia() {
 		return;
 	}
 
+	const std::filesystem::path sharedMoviesDirectory =
+		std::filesystem::path(ofFilePath::getCurrentExeDir()) /
+		"..\\..\\..\\..\\examples\\video\\videoPlayerExample\\bin\\data\\movies";
 	const std::vector<std::filesystem::path> candidates = {
+		ofToDataPath("finger.mp4", true),
 		ofToDataPath("fingers.mp4", true),
 		ofToDataPath("movie.mp4", true),
-		ofToDataPath("sample.mp4", true)
+		ofToDataPath("sample.mp4", true),
+		sharedMoviesDirectory / "finger.mp4",
+		sharedMoviesDirectory / "fingers.mp4"
 	};
 
 	for (const auto & candidate : candidates) {

@@ -1,5 +1,7 @@
 #include "ofApp.h"
 
+#include <filesystem>
+
 namespace {
 const std::initializer_list<std::string> kSeedExtensions = {
 	".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv",
@@ -173,6 +175,34 @@ std::string resolveArtworkPath(const std::string & rawArtworkUrl) {
 
 bool pathExists(const std::string & path) {
 	return ofFile::doesFileExist(path, true) || ofDirectory::doesDirectoryExist(path, true);
+}
+
+std::vector<std::filesystem::path> defaultSeedMediaCandidates() {
+	const std::filesystem::path sharedMoviesDirectory =
+		std::filesystem::path(ofFilePath::getCurrentExeDir()) /
+		"..\\..\\..\\..\\examples\\video\\videoPlayerExample\\bin\\data\\movies";
+
+	return {
+		ofToDataPath("finger.mp4", true),
+		ofToDataPath("fingers.mp4", true),
+		ofToDataPath("movie.mp4", true),
+		ofToDataPath("sample.mp4", true),
+		sharedMoviesDirectory / "finger.mp4",
+		sharedMoviesDirectory / "fingers.mp4"
+	};
+}
+
+bool addFirstExistingSeedMedia(ofxVlc4 & player, const std::vector<std::filesystem::path> & candidatePaths) {
+	for (const std::filesystem::path & candidatePath : candidatePaths) {
+		const std::string resolvedPath = candidatePath.lexically_normal().string();
+		if (!ofFile::doesFileExist(resolvedPath, true)) {
+			continue;
+		}
+		if (player.addPathToPlaylist(resolvedPath, kSeedExtensions) > 0) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool isSupportedCustomImagePath(const std::string & path) {
@@ -418,7 +448,7 @@ void ofApp::setup() {
 	player.init(vlc_argc, vlc_argv);
 	player.setWatchTimeEnabled(true);
 	player.setWatchTimeMinPeriodUs(50000);
-	player.addPathToPlaylist(ofToDataPath("fingers.mp4", true), kSeedExtensions);
+	addFirstExistingSeedMedia(player, defaultSeedMediaCandidates());
 
 	player.setPlaybackMode(ofxVlc4::PlaybackMode::Default);
 	player.setVolume(50);

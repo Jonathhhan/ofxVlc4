@@ -177,7 +177,7 @@ private:
 
 	bool followPlaybackSelectionEnabled = true;
 	bool showRemainingTime = false;
-	int selectedVlcHelpModeIndex = 2;
+	int selectedVlcHelpModeIndex = 1;
 	char vlcHelpModuleName[128] = "";
 	std::string vlcHelpTextCache;
 	ofVlcPlayer4GuiAudio audioSection;

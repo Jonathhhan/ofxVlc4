@@ -15,6 +15,8 @@ Bundled VLC help assets:
 
 It is aimed at media-player style apps, video-texture workflows, and hybrid tools where playback, analysis, overlays, and custom rendering need to live inside openFrameworks.
 
+![ofxVlc4Example screenshot](docs/ofxVlc4Example.jpg)
+
 ## Note
 
 Parts of this addon, its examples, GUI structure, and documentation were developed with AI-assisted help during implementation and refinement.
@@ -75,6 +77,22 @@ Support classes:
 - `src/playback/PlaybackController.*`
 - `src/playback/PlaybackTransportState.h`
 
+## Clone / install quick start
+
+Clone the addon into your openFrameworks `addons` folder:
+
+```bash
+git clone https://github.com/Jonathhhan/ofxVlc4.git
+```
+
+Then install the bundled `libVLC` layout:
+
+```bash
+bash scripts/install-libvlc.sh
+```
+
+The examples do not ship a bundled sample movie in `bin/data`. Drop your own media into an example's `bin/data`, drag a file in at runtime, or use the standard openFrameworks sample video from `examples/video/videoPlayerExample/bin/data/movies/fingers.mp4`.
+
 ## Installing libVLC
 
 The addon ships with a single cross-platform shell entry point that installs `libVLC` into the addon-local `libs/libvlc` layout.
@@ -106,6 +124,14 @@ This installs:
 - one shared runtime into `libs/libvlc/runtime/vs/x64`
 - linked file-tree runtime views into the example `bin` folders
 - linked file-tree `dll/x64` staging folders used by the Visual Studio post-build copy step
+
+For the Windows examples, the intended runtime layout in `bin` includes:
+
+- `libvlc.dll` and `libvlccore.dll` in the `bin` root
+- `plugins/` as a real subfolder
+- `lua/` as a real subfolder
+
+If you ever see all VLC plugin DLLs flattened directly into `bin`, that is a staging/build-layout problem rather than the intended release layout.
 
 For normal addon development, keep the shared Windows runtime in `libs/libvlc/runtime/vs/x64` and let the examples link to it locally. Only copy the VLC runtime into your app output if you want a truly standalone distribution.
 

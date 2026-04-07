@@ -57,6 +57,8 @@ In practice this means:
 - install `ofxImGui` on its `develop` branch
 - add preset and texture assets if you want the `projectM` parts to be useful
 
+This example does not ship a sample movie in `bin/data`. On startup it will first look for `finger.mp4` / `fingers.mp4` in its own `bin/data`, then fall back to the standard openFrameworks sample video in `examples/video/videoPlayerExample/bin/data/movies/fingers.mp4` when that file exists.
+
 ## GUI overview
 
 The main GUI contains:

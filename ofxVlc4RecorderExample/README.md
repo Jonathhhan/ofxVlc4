@@ -15,7 +15,8 @@ This example keeps the UI small and concentrates on the addon's recording-relate
   - includes `H265 / HEVC` plus `MKV / Opus` and `MKV / LPCM` recorder presets
 - snapshot capture
 - drag-and-drop media loading
-- automatic startup seed from `bin/data/fingers.mp4` when present
+- automatic startup seed from local `bin/data/finger.mp4` or `bin/data/fingers.mp4` when present
+- fallback startup seed from `examples/video/videoPlayerExample/bin/data/movies/fingers.mp4` in the openFrameworks tree when available
 - recorder readback metrics for async PBO latency, queue depth, drops, and map failures
 
 See also:
