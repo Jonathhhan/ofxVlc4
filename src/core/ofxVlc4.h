@@ -97,6 +97,8 @@ struct ofxVlc4RecordingPreset {
 	bool deleteMuxSourceFilesOnSuccess = true;
 	size_t readbackBufferCount = 3;
 	ofxVlc4VideoReadbackPolicy readbackPolicy = ofxVlc4VideoReadbackPolicy::DropLateFrames;
+	uint64_t muxTimeoutMs = 15000;
+	double audioRingBufferSeconds = 4.0;
 };
 
 struct ofxVlc4RecordingSessionConfig {
@@ -1189,8 +1191,7 @@ public:
 		const ofTexture & texture,
 		const ofxVlc4RecordingPreset & preset,
 		int sampleRate,
-		int channelCount,
-		uint64_t muxTimeoutMs = 15000);
+		int channelCount);
 	static ofxVlc4RecordingSessionConfig textureRecordingSessionConfig(
 		std::string outputBasePath,
 		const ofTexture & texture,
@@ -1204,8 +1205,7 @@ public:
 		std::string outputBasePath,
 		const ofxVlc4RecordingPreset & preset,
 		int sampleRate,
-		int channelCount,
-		uint64_t muxTimeoutMs = 15000);
+		int channelCount);
 	static ofxVlc4RecordingSessionConfig windowRecordingSessionConfig(
 		std::string outputBasePath,
 		ofxVlc4RecordingAudioSource audioSource,
