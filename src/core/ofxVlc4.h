@@ -2001,6 +2001,9 @@ public:
 	const std::string & getLastStatusMessage() const;
 	const std::string & getLastErrorMessage() const;
 	void clearLastMessages();
+	// getDiagnosticsReport() returns a formatted multi-line string capturing all key diagnostic state
+	// in one call. Intended for logging, clipboard copy, and bug reports.
+	std::string getDiagnosticsReport() const;
 	static std::string vlcHelpModeToOptionString(ofxVlc4VlcHelpMode mode);
 	std::string getVlcHelpText(ofxVlc4VlcHelpMode mode = ofxVlc4VlcHelpMode::FullHelp) const;
 	void printVlcHelp(ofxVlc4VlcHelpMode mode = ofxVlc4VlcHelpMode::FullHelp) const;

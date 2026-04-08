@@ -1554,6 +1554,21 @@ void ofVlcPlayer4GuiMedia::drawDiagnosticsSubMenu(
 	if (ImGui::Button("Clear Logs", ImVec2(dualActionButtonWidth, 0.0f))) {
 		player.clearLibVlcLogEntries();
 	}
+	ImGui::SameLine(0.0f, buttonSpacing);
+	if (ImGui::Button("Print Report", ImVec2(dualActionButtonWidth, 0.0f))) {
+		const std::string report = player.getDiagnosticsReport();
+		ofLogNotice("ofxVlc4") << "\n" << report;
+	}
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip("Print a full diagnostics report to the openFrameworks log (ofLogNotice).");
+	}
+	ImGui::SameLine(0.0f, buttonSpacing);
+	if (ImGui::Button("Copy Report", ImVec2(dualActionButtonWidth, 0.0f))) {
+		ImGui::SetClipboardText(player.getDiagnosticsReport().c_str());
+	}
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip("Copy a full diagnostics report to the clipboard.");
+	}
 	const std::vector<ofxVlc4::LibVlcLogEntry> libVlcLogs = player.getLibVlcLogEntries();
 	drawLibVlcLogEntries(libVlcLogs);
 	ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
