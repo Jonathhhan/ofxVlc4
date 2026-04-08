@@ -80,6 +80,7 @@ public:
 	float getBufferCache() const;
 	bool isCorked() const;
 	unsigned getCachedVideoOutputCount() const;
+	bool isPausableLatched() const;
 
 private:
 	struct PlaylistSnapshot {

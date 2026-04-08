@@ -31,6 +31,7 @@ struct PlaybackTransportState {
 	mutable std::atomic<float> lastKnownPlaybackPosition { 0.0f };
 	std::atomic<float> bufferCache { 0.0f };
 	std::atomic<bool> seekableLatched { false };
+	std::atomic<bool> pausableLatched { false };
 	std::atomic<unsigned> cachedVideoOutputCount { 0 };
 	std::atomic<bool> corked { false };
 };

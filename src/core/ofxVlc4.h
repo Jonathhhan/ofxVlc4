@@ -837,6 +837,7 @@ public:
 		bool seekable = false;
 		float bufferCache = 0.0f;
 		bool corked = false;
+		bool pausable = false;
 		float position = 0.0f;
 		int timeMs = 0;
 		float lengthMs = 0.0f;

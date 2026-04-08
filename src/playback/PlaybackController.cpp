@@ -555,6 +555,7 @@ void PlaybackController::resetTransportState() {
 	playbackTransport.lastKnownPlaybackPosition.store(0.0f, std::memory_order_relaxed);
 	playbackTransport.bufferCache.store(0.0f, std::memory_order_relaxed);
 	playbackTransport.seekableLatched.store(false, std::memory_order_relaxed);
+	playbackTransport.pausableLatched.store(false, std::memory_order_relaxed);
 	playbackTransport.cachedVideoOutputCount.store(0, std::memory_order_relaxed);
 	playbackTransport.corked.store(false, std::memory_order_relaxed);
 	clearPendingActivationRequest();
@@ -841,6 +842,7 @@ void PlaybackController::onMediaPlayerStopped() {
 	playbackTransport.lastKnownPlaybackPosition.store(0.0f, std::memory_order_relaxed);
 	playbackTransport.bufferCache.store(0.0f, std::memory_order_relaxed);
 	playbackTransport.seekableLatched.store(false, std::memory_order_relaxed);
+	playbackTransport.pausableLatched.store(false, std::memory_order_relaxed);
 	playbackTransport.cachedVideoOutputCount.store(0, std::memory_order_relaxed);
 	playbackTransport.corked.store(false, std::memory_order_relaxed);
 	clearWatchTimeState();
@@ -883,11 +885,12 @@ void PlaybackController::onMediaPlayerSeekableChanged(bool seekable) {
 	playbackTransport.seekableLatched.store(seekable, std::memory_order_relaxed);
 }
 
-void PlaybackController::onMediaPlayerPausableChanged(bool /*pausable*/) {
+void PlaybackController::onMediaPlayerPausableChanged(bool pausable) {
+	playbackTransport.pausableLatched.store(pausable, std::memory_order_relaxed);
 }
 
 void PlaybackController::onMediaPlayerEncounteredError() {
-	ofxVlc4::logError("VLC encountered a playback error.");
+	owner.setError("VLC encountered a playback error.");
 }
 
 void PlaybackController::onMediaPlayerCorked() {
@@ -908,6 +911,10 @@ bool PlaybackController::isCorked() const {
 
 unsigned PlaybackController::getCachedVideoOutputCount() const {
 	return playbackTransport.cachedVideoOutputCount.load(std::memory_order_relaxed);
+}
+
+bool PlaybackController::isPausableLatched() const {
+	return playbackTransport.pausableLatched.load(std::memory_order_relaxed);
 }
 
 void PlaybackController::prepareForClose() {
