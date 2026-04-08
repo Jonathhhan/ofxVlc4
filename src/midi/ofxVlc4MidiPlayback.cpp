@@ -233,7 +233,7 @@ bool MidiPlaybackSession::isPlaying() const {
 }
 
 bool MidiPlaybackSession::isPaused() const {
-	return loaded && !playing && playheadSeconds > 0.0 && !finished;
+	return loaded && !playing && !finished;
 }
 
 bool MidiPlaybackSession::isStopped() const {

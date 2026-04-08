@@ -126,7 +126,7 @@ void VlcCoreSession::detachPlayerEvents(void * data, EventCallback callback) {
 	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerEncounteredError, callback, data);
 	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerCorked, callback, data);
 	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerUncorked, callback, data);
-	mediaPlayerEventManager = nullptr;
+	// Do not set mediaPlayerEventManager to nullptr here.
 }
 
 libvlc_event_manager_t * VlcCoreSession::mediaEvents() const {
@@ -155,7 +155,7 @@ void VlcCoreSession::detachMediaEvents(void * data, EventCallback callback) {
 	libvlc_event_detach(mediaEventManager, libvlc_MediaParsedChanged, callback, data);
 	libvlc_event_detach(mediaEventManager, libvlc_MediaThumbnailGenerated, callback, data);
 	libvlc_event_detach(mediaEventManager, libvlc_MediaAttachedThumbnailsFound, callback, data);
-	mediaEventManager = nullptr;
+	// Do not set mediaEventManager to nullptr here.
 }
 
 libvlc_media_discoverer_t * VlcCoreSession::mediaDiscoverer() const {
@@ -200,7 +200,7 @@ void VlcCoreSession::detachMediaDiscovererListEvents(void * data, EventCallback 
 	libvlc_event_detach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemAdded, callback, data);
 	libvlc_event_detach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemDeleted, callback, data);
 	libvlc_event_detach(mediaDiscovererMediaListEventManager, libvlc_MediaListEndReached, callback, data);
-	mediaDiscovererMediaListEventManager = nullptr;
+	// Do not set mediaDiscovererMediaListEventManager to nullptr here.
 }
 
 libvlc_renderer_discoverer_t * VlcCoreSession::rendererDiscoverer() const {
@@ -235,7 +235,7 @@ void VlcCoreSession::detachRendererEvents(void * data, EventCallback callback) {
 
 	libvlc_event_detach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemAdded, callback, data);
 	libvlc_event_detach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemDeleted, callback, data);
-	rendererDiscovererEventManager = nullptr;
+	// Do not set rendererDiscovererEventManager to nullptr here.
 }
 
 bool VlcCoreSession::loggingEnabled() const {
@@ -280,8 +280,12 @@ void VlcCoreSession::closeLogFile() {
 		return;
 	}
 
-	std::fflush(libVlcLogFileHandle);
-	std::fclose(libVlcLogFileHandle);
+	if (std::fflush(libVlcLogFileHandle) != 0) {
+		// Optionally log error
+	}
+	if (std::fclose(libVlcLogFileHandle) != 0) {
+		// Optionally log error
+	}
 	libVlcLogFileHandle = nullptr;
 }
 
