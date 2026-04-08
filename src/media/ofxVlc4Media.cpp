@@ -31,7 +31,8 @@ using ofxVlc4Utils::trimWhitespace;
 
 namespace {
 
-constexpr size_t kLibVlcLogCapacity = 200;
+// Use the same capacity constant as VlcCoreSession to avoid duplication.
+constexpr size_t kLibVlcLogCapacity = VlcCoreSession::kLogCapacity;
 constexpr const char * kMediaLogChannel = "ofxVlc4";
 
 std::string defaultLibVlcLogFilePath() {
@@ -1183,13 +1184,13 @@ void ofxVlc4::MediaComponent::appendLibVlcLog(const LibVlcLogEntry & entry) {
 		coreEntry.message = entry.message;
 		owner.coreSession->appendLog(coreEntry);
 	} else {
-		owner.libVlcLogEntries.push_back(entry);
-		if (owner.libVlcLogEntries.size() > kLibVlcLogCapacity) {
-			const size_t overflow = owner.libVlcLogEntries.size() - kLibVlcLogCapacity;
+		if (owner.libVlcLogEntries.size() >= kLibVlcLogCapacity) {
+			const size_t overflow = owner.libVlcLogEntries.size() - kLibVlcLogCapacity + 1;
 			owner.libVlcLogEntries.erase(
 				owner.libVlcLogEntries.begin(),
 				owner.libVlcLogEntries.begin() + overflow);
 		}
+		owner.libVlcLogEntries.push_back(entry);
 	}
 
 	if (!friendlyError.empty() && owner.lastErrorMessage != friendlyError) {

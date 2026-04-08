@@ -159,22 +159,6 @@ const char * audioVisualizerModuleOptionName(ofxVlc4AudioVisualizerModule module
 	}
 }
 
-const char * audioVisualizerFilterOptionName(ofxVlc4AudioVisualizerModule module) {
-	switch (module) {
-	case ofxVlc4AudioVisualizerModule::Visual:
-		return "visual";
-	case ofxVlc4AudioVisualizerModule::Goom:
-		return "goom";
-	case ofxVlc4AudioVisualizerModule::Glspectrum:
-		return "glspectrum";
-	case ofxVlc4AudioVisualizerModule::ProjectM:
-		return "projectm";
-	case ofxVlc4AudioVisualizerModule::None:
-	default:
-		return "";
-	}
-}
-
 const char * audioVisualizerEffectOptionName(ofxVlc4AudioVisualizerEffect effect) {
 	switch (effect) {
 	case ofxVlc4AudioVisualizerEffect::Scope:
