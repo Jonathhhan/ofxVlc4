@@ -22,6 +22,8 @@ public:
 	bool hasMessageCallback() const;
 	void setSyncSettings(const MidiSyncSettings & settings);
 	MidiSyncSettings getSyncSettings() const;
+	void setLoopEnabled(bool enabled);
+	bool isLoopEnabled() const;
 
 	bool isLoaded() const;
 	bool isPlaying() const;
@@ -32,6 +34,7 @@ public:
 	double getDurationSeconds() const;
 	double getPositionSeconds() const;
 	double getTempoMultiplier() const;
+	double getCurrentBpm() const;
 	const std::string & getPath() const;
 	const std::vector<MidiChannelMessage> & getMessages() const;
 	size_t getLastDispatchBegin() const;
@@ -51,6 +54,7 @@ private:
 	int songPositionAtSeconds(double seconds) const;
 	static std::vector<unsigned char> makeQuarterFrameMessage(double seconds, double fps, int piece);
 
+	bool loopEnabled = false;
 	std::string path;
 	double durationSeconds = 0.0;
 	double playheadSeconds = 0.0;

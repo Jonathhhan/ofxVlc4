@@ -68,6 +68,19 @@ void MidiPlaybackSession::update(double nowSeconds) {
 		lastDispatchEnd = cursor.advanceUntil(playheadSeconds);
 		dispatchRange(lastDispatchBegin, lastDispatchEnd);
 		emitSyncBetween(previousPlayheadSeconds, playheadSeconds);
+
+		if (loopEnabled) {
+			playheadSeconds = 0.0;
+			playbackStartPositionSeconds = 0.0;
+			playbackStartWallSeconds = nowSeconds;
+			nextSyncSeconds = 0.0;
+			nextQuarterFramePiece = 0;
+			cursor.rewind();
+			sendSongPositionPointer();
+			sendTransportStart(false);
+			return;
+		}
+
 		playing = false;
 		finished = true;
 		sendTransportStop();
@@ -184,6 +197,14 @@ MidiSyncSettings MidiPlaybackSession::getSyncSettings() const {
 	return syncSettings;
 }
 
+void MidiPlaybackSession::setLoopEnabled(bool enabled) {
+	loopEnabled = enabled;
+}
+
+bool MidiPlaybackSession::isLoopEnabled() const {
+	return loopEnabled;
+}
+
 bool MidiPlaybackSession::isLoaded() const {
 	return loaded;
 }
@@ -214,6 +235,10 @@ double MidiPlaybackSession::getPositionSeconds() const {
 
 double MidiPlaybackSession::getTempoMultiplier() const {
 	return tempoMultiplier;
+}
+
+double MidiPlaybackSession::getCurrentBpm() const {
+	return tempoAtSeconds(playheadSeconds);
 }
 
 const std::string & MidiPlaybackSession::getPath() const {

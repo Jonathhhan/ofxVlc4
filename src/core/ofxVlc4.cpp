@@ -2216,9 +2216,11 @@ ofxVlc4::MidiTransportInfo ofxVlc4::getMidiTransportInfo() const {
 	info.playing = midiRuntime.playback.isPlaying();
 	info.paused = midiRuntime.playback.isPaused();
 	info.finished = midiRuntime.playback.isFinished();
+	info.loopEnabled = midiRuntime.playback.isLoopEnabled();
 	info.durationSeconds = midiRuntime.playback.getDurationSeconds();
 	info.positionSeconds = midiRuntime.playback.getPositionSeconds();
 	info.tempoMultiplier = midiRuntime.playback.getTempoMultiplier();
+	info.currentBpm = midiRuntime.playback.getCurrentBpm();
 	info.dispatchedCount = midiRuntime.playback.getDispatchedCount();
 	info.messageCount = midiRuntime.messages.size();
 	info.syncSource = midiRuntime.syncSource;
@@ -2274,4 +2276,19 @@ void ofxVlc4::setMidiSyncToWatchTimeEnabled(bool enabled) {
 bool ofxVlc4::isMidiSyncToWatchTimeEnabled() const {
 	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
 	return midiRuntime.syncToWatchTime;
+}
+
+void ofxVlc4::setMidiLoopEnabled(bool enabled) {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	midiRuntime.playback.setLoopEnabled(enabled);
+}
+
+bool ofxVlc4::isMidiLoopEnabled() const {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	return midiRuntime.playback.isLoopEnabled();
+}
+
+double ofxVlc4::getMidiCurrentBpm() const {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	return midiRuntime.playback.getCurrentBpm();
 }

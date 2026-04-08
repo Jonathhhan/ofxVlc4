@@ -283,6 +283,13 @@ void ofApp::drawControlPanel() {
 			ImGui::SliderFloat("Position", &position, 0.0f, 1.0f, "%.2f s");
 			ImGui::EndDisabled();
 		}
+
+		bool loopEnabled = midiInfo.loopEnabled;
+		if (ImGui::Checkbox("Loop", &loopEnabled)) {
+			player->setMidiLoopEnabled(loopEnabled);
+		}
+		ImGui::SameLine();
+		ImGui::Text("BPM: %.1f", midiInfo.currentBpm);
 	} else {
 		const ofxVlc4::PlaylistStateInfo playlistState = player->getPlaylistStateInfo();
 		ImGui::Text("Playlist items: %d", static_cast<int>(playlistState.size));
@@ -550,6 +557,12 @@ void ofApp::keyPressed(int key) {
 		if (midiMode) {
 			soloMidiChannel = -1;
 			sendMidiPanic();
+		}
+		break;
+	case 'o':
+	case 'O':
+		if (midiMode) {
+			player->setMidiLoopEnabled(!player->isMidiLoopEnabled());
 		}
 		break;
 	case OF_KEY_UP:
@@ -866,7 +879,7 @@ std::string ofApp::playbackLabel() {
 	if (isMidiModeActive()) {
 		const auto midiInfo = player->getMidiTransportInfo();
 		if (midiInfo.playing) {
-			return "Playing (MIDI out)";
+			return midiInfo.loopEnabled ? "Looping (MIDI out)" : "Playing (MIDI out)";
 		}
 		if (midiInfo.paused) {
 			return "Paused (MIDI out)";
