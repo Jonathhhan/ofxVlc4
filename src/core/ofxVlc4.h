@@ -1142,11 +1142,13 @@ private:
 		std::atomic<float> displayAspectRatio { 1.0f };
 		unsigned allocatedVideoWidth = 1;
 		unsigned allocatedVideoHeight = 1;
+		int allocatedGlPixelFormat = static_cast<int>(GL_RGBA);
 		unsigned lastBoundViewportWidth = 0;
 		unsigned lastBoundViewportHeight = 0;
 		std::atomic<unsigned> pendingRenderWidth { 0 };
 		std::atomic<unsigned> pendingRenderHeight { 0 };
 		std::atomic<bool> pendingResize { false };
+		std::atomic<int> pendingGlPixelFormat { static_cast<int>(GL_RGBA) };
 	};
 
 	struct PlaybackPolicyRuntimeState {
@@ -1548,6 +1550,8 @@ private:
 	std::atomic<unsigned> & pendingRenderWidth;
 	std::atomic<unsigned> & pendingRenderHeight;
 	std::atomic<bool> & pendingResize;
+	std::atomic<int> & pendingGlPixelFormat;
+	int & allocatedGlPixelFormat;
 	std::shared_ptr<ofAppGLFWWindow> & mainWindow;
 	std::shared_ptr<ofAppGLFWWindow> & vlcWindow;
 	PlaybackMode & playbackMode;

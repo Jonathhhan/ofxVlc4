@@ -34,8 +34,8 @@ public:
 	VideoAdjustmentEngine resolveActiveVideoAdjustmentEngine() const;
 	bool usesShaderVideoAdjustments() const;
 	void ensureVideoAdjustShaderLoaded();
-	void ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight);
-	void ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight);
+	void ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight, int glPixelFormat = static_cast<int>(GL_RGBA));
+	void ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight, int glPixelFormat = static_cast<int>(GL_RGBA));
 	void refreshExposedTextureLocked(const VideoStateInfo & state);
 	bool applyPendingVideoResize();
 	void bindVlcRenderTarget();
