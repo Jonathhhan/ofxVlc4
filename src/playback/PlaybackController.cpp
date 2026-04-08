@@ -6,6 +6,7 @@
 #include "support/ofxVlc4Utils.h"
 #include "video/ofxVlc4Video.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
@@ -563,9 +564,52 @@ void PlaybackController::resetTransportState() {
 	playbackTransport.activeDirectMediaOptions.clear();
 	playbackTransport.activeDirectMediaIsLocation = true;
 	playbackTransport.activeDirectMediaParseAsNetwork = false;
+	invalidateShuffleQueue();
 }
 
 void PlaybackController::clearPendingActivationRequest() {
+	playbackTransport.pendingActivateIndex.store(-1);
+	playbackTransport.pendingActivateShouldPlay.store(false);
+	playbackTransport.pendingActivateReady.store(false);
+	playbackTransport.pendingDirectMediaSource.clear();
+	playbackTransport.pendingDirectMediaOptions.clear();
+	playbackTransport.pendingDirectMediaLabel.clear();
+	playbackTransport.pendingDirectMediaIsLocation = true;
+	playbackTransport.pendingDirectMediaParseAsNetwork = false;
+}
+
+void PlaybackController::buildShuffleQueue(int excludeIndex) {
+	const PlaylistSnapshot playlist = getPlaylistSnapshot();
+	shuffleQueue.clear();
+	for (int i = 0; i < static_cast<int>(playlist.size); ++i) {
+		if (i != excludeIndex) {
+			shuffleQueue.push_back(i);
+		}
+	}
+	for (int i = static_cast<int>(shuffleQueue.size()) - 1; i > 0; --i) {
+		const int j = static_cast<int>(ofRandom(static_cast<float>(i + 1)));
+		std::swap(shuffleQueue[i], shuffleQueue[j]);
+	}
+	shuffleQueueBuilt = true;
+}
+
+void PlaybackController::invalidateShuffleQueue() {
+	shuffleQueue.clear();
+	shuffleQueueBuilt = false;
+}
+
+int PlaybackController::popNextFromShuffleQueue() {
+	const PlaylistSnapshot playlist = getPlaylistSnapshot();
+	while (!shuffleQueue.empty()) {
+		const int next = shuffleQueue.back();
+		shuffleQueue.pop_back();
+		if (playlist.contains(next)) {
+			return next;
+		}
+	}
+	return -1;
+}
+
 	playbackTransport.pendingActivateIndex.store(-1);
 	playbackTransport.pendingActivateShouldPlay.store(false);
 	playbackTransport.pendingActivateReady.store(false);
