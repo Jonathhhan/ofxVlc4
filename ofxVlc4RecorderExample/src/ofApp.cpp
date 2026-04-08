@@ -10,7 +10,6 @@ constexpr float kDefaultAspect = 16.0f / 9.0f;
 constexpr int kVideoModeFrameRate = 60;
 constexpr int kAudioOnlyModeFrameRate = 30;
 constexpr double kTwoPi = 6.28318530717958647692;
-constexpr uint64_t kBenchmarkMuxTimeoutMs = 15000;
 
 const std::set<std::string> & audioOnlyExtensions() {
 	static const std::set<std::string> extensions = {
@@ -698,8 +697,7 @@ void ofApp::toggleBenchmarkVideoRecording() {
 		benchmarkFbo.getTexture(),
 		player->getRecordingPreset(),
 		benchmarkAudioSampleRate,
-		benchmarkAudioChannelCount,
-		kBenchmarkMuxTimeoutMs))) {
+		benchmarkAudioChannelCount))) {
 		return;
 	}
 	benchmarkVideoRecordingActive = true;
@@ -722,8 +720,7 @@ void ofApp::toggleWindowRecording() {
 		windowRecordingBasePath,
 		player->getRecordingPreset(),
 		benchmarkAudioSampleRate,
-		benchmarkAudioChannelCount,
-		kBenchmarkMuxTimeoutMs))) {
+		benchmarkAudioChannelCount))) {
 		windowRecordingActive = false;
 		return;
 	}
@@ -1074,6 +1071,18 @@ void ofApp::drawControlPanel() {
 		int audioBitrate = recordingPreset.audioBitrateKbps;
 		if (ImGui::InputInt("Mux audio bitrate (kbps)", &audioBitrate, 0, 0)) {
 			recordingPreset.audioBitrateKbps = std::max(0, audioBitrate);
+			presetChanged = true;
+		}
+
+		int muxTimeoutSec = static_cast<int>(recordingPreset.muxTimeoutMs / 1000);
+		if (ImGui::SliderInt("Mux timeout (s)", &muxTimeoutSec, 5, 120)) {
+			recordingPreset.muxTimeoutMs = static_cast<uint64_t>(std::max(5, muxTimeoutSec)) * 1000;
+			presetChanged = true;
+		}
+
+		float audioRingBuf = static_cast<float>(recordingPreset.audioRingBufferSeconds);
+		if (ImGui::SliderFloat("Audio ring buffer (s)", &audioRingBuf, 1.0f, 30.0f, "%.1f")) {
+			recordingPreset.audioRingBufferSeconds = static_cast<double>(audioRingBuf);
 			presetChanged = true;
 		}
 
