@@ -82,6 +82,19 @@ target_include_directories(test_mux_helpers PRIVATE
 add_test(NAME mux_helpers COMMAND test_mux_helpers)
 
 # ---------------------------------------------------------------------------
+# test_playlist
+# Tests the in-memory playlist manipulation logic (add, remove, move single,
+# move multiple) mirroring the behaviour of MediaLibrary.  No dependency on
+# OF, GLFW, or VLC.
+# ---------------------------------------------------------------------------
+
+add_executable(test_playlist
+    test_playlist.cpp
+)
+
+add_test(NAME playlist COMMAND test_playlist)
+
+# ---------------------------------------------------------------------------
 # test_gl
 # Tests the GL-context helpers hasCurrentGlContext() and clearAllocatedFbo()
 # from ofxVlc4Utils.h.  Uses a dedicated stubs_gl/ directory that provides a
