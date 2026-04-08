@@ -15,6 +15,13 @@
 
 namespace ofxVlc4MuxHelpers {
 
+// Number of consecutive polls where the file size must be unchanged before
+// the file is considered fully written and ready to read.
+static constexpr int kFileStableCheckCount = 3;
+
+// Polling interval used when waiting for a file to appear or be removed.
+static constexpr int kFilePollIntervalMs = 50;
+
 // Escapes single-quotes in a path and normalises it for use in a VLC sout
 // stream specification.
 inline std::string normalizeSoutPath(const std::string & path) {
@@ -55,14 +62,13 @@ inline bool waitForRecordingFile(const std::string & path, uint64_t timeoutMs) {
 	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
 	uintmax_t previousSize = 0;
 	int stableCount = 0;
-	static constexpr int kMinStableCount = 3;
 	while (std::chrono::steady_clock::now() < deadline) {
 		std::error_code error;
 		if (std::filesystem::exists(path, error)) {
 			const uintmax_t currentSize = std::filesystem::file_size(path, error);
 			if (!error && currentSize > 0) {
 				if (currentSize == previousSize) {
-					if (++stableCount >= kMinStableCount) {
+					if (++stableCount >= kFileStableCheckCount) {
 						return true;
 					}
 				} else {
@@ -71,7 +77,7 @@ inline bool waitForRecordingFile(const std::string & path, uint64_t timeoutMs) {
 				}
 			}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(kFilePollIntervalMs));
 	}
 	return previousSize > 0;
 }
@@ -85,7 +91,6 @@ inline bool waitForRecordingFile(
 	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
 	uintmax_t previousSize = 0;
 	int stableCount = 0;
-	static constexpr int kMinStableCount = 3;
 	while (std::chrono::steady_clock::now() < deadline) {
 		if (cancelRequested && cancelRequested->load(std::memory_order_acquire)) {
 			return false;
@@ -96,7 +101,7 @@ inline bool waitForRecordingFile(
 			const uintmax_t currentSize = std::filesystem::file_size(path, error);
 			if (!error && currentSize > 0) {
 				if (currentSize == previousSize) {
-					if (++stableCount >= kMinStableCount) {
+					if (++stableCount >= kFileStableCheckCount) {
 						return true;
 					}
 				} else {
@@ -105,7 +110,7 @@ inline bool waitForRecordingFile(
 				}
 			}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(kFilePollIntervalMs));
 	}
 	return previousSize > 0;
 }
@@ -129,7 +134,7 @@ inline bool removeRecordingFile(const std::string & path, uint64_t timeoutMs) {
 		if (!error && !std::filesystem::exists(path, error)) {
 			return !error;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(kFilePollIntervalMs));
 	} while (std::chrono::steady_clock::now() < deadline);
 
 	std::error_code error;
