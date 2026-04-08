@@ -1043,7 +1043,9 @@ std::string ofxVlc4::getDiagnosticsReport() const {
 	    << "  stopped: " << boolStr(pb.stopped)
 	    << "  transitioning: " << boolStr(pb.transitioning) << "\n";
 	out << "seekable:    " << boolStr(pb.seekable)
-	    << "  rate: " << pb.rate << "\n";
+	    << "  rate: " << pb.rate
+	    << "  bufferCache: " << static_cast<int>(pb.bufferCache) << "%"
+	    << "  corked: " << boolStr(pb.corked) << "\n";
 	out << "position:    " << pb.position
 	    << "  time: " << pb.timeMs << " ms"
 	    << "  length: " << static_cast<int>(pb.lengthMs) << " ms\n";

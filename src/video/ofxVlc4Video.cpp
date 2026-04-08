@@ -1,6 +1,7 @@
 #include "ofxVlc4.h"
 #include "ofxVlc4Video.h"
 #include "media/ofxVlc4Media.h"
+#include "playback/PlaybackController.h"
 #include "support/ofxVlc4Utils.h"
 
 #ifdef TARGET_WIN32
@@ -2285,7 +2286,10 @@ void ofxVlc4::VideoComponent::setVideoFilterChain(const std::string & filterChai
 
 unsigned ofxVlc4::VideoComponent::getVideoOutputCount() const {
 	libvlc_media_player_t * player = owner.sessionPlayer();
-	return player ? libvlc_media_player_has_vout(player) : 0u;
+	if (!player) {
+		return 0u;
+	}
+	return owner.playbackController->getCachedVideoOutputCount();
 }
 
 bool ofxVlc4::VideoComponent::hasVideoOutput() const {

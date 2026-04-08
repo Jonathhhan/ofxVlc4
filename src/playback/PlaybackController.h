@@ -77,6 +77,9 @@ public:
 	void previousMediaListItem();
 	bool hasActiveDirectMedia() const;
 	bool reloadActiveDirectMedia();
+	float getBufferCache() const;
+	bool isCorked() const;
+	unsigned getCachedVideoOutputCount() const;
 
 private:
 	struct PlaylistSnapshot {
@@ -105,6 +108,14 @@ private:
 	ofxVlc4::PlaybackMode getPlaybackModeValue() const;
 	void setShuffleEnabledValue(bool enabled);
 	bool isShuffleEnabledValue() const;
+	void onMediaPlayerPaused();
+	void onMediaPlayerVout(unsigned count);
+	void onMediaPlayerBuffering(float cache);
+	void onMediaPlayerSeekableChanged(bool seekable);
+	void onMediaPlayerPausableChanged(bool pausable);
+	void onMediaPlayerEncounteredError();
+	void onMediaPlayerCorked();
+	void onMediaPlayerUncorked();
 
 	ofxVlc4 & owner;
 	PlaybackTransportState playbackTransport;
