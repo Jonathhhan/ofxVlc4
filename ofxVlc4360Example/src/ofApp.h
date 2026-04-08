@@ -27,6 +27,12 @@ private:
 		Sphere
 	};
 
+	enum class SphereLayout {
+		Mono,
+		SideBySide,
+		TopBottom
+	};
+
 	void drawPreview();
 	void drawControlPanel();
 	void loadSeedMedia();
@@ -67,4 +73,12 @@ private:
 	int startupSeedDelayFrames = 0;
 	std::string pendingSeedPath;
 	std::string infoStatus;
+
+	// libVLC 360 projection and stereo settings (indices into label arrays)
+	int libVlcProjectionIndex = 0;
+	int libVlcStereoIndex = 0;
+
+	// Sphere-mode stereo layout
+	SphereLayout sphereLayout = SphereLayout::Mono;
+	int sphereEyeIndex = 0;
 };
