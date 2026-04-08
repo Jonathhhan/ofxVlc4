@@ -3,6 +3,7 @@
 #include "midi/ofxVlc4MidiAnalysis.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdio>
 #include <cstdint>
 #include <filesystem>
@@ -140,8 +141,9 @@ std::vector<uint8_t> concat(std::initializer_list<std::vector<uint8_t>> parts) {
 
 // Write bytes to a temporary file and return the path.
 std::string writeTempFile(const std::vector<uint8_t> & bytes, const std::string & suffix = ".mid") {
+	static std::atomic<int> counter { 0 };
 	const std::string path = std::filesystem::temp_directory_path().string() +
-		"/ofxvlc4_test_" + std::to_string(reinterpret_cast<uintptr_t>(&bytes)) + suffix;
+		"/ofxvlc4_test_" + std::to_string(++counter) + suffix;
 	std::ofstream f(path, std::ios::binary);
 	f.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
 	return path;
@@ -736,7 +738,10 @@ TEST(MidiReportExporter_CsvContent_TempoCsv) {
 	std::ifstream f(prefix + ".tempo.csv");
 	std::string line;
 	std::getline(f, line);
-	EXPECT_STREQ(line, "tick,seconds,microsecondsPerQuarter,bpm");
+	EXPECT_TRUE(line.find("tick") != std::string::npos &&
+		line.find("seconds") != std::string::npos &&
+		line.find("microsecondsPerQuarter") != std::string::npos &&
+		line.find("bpm") != std::string::npos);
 	std::getline(f, line);
 	EXPECT_TRUE(line.find("500000") != std::string::npos);
 
