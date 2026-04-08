@@ -24,7 +24,9 @@
 #include <sstream>
 
 using ofxVlc4Utils::clearAllocatedFbo;
+using ofxVlc4Utils::joinFilterChainEntries;
 using ofxVlc4Utils::normalizeOptionalPath;
+using ofxVlc4Utils::parseFilterChainEntries;
 using ofxVlc4Utils::setInputHandlingEnabled;
 using ofxVlc4Utils::trimWhitespace;
 
@@ -257,39 +259,6 @@ std::string loadVideoAdjustShaderSource(const std::string & fileName) {
 		}
 	}
 	return "";
-}
-
-std::vector<std::string> parseFilterChainEntries(const std::string & filterChain) {
-	std::vector<std::string> filters;
-	std::stringstream stream(filterChain);
-	std::string entry;
-	while (std::getline(stream, entry, ':')) {
-		entry = trimWhitespace(entry);
-		if (entry.empty()) {
-			continue;
-		}
-		if (std::find(filters.begin(), filters.end(), entry) == filters.end()) {
-			filters.push_back(std::move(entry));
-		}
-	}
-	return filters;
-}
-
-std::string joinFilterChainEntries(const std::vector<std::string> & filters) {
-	std::ostringstream stream;
-	bool first = true;
-	for (const std::string & filter : filters) {
-		const std::string trimmed = trimWhitespace(filter);
-		if (trimmed.empty()) {
-			continue;
-		}
-		if (!first) {
-			stream << ":";
-		}
-		stream << trimmed;
-		first = false;
-	}
-	return stream.str();
 }
 
 const char * videoDeinterlaceFilterName(ofxVlc4::VideoDeinterlaceMode mode) {
@@ -608,7 +577,7 @@ bool ofxVlc4::VideoComponent::shouldApplyVideoAdjustmentsImmediately() const {
 	}
 
 	const libvlc_state_t state = libvlc_media_player_get_state(player);
-	return state != libvlc_Playing && state != libvlc_Paused;
+	return state == libvlc_Playing || state == libvlc_Paused;
 }
 
 void ofxVlc4::VideoComponent::applyOrQueueVideoAdjustments() {

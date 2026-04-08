@@ -11,6 +11,8 @@
 #include <sstream>
 
 using ofxVlc4Utils::trimWhitespace;
+using ofxVlc4Utils::parseFilterChainEntries;
+using ofxVlc4Utils::joinFilterChainEntries;
 
 namespace {
 constexpr double kBufferedAudioSeconds = 0.75;
@@ -31,39 +33,6 @@ uint64_t steadyMicrosNow() {
 	return static_cast<uint64_t>(
 		std::chrono::duration_cast<std::chrono::microseconds>(
 			std::chrono::steady_clock::now().time_since_epoch()).count());
-}
-
-std::vector<std::string> parseFilterChainEntries(const std::string & filterChain) {
-	std::vector<std::string> filters;
-	std::stringstream stream(filterChain);
-	std::string entry;
-	while (std::getline(stream, entry, ':')) {
-		entry = trimWhitespace(entry);
-		if (entry.empty()) {
-			continue;
-		}
-		if (std::find(filters.begin(), filters.end(), entry) == filters.end()) {
-			filters.push_back(std::move(entry));
-		}
-	}
-	return filters;
-}
-
-std::string joinFilterChainEntries(const std::vector<std::string> & filters) {
-	std::ostringstream stream;
-	bool first = true;
-	for (const std::string & filter : filters) {
-		const std::string trimmed = trimWhitespace(filter);
-		if (trimmed.empty()) {
-			continue;
-		}
-		if (!first) {
-			stream << ":";
-		}
-		stream << trimmed;
-		first = false;
-	}
-	return stream.str();
 }
 
 void updateAtomicMax(std::atomic<uint64_t> & target, uint64_t value) {

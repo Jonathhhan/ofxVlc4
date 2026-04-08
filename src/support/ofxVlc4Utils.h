@@ -3,11 +3,13 @@
 #include "ofMain.h"
 #include "GLFW/glfw3.h"
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace ofxVlc4Utils {
 inline std::string trimWhitespace(const std::string & value) {
@@ -152,6 +154,39 @@ inline std::string formatAdjustmentValue(float value, int precision = 1, const c
 	stream << std::fixed << std::setprecision(precision) << value;
 	if (suffix && *suffix) {
 		stream << suffix;
+	}
+	return stream.str();
+}
+
+inline std::vector<std::string> parseFilterChainEntries(const std::string & filterChain) {
+	std::vector<std::string> filters;
+	std::stringstream stream(filterChain);
+	std::string entry;
+	while (std::getline(stream, entry, ':')) {
+		entry = trimWhitespace(entry);
+		if (entry.empty()) {
+			continue;
+		}
+		if (std::find(filters.begin(), filters.end(), entry) == filters.end()) {
+			filters.push_back(std::move(entry));
+		}
+	}
+	return filters;
+}
+
+inline std::string joinFilterChainEntries(const std::vector<std::string> & filters) {
+	std::ostringstream stream;
+	bool first = true;
+	for (const std::string & filter : filters) {
+		const std::string trimmed = trimWhitespace(filter);
+		if (trimmed.empty()) {
+			continue;
+		}
+		if (!first) {
+			stream << ":";
+		}
+		stream << trimmed;
+		first = false;
 	}
 	return stream.str();
 }
