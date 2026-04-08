@@ -351,6 +351,124 @@ static void testAllocateResetsState() {
 }
 
 // ---------------------------------------------------------------------------
+// Full-buffer coincident-positions cases
+//
+// When writeStart = readStart + capacity the masked positions coincide
+// (writePos == readPos mod capacity) even though the buffer is completely
+// full.  readBegin / writeBegin must distinguish this from the empty case.
+// ---------------------------------------------------------------------------
+
+static void testFullBufferCoincidentAtZero() {
+	beginSuite("full-buffer coincident at index 0");
+
+	// After writing exactly capacity samples from a fresh buffer:
+	// writeStart=8, readStart=0  →  writePos=0 & 7 = 0 == readPos=0 & 7 = 0
+	ofxVlc4RingBuffer rb(8);
+
+	float src[8];
+	for (int i = 0; i < 8; ++i) src[i] = float(i + 1);
+
+	CHECK_EQ(rb.write(src, 8), 8u);
+	CHECK_EQ(rb.getNumReadableSamples(), 8u);
+	CHECK_EQ(rb.getNumWritableSamples(), 0u);
+
+	// Further writes must be rejected
+	float extra[1] = { 99.f };
+	CHECK_EQ(rb.write(extra, 1), 0u);
+	CHECK(rb.getOverrunCount() >= 1u);
+
+	// All samples must come back in order
+	float dst[8] = {};
+	CHECK_EQ(rb.read(dst, 8), 8u);
+	CHECK_EQ(rb.getNumReadableSamples(), 0u);
+	for (int i = 0; i < 8; ++i)
+		CHECK(nearlyEqual(dst[i], float(i + 1)));
+}
+
+static void testFullBufferCoincidentAtNonZero() {
+	beginSuite("full-buffer coincident at index 5");
+
+	ofxVlc4RingBuffer rb(8);
+
+	// Advance both pointers to index 5
+	float advance[5] = {}, discard[5] = {};
+	rb.write(advance, 5);
+	rb.read(discard, 5);
+
+	CHECK_EQ(rb.getNumReadableSamples(), 0u);
+	CHECK_EQ(rb.getNumWritableSamples(), 8u);
+
+	// Fill completely: writeStart=13, readStart=5
+	// writePos = 13 & 7 = 5 == readPos = 5 & 7 = 5  →  coincident, full
+	float src[8];
+	for (int i = 0; i < 8; ++i) src[i] = float(10 + i);
+
+	CHECK_EQ(rb.write(src, 8), 8u);
+	CHECK_EQ(rb.getNumReadableSamples(), 8u);
+	CHECK_EQ(rb.getNumWritableSamples(), 0u);
+
+	float extra[1] = { 99.f };
+	CHECK_EQ(rb.write(extra, 1), 0u);
+	CHECK(rb.getOverrunCount() >= 1u);
+
+	// Reading wraps: index 5..7, then 0..4
+	float dst[8] = {};
+	CHECK_EQ(rb.read(dst, 8), 8u);
+	CHECK_EQ(rb.getNumReadableSamples(), 0u);
+	for (int i = 0; i < 8; ++i)
+		CHECK(nearlyEqual(dst[i], float(10 + i)));
+}
+
+static void testFullBufferCoincidentPartialRead() {
+	beginSuite("full-buffer coincident — partial reads");
+
+	ofxVlc4RingBuffer rb(8);
+
+	// Advance to index 6 so the subsequent fill crosses the array end
+	float junk[6] = {}, junk2[6] = {};
+	rb.write(junk, 6);
+	rb.read(junk2, 6);
+
+	float src[8];
+	for (int i = 0; i < 8; ++i) src[i] = float(20 + i);
+	rb.write(src, 8);
+	// writeStart=14, readStart=6  →  writePos=14&7=6 == readPos=6&7=6
+
+	CHECK_EQ(rb.getNumReadableSamples(), 8u);
+
+	float dst[8] = {};
+	CHECK_EQ(rb.read(dst, 3), 3u);
+	CHECK_EQ(rb.getNumReadableSamples(), 5u);
+	CHECK_EQ(rb.read(dst + 3, 5), 5u);
+	CHECK_EQ(rb.getNumReadableSamples(), 0u);
+
+	for (int i = 0; i < 8; ++i)
+		CHECK(nearlyEqual(dst[i], float(20 + i)));
+}
+
+static void testFullBufferCoincidentPeekLatest() {
+	beginSuite("full-buffer coincident — peekLatest");
+
+	ofxVlc4RingBuffer rb(8);
+
+	float junk[3] = {}, junk2[3] = {};
+	rb.write(junk, 3);
+	rb.read(junk2, 3);
+	// writeStart=3, readStart=3  →  both at index 3
+
+	float src[8];
+	for (int i = 0; i < 8; ++i) src[i] = float(30 + i);
+	rb.write(src, 8);
+	// coincident full buffer at index 3
+
+	float out[4] = {};
+	CHECK_EQ(rb.peekLatest(out, 4), 4u);
+	CHECK_EQ(rb.getNumReadableSamples(), 8u); // read pointer unchanged
+	for (int i = 0; i < 4; ++i)
+		CHECK(nearlyEqual(out[i], float(34 + i)));
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -375,6 +493,10 @@ int main() {
 	testNullSrcDst();
 	testZeroCapacity();
 	testAllocateResetsState();
+	testFullBufferCoincidentAtZero();
+	testFullBufferCoincidentAtNonZero();
+	testFullBufferCoincidentPartialRead();
+	testFullBufferCoincidentPeekLatest();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

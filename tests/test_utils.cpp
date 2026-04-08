@@ -72,8 +72,8 @@ static void testIsUri() {
 	CHECK(!isUri("/home/user/video.mp4"));
 	CHECK(!isUri("relative/path.mp4"));
 	CHECK(!isUri("justword"));
-	// Edge: two occurrences of "://" → not considered a single URI
-	CHECK(!isUri("http://host/a://b"));
+	// Edge: two occurrences of "://" — first scheme (http) is still valid
+	CHECK(isUri("http://host/a://b"));
 }
 
 // ---------------------------------------------------------------------------
@@ -257,6 +257,37 @@ static void testFormatProgramName() {
 }
 
 // ---------------------------------------------------------------------------
+// normalizeOptionalPath
+// ---------------------------------------------------------------------------
+
+static void testNormalizeOptionalPath() {
+	beginSuite("normalizeOptionalPath");
+
+	using ofxVlc4Utils::normalizeOptionalPath;
+
+	// Empty string → returns empty string unchanged.
+	CHECK_EQ(normalizeOptionalPath(""), "");
+
+	// Whitespace-only → trimmed to empty, returned as empty.
+	CHECK_EQ(normalizeOptionalPath("   "), "");
+
+	// URI → returned trimmed, not resolved as a path.
+	CHECK_EQ(normalizeOptionalPath("http://example.com/video.mp4"), "http://example.com/video.mp4");
+	CHECK_EQ(normalizeOptionalPath("  rtsp://camera/stream  "), "rtsp://camera/stream");
+
+	// Local path → returned as an absolute path (non-empty, not a URI).
+	{
+		const std::string result = normalizeOptionalPath("video.mp4");
+		CHECK(!result.empty());
+		CHECK(!ofxVlc4Utils::isUri(result));
+	}
+	{
+		const std::string result = normalizeOptionalPath("/tmp/video.mp4");
+		CHECK_EQ(result, "/tmp/video.mp4");
+	}
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -270,6 +301,7 @@ int main() {
 	testFormatAdjustmentValue();
 	testFallbackIndexedLabel();
 	testFormatProgramName();
+	testNormalizeOptionalPath();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

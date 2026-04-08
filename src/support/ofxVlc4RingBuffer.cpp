@@ -49,10 +49,13 @@ void ofxVlc4RingBuffer::reset() {
 size_t ofxVlc4RingBuffer::getNumReadableSamples() const {
 	const auto writeStart = _writeStart.load(std::memory_order_acquire);
 	const auto readStart = _readStart.load(std::memory_order_acquire);
-	return (writeStart > readStart) ? std::min(writeStart - readStart, _capacity) : 0;
+	// Unsigned subtraction correctly handles wraparound of the monotonically
+	// increasing indices without needing a comparison.
+	return writeStart - readStart;
 }
 
 size_t ofxVlc4RingBuffer::getNumWritableSamples() const {
+	if (_capacity == 0) return 0;
 	return _capacity - getNumReadableSamples();
 }
 
@@ -60,9 +63,8 @@ size_t ofxVlc4RingBuffer::writeBegin(float *& first, size_t & firstCount, float 
 	const auto writeStart = _writeStart.load(std::memory_order_relaxed);
 	const auto readStart = _readStart.load(std::memory_order_acquire);
 
-	const size_t readable = (writeStart > readStart) ? std::min(writeStart - readStart, _capacity) : 0;
+	const size_t readable = writeStart - readStart;
 	const size_t writable = _capacity - readable;
-
 	const auto readPosition = readStart & _mask;
 	const auto writePosition = writeStart & _mask;
 
@@ -91,7 +93,7 @@ size_t ofxVlc4RingBuffer::readBegin(const float *& first, size_t & firstCount, c
 	const auto readStart = _readStart.load(std::memory_order_relaxed);
 	const auto writeStart = _writeStart.load(std::memory_order_acquire);
 
-	const size_t readable = (writeStart > readStart) ? std::min(writeStart - readStart, _capacity) : 0;
+	const size_t readable = writeStart - readStart;
 	const auto readPosition = readStart & _mask;
 	const auto writePosition = writeStart & _mask;
 
@@ -193,7 +195,7 @@ size_t ofxVlc4RingBuffer::peekLatest(float * dst, size_t wanted) const {
 
 	const auto writeStart = _writeStart.load(std::memory_order_acquire);
 	const auto readStart = _readStart.load(std::memory_order_acquire);
-	const size_t readable = (writeStart > readStart) ? std::min(writeStart - readStart, _capacity) : 0;
+	const size_t readable = writeStart - readStart;
 	const size_t copied = std::min(wanted, readable);
 	const size_t zeroPad = wanted - copied;
 

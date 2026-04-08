@@ -39,7 +39,11 @@ inline std::string normalizeSoutPath(const std::string & path) {
 inline std::string pathToFileUri(const std::string & path) {
 	const std::string genericPath = std::filesystem::absolute(path).lexically_normal().generic_string();
 	std::ostringstream uri;
-	uri << "file:///";
+	// On Unix, generic_string() begins with '/' which already provides the
+	// third slash of the authority separator, so emit only "file://".
+	// On Windows the path starts with a drive letter (e.g. "C:/…"), so we
+	// must add the extra '/' to form the correct "file:///C:/…" URI.
+	uri << ((!genericPath.empty() && genericPath[0] == '/') ? "file://" : "file:///");
 	for (const unsigned char ch : genericPath) {
 		if ((ch >= 'A' && ch <= 'Z') ||
 			(ch >= 'a' && ch <= 'z') ||
