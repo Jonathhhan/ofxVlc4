@@ -77,7 +77,10 @@ enum class ofxVlc4RecordingVideoCodecPreset {
 	Mjpg,
 	Hap,
 	HapAlpha,
-	HapQ
+	HapQ,
+	VP8,
+	VP9,
+	Theora
 };
 
 enum class ofxVlc4RecordingMuxProfile {
@@ -86,7 +89,9 @@ enum class ofxVlc4RecordingMuxProfile {
 	MkvFlac,
 	MkvLpcm,
 	OggVorbis,
-	MovAac
+	MovAac,
+	WebmOpus,
+	MkvAac
 };
 
 struct ofxVlc4RecordingPreset {
