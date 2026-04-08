@@ -64,3 +64,19 @@ target_include_directories(test_utils PRIVATE
 )
 
 add_test(NAME utils COMMAND test_utils)
+
+# ---------------------------------------------------------------------------
+# test_mux_helpers
+# Tests the pure filesystem/string helpers in ofxVlc4MuxHelpers.h.
+# No OF, GLFW, or VLC dependencies — uses only the C++ standard library.
+# ---------------------------------------------------------------------------
+
+add_executable(test_mux_helpers
+    test_mux_helpers.cpp
+)
+
+target_include_directories(test_mux_helpers PRIVATE
+    "${SRC_DIR}/support"  # ofxVlc4MuxHelpers.h
+)
+
+add_test(NAME mux_helpers COMMAND test_mux_helpers)
