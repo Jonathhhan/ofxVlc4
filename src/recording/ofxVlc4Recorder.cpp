@@ -70,6 +70,16 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		}
 		return false;
 	}
+	// Only alphanumeric characters are valid in a VLC mux/sout module name.
+	// Reject anything else to prevent sout string injection.
+	for (const char c : normalizedMux) {
+		if (!std::isalnum(static_cast<unsigned char>(c))) {
+			if (errorOut) {
+				*errorOut = "Mux container name contains invalid characters.";
+			}
+			return false;
+		}
+	}
 	if (normalizedAudioCodec.empty()) {
 		if (errorOut) {
 			*errorOut = "Mux audio codec is empty.";
@@ -208,7 +218,7 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		return fail("Recording mux cancelled.");
 	}
 	if (!success) {
-		return fail("Timed out or failed while muxing benchmark recording.");
+		return fail("Timed out or failed while muxing recording.");
 	}
 	return true;
 }

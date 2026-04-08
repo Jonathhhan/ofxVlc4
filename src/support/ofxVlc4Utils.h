@@ -23,7 +23,24 @@ inline std::string trimWhitespace(const std::string & value) {
 }
 
 inline bool isUri(const std::string & value) {
-	return ofStringTimesInString(value, "://") == 1;
+	// Find "://" — absent means it cannot be a URI.
+	const size_t schemeEnd = value.find("://");
+	if (schemeEnd == std::string::npos || schemeEnd == 0) {
+		return false;
+	}
+	// RFC 3986 §3.1: a URI scheme is ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
+	// and must start with a letter.  Any non-scheme character (e.g. a path
+	// separator '/') before "://" means the string is a local path, not a URI.
+	if (!std::isalpha(static_cast<unsigned char>(value[0]))) {
+		return false;
+	}
+	for (size_t i = 1; i < schemeEnd; ++i) {
+		const unsigned char c = static_cast<unsigned char>(value[i]);
+		if (!std::isalpha(c) && !std::isdigit(c) && c != '+' && c != '-' && c != '.') {
+			return false;
+		}
+	}
+	return true;
 }
 
 inline std::string fileNameFromUri(const std::string & uri) {

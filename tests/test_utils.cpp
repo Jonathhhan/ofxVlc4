@@ -72,8 +72,8 @@ static void testIsUri() {
 	CHECK(!isUri("/home/user/video.mp4"));
 	CHECK(!isUri("relative/path.mp4"));
 	CHECK(!isUri("justword"));
-	// Edge: two occurrences of "://" → not considered a single URI
-	CHECK(!isUri("http://host/a://b"));
+	// Edge: two occurrences of "://" — first scheme (http) is still valid
+	CHECK(isUri("http://host/a://b"));
 }
 
 // ---------------------------------------------------------------------------
