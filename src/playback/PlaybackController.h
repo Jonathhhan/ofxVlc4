@@ -120,6 +120,7 @@ private:
 	void onMediaPlayerUncorked();
 	void buildShuffleQueue(int excludeIndex);
 	int popNextFromShuffleQueue();
+	int nextFromShuffleQueueLazy(int excludeIndex);
 
 	ofxVlc4 & owner;
 	PlaybackTransportState playbackTransport;

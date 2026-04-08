@@ -611,6 +611,18 @@ int PlaybackController::popNextFromShuffleQueue() {
 	return -1;
 }
 
+int PlaybackController::nextFromShuffleQueueLazy(int excludeIndex) {
+	if (!shuffleQueueBuilt) {
+		buildShuffleQueue(excludeIndex);
+	}
+	int next = popNextFromShuffleQueue();
+	if (next < 0 && getPlaybackMode() == ofxVlc4::PlaybackMode::Loop) {
+		buildShuffleQueue(excludeIndex);
+		next = popNextFromShuffleQueue();
+	}
+	return next;
+}
+
 void PlaybackController::handlePlaybackEnded() {
 	const PlaylistSnapshot playlist = getPlaylistSnapshot();
 	const int activeIndex = playlist.currentIndex;
@@ -642,21 +654,10 @@ void PlaybackController::handlePlaybackEnded() {
 	}
 
 	if (isShuffleEnabled()) {
-		if (!shuffleQueueBuilt) {
-			buildShuffleQueue(activeIndex);
-		}
-		int next = popNextFromShuffleQueue();
+		int next = nextFromShuffleQueueLazy(activeIndex);
 		if (next >= 0) {
 			playIndex(next);
 			return;
-		}
-		if (getPlaybackMode() == ofxVlc4::PlaybackMode::Loop) {
-			buildShuffleQueue(activeIndex);
-			next = popNextFromShuffleQueue();
-			if (next >= 0) {
-				playIndex(next);
-				return;
-			}
 		}
 		playbackTransport.playNextRequested.store(false);
 		playbackTransport.playbackWanted.store(false);
@@ -1227,14 +1228,7 @@ void PlaybackController::nextMediaListItem() {
 	const bool shouldPlay = playbackTransport.playbackWanted.load();
 
 	if (isShuffleEnabled()) {
-		if (!shuffleQueueBuilt) {
-			buildShuffleQueue(playlist.currentIndex);
-		}
-		int next = popNextFromShuffleQueue();
-		if (next < 0 && getPlaybackMode() == ofxVlc4::PlaybackMode::Loop) {
-			buildShuffleQueue(playlist.currentIndex);
-			next = popNextFromShuffleQueue();
-		}
+		int next = nextFromShuffleQueueLazy(playlist.currentIndex);
 		if (next >= 0) {
 			activatePlaylistIndex(next, shouldPlay);
 		}
@@ -1255,14 +1249,7 @@ void PlaybackController::previousMediaListItem() {
 	const bool shouldPlay = playbackTransport.playbackWanted.load();
 
 	if (isShuffleEnabled()) {
-		if (!shuffleQueueBuilt) {
-			buildShuffleQueue(playlist.currentIndex);
-		}
-		int previous = popNextFromShuffleQueue();
-		if (previous < 0 && getPlaybackMode() == ofxVlc4::PlaybackMode::Loop) {
-			buildShuffleQueue(playlist.currentIndex);
-			previous = popNextFromShuffleQueue();
-		}
+		int previous = nextFromShuffleQueueLazy(playlist.currentIndex);
 		if (previous >= 0) {
 			activatePlaylistIndex(previous, shouldPlay);
 		}
