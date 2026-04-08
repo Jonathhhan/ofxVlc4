@@ -1,5 +1,6 @@
 #include "VlcEventRouter.h"
 #include "ofxVlc4.h"
+#include "ofxVlc4Impl.h"
 
 VlcEventRouter::VlcEventRouter(ofxVlc4 & ownerRef)
 	: owner(ownerRef) {
