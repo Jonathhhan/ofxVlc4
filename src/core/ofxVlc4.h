@@ -106,6 +106,8 @@ struct ofxVlc4RecordingPreset {
 	int videoBitrateKbps = 8000;
 	int audioBitrateKbps = 192;
 	bool deleteMuxSourceFilesOnSuccess = true;
+	size_t readbackBufferCount = 3;
+	ofxVlc4VideoReadbackPolicy readbackPolicy = ofxVlc4VideoReadbackPolicy::DropLateFrames;
 };
 
 struct ofxVlc4RecordingSessionConfig {
@@ -1946,6 +1948,8 @@ public:
 	ofxVlc4VideoReadbackPolicy getVideoReadbackPolicy() const;
 	void setVideoReadbackBufferCount(size_t bufferCount);
 	size_t getVideoReadbackBufferCount() const;
+	void setRecordingAudioRingBufferSeconds(double seconds);
+	double getRecordingAudioRingBufferSeconds() const;
 	ofxVlc4RecorderPerformanceInfo getRecorderPerformanceInfo() const;
 
 	void draw(float x, float y, float w, float h);

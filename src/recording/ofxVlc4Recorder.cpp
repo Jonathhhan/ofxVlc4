@@ -865,10 +865,19 @@ ofxVlc4RecorderPerformanceInfo ofxVlc4::getRecorderPerformanceInfo() const {
 	return recorder.getPerformanceInfo();
 }
 
+void ofxVlc4::setRecordingAudioRingBufferSeconds(double seconds) {
+	recorder.setAudioRingBufferSeconds(seconds);
+}
+
+double ofxVlc4::getRecordingAudioRingBufferSeconds() const {
+	return recorder.getAudioRingBufferSeconds();
+}
+
 void ofxVlc4Recorder::resetAudioCaptureState() {
 	sampleRate = 0;
 	channelCount = 0;
 	dataBytes = 0;
+	wavSizeLimitWarned = false;
 	outputPath.clear();
 	audioRecordingActive.store(false);
 	clearBufferedAudioCapture();
@@ -879,7 +888,7 @@ void ofxVlc4Recorder::resetAudioCaptureBuffer(int sampleRate, int channelCount) 
 	audioRingBuffer.allocate(
 		static_cast<size_t>(sampleRate) *
 		static_cast<size_t>(channelCount) *
-		kBufferedAudioSeconds);
+		audioRingBufferSeconds);
 	audioRingBuffer.clear();
 }
 
@@ -1099,12 +1108,22 @@ ofxVlc4VideoReadbackPolicy ofxVlc4Recorder::getVideoReadbackPolicy() const {
 
 void ofxVlc4Recorder::setVideoReadbackBufferCount(size_t bufferCount) {
 	std::lock_guard<std::mutex> lock(recordingMutex);
-	recordingPboBufferCount = std::clamp<size_t>(bufferCount, 2, 4);
+	recordingPboBufferCount = std::clamp<size_t>(bufferCount, 2, 8);
 }
 
 size_t ofxVlc4Recorder::getVideoReadbackBufferCount() const {
 	std::lock_guard<std::mutex> lock(recordingMutex);
 	return recordingPboBufferCount;
+}
+
+void ofxVlc4Recorder::setAudioRingBufferSeconds(double seconds) {
+	std::lock_guard<std::mutex> lock(audioRecordingMutex);
+	audioRingBufferSeconds = std::max(1.0, seconds);
+}
+
+double ofxVlc4Recorder::getAudioRingBufferSeconds() const {
+	std::lock_guard<std::mutex> lock(audioRecordingMutex);
+	return audioRingBufferSeconds;
 }
 
 libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
@@ -1253,7 +1272,7 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		streamSpec += ",width=" + ofToString(encodedWidth);
 		streamSpec += ",height=" + ofToString(encodedHeight);
 	}
-	streamSpec += "}:standard{access=file,dst=" + videoPath + "}";
+	streamSpec += "}:standard{access=file,dst='" + normalizeSoutPath(videoPath) + "'}";
 
 	libvlc_media_add_option(recordingMedia, "demux=rawvid");
 	libvlc_media_add_option(recordingMedia, width.c_str());
@@ -1279,7 +1298,11 @@ std::string ofxVlc4Recorder::updateCaptureState() {
 			}
 			if (lastVideoCaptureTimeUs == 0 || nowUs >= lastVideoCaptureTimeUs + videoFrameIntervalUs) {
 				captureVideoFrameLocked();
-				lastVideoCaptureTimeUs = nowUs;
+				if (lastVideoCaptureTimeUs == 0) {
+					lastVideoCaptureTimeUs = nowUs;
+				} else {
+					lastVideoCaptureTimeUs += videoFrameIntervalUs;
+				}
 			}
 		}
 	}
@@ -1575,7 +1598,6 @@ void ofxVlc4Recorder::captureVideoFrameLocked() {
 			glDeleteSync(recordingPixelPackFences[writeIndex]);
 		}
 		recordingPixelPackFences[writeIndex] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-		glFlush();
 		recordingPboPendingIndices.push_back(writeIndex);
 		videoMaxPendingFrames = std::max<uint64_t>(
 			videoMaxPendingFrames,
@@ -1678,6 +1700,12 @@ void ofxVlc4Recorder::writeInterleaved(const float * samples, size_t sampleCount
 		}
 
 		dataBytes += static_cast<uint64_t>(byteCount);
+
+		constexpr uint64_t kWavWarningThreshold = static_cast<uint64_t>(kMaxWavDataBytes * 0.9);
+		if (!wavSizeLimitWarned && dataBytes >= kWavWarningThreshold) {
+			wavSizeLimitWarned = true;
+			ofLogWarning("ofxVlc4") << "Audio recording is approaching the WAV size limit (~4 GB). Stop the recording soon to avoid data loss.";
+		}
 	}
 
 	if (writableSamples < sampleCount) {
