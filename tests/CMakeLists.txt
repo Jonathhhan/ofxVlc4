@@ -80,3 +80,23 @@ target_include_directories(test_mux_helpers PRIVATE
 )
 
 add_test(NAME mux_helpers COMMAND test_mux_helpers)
+
+# ---------------------------------------------------------------------------
+# test_gl
+# Tests the GL-context helpers hasCurrentGlContext() and clearAllocatedFbo()
+# from ofxVlc4Utils.h.  Uses a dedicated stubs_gl/ directory that provides a
+# controllable glfwGetCurrentContext() and an observable ofFbo / ofClear.
+# ---------------------------------------------------------------------------
+
+set(STUBS_GL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/stubs_gl")
+
+add_executable(test_gl
+    test_gl.cpp
+)
+
+target_include_directories(test_gl PRIVATE
+    "${STUBS_GL_DIR}"        # ofMain.h stub + GLFW/ sub-stub (controllable)
+    "${SRC_DIR}/support"     # ofxVlc4Utils.h
+)
+
+add_test(NAME gl COMMAND test_gl)
