@@ -10,6 +10,24 @@
 namespace {
 	constexpr float kPreviewOutlineAlpha = 34.0f;
 
+	ofxVlc4::VideoProjectionMode projectionModeFromIndex(int index) {
+		switch (index) {
+		case 1: return ofxVlc4::VideoProjectionMode::CubemapStandard;
+		case 2: return ofxVlc4::VideoProjectionMode::Rectangular;
+		default: return ofxVlc4::VideoProjectionMode::Equirectangular;
+		}
+	}
+
+	ofxVlc4::VideoStereoMode stereoModeFromIndex(int index) {
+		switch (index) {
+		case 1: return ofxVlc4::VideoStereoMode::Stereo;
+		case 2: return ofxVlc4::VideoStereoMode::LeftEye;
+		case 3: return ofxVlc4::VideoStereoMode::RightEye;
+		case 4: return ofxVlc4::VideoStereoMode::SideBySide;
+		default: return ofxVlc4::VideoStereoMode::Auto;
+		}
+	}
+
 	std::string formatSimpleWatchTimeLabel(const ofxVlc4::WatchTimeInfo & watchTime) {
 		if (!watchTime.available) {
 			return "--:--:--";
@@ -344,9 +362,9 @@ void ofApp::drawControlPanel() {
 	const ofxVlc4::MediaReadinessInfo readiness = player.getMediaReadinessInfo();
 	const ofxVlc4::PlaylistStateInfo playlistState = player.getPlaylistStateInfo();
 
-	const ImVec2 controlPanelSize(430.0f, 620.0f);
-	ImGui::SetNextWindowSize(controlPanelSize, ImGuiCond_Always);
-	if (!ImGui::Begin("360 Controls", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize)) {
+	const ImVec2 controlPanelSize(430.0f, 750.0f);
+	ImGui::SetNextWindowSize(controlPanelSize, ImGuiCond_FirstUseEver);
+	if (!ImGui::Begin("360 Controls", nullptr, ImGuiWindowFlags_NoCollapse)) {
 		ImGui::End();
 		return;
 	}
@@ -412,13 +430,62 @@ void ofApp::drawControlPanel() {
 		libVlcViewDirty = true;
 	}
 	if (renderMode == RenderMode::LibVlc360) {
-		ImGui::TextDisabled("Drag with the mouse to update the libVLC 360 viewpoint.");
-		ImGui::TextDisabled("Use R to reset view. [ and ] adjust viewpoint FOV.");
+		static const char * projectionLabels[] = { "Equirectangular", "Cubemap Standard", "Rectangular" };
+		ImGui::SetNextItemWidth(200.0f);
+		if (ImGui::Combo("Projection", &libVlcProjectionIndex, projectionLabels, IM_ARRAYSIZE(projectionLabels))) {
+			player.setVideoProjectionMode(projectionModeFromIndex(libVlcProjectionIndex));
+		}
+
+		static const char * stereoLabels[] = { "Auto", "Stereo", "Left Eye", "Right Eye", "Side-by-Side" };
+		ImGui::SetNextItemWidth(200.0f);
+		if (ImGui::Combo("Stereo", &libVlcStereoIndex, stereoLabels, IM_ARRAYSIZE(stereoLabels))) {
+			player.setVideoStereoMode(stereoModeFromIndex(libVlcStereoIndex));
+		}
+
+		bool viewpointChanged = false;
+		ImGui::SetNextItemWidth(200.0f);
+		if (ImGui::SliderFloat("Yaw", &libVlcYaw, -180.0f, 180.0f, "%.1f deg")) {
+			viewpointChanged = true;
+		}
+		ImGui::SetNextItemWidth(200.0f);
+		if (ImGui::SliderFloat("Pitch", &libVlcPitch, -90.0f, 90.0f, "%.1f deg")) {
+			viewpointChanged = true;
+		}
+		ImGui::SetNextItemWidth(200.0f);
+		if (ImGui::SliderFloat("Roll", &libVlcRoll, -180.0f, 180.0f, "%.1f deg")) {
+			viewpointChanged = true;
+		}
+		if (viewpointChanged) {
+			libVlcViewDirty = true;
+		}
+		ImGui::TextDisabled("Drag the mouse or use sliders to update the viewpoint.");
+		ImGui::TextDisabled("Use R to reset view. [ and ] adjust FOV.");
 	} else {
+		static const char * layoutLabels[] = { "Mono", "Side-by-Side", "Top/Bottom" };
+		int layoutIndex = static_cast<int>(sphereLayout);
+		ImGui::SetNextItemWidth(200.0f);
+		if (ImGui::Combo("Stereo Layout", &layoutIndex, layoutLabels, IM_ARRAYSIZE(layoutLabels))) {
+			sphereLayout = static_cast<SphereLayout>(layoutIndex);
+			mappedTextureWidth = 0.0f;
+			mappedTextureHeight = 0.0f;
+		}
+		if (sphereLayout != SphereLayout::Mono) {
+			static const char * eyeLabels[] = { "Left Eye", "Right Eye" };
+			ImGui::SetNextItemWidth(200.0f);
+			if (ImGui::Combo("Eye", &sphereEyeIndex, eyeLabels, IM_ARRAYSIZE(eyeLabels))) {
+				mappedTextureWidth = 0.0f;
+				mappedTextureHeight = 0.0f;
+			}
+		}
 		ImGui::TextDisabled("Drag with the mouse to look around inside the sphere.");
 		ImGui::TextDisabled("Use R to reset view. [ and ] adjust FOV.");
-		ImGui::TextDisabled("Sphere mode assumes standard mono 2:1 equirectangular video.");
-		ImGui::TextDisabled("The default mapping uses a flipped Y orientation.");
+		if (sphereLayout == SphereLayout::Mono) {
+			ImGui::TextDisabled("Mono: standard 2:1 equirectangular mapping.");
+		} else if (sphereLayout == SphereLayout::SideBySide) {
+			ImGui::TextDisabled("Side-by-Side: left/right halves are separate eyes.");
+		} else {
+			ImGui::TextDisabled("Top/Bottom: top half is left eye, bottom is right.");
+		}
 	}
 
 	ImGui::SeparatorText("Diagnostics");
@@ -565,8 +632,8 @@ void ofApp::applyLibVlc360Viewpoint(bool force) {
 	}
 
 	if (!libVlc360Applied || force) {
-		player.setVideoProjectionMode(ofxVlc4::VideoProjectionMode::Equirectangular);
-		player.setVideoStereoMode(ofxVlc4::VideoStereoMode::Auto);
+		player.setVideoProjectionMode(projectionModeFromIndex(libVlcProjectionIndex));
+		player.setVideoStereoMode(stereoModeFromIndex(libVlcStereoIndex));
 		libVlc360Applied = true;
 		libVlcViewDirty = true;
 	}
@@ -595,6 +662,11 @@ void ofApp::rebuildSphereTexCoords(const ofTexture & texture) {
 
 	const float twoPi = glm::two_pi<float>();
 
+	const float uScale = (sphereLayout == SphereLayout::SideBySide) ? 0.5f : 1.0f;
+	const float vScale = (sphereLayout == SphereLayout::TopBottom) ? 0.5f : 1.0f;
+	const float uOffset = (sphereLayout == SphereLayout::SideBySide && sphereEyeIndex == 1) ? 0.5f : 0.0f;
+	const float vOffset = (sphereLayout == SphereLayout::TopBottom && sphereEyeIndex == 1) ? 0.5f : 0.0f;
+
 	for (const glm::vec3 & vertex : vertices) {
 		const glm::vec3 direction = glm::normalize(vertex);
 		float u = 0.5f + std::atan2(direction.z, direction.x) / twoPi;
@@ -604,7 +676,9 @@ void ofApp::rebuildSphereTexCoords(const ofTexture & texture) {
 		u = 1.0f - u;
 		float v = 0.5f - (std::asin(ofClamp(direction.y, -1.0f, 1.0f)) / PI);
 		v = 1.0f - v;
-		texCoords.emplace_back(texture.getCoordFromPercent(ofClamp(u, 0.0f, 1.0f), ofClamp(v, 0.0f, 1.0f)));
+		const float finalU = uOffset + u * uScale;
+		const float finalV = vOffset + v * vScale;
+		texCoords.emplace_back(texture.getCoordFromPercent(ofClamp(finalU, 0.0f, 1.0f), ofClamp(finalV, 0.0f, 1.0f)));
 	}
 
 	mesh.clearTexCoords();
