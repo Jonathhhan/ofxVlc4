@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 
 using ofxVlc4Utils::clearAllocatedFbo;
 
@@ -1022,6 +1023,151 @@ ofxVlc4AddonVersionInfo ofxVlc4::getAddonVersionInfo() {
 		kOfxVlc4AddonVersionPatch,
 		kOfxVlc4AddonVersionString
 	};
+}
+
+std::string ofxVlc4::getDiagnosticsReport() const {
+	const auto boolStr = [](bool v) -> const char * { return v ? "yes" : "no"; };
+	const auto naStr = [](const std::string & s) -> std::string {
+		return s.empty() ? "(none)" : s;
+	};
+
+	std::ostringstream out;
+	const ofxVlc4AddonVersionInfo version = getAddonVersionInfo();
+	out << "=== ofxVlc4 Diagnostics Report ===\n";
+	out << "Addon version: " << version.versionString << "\n";
+
+	// --- Playback state ---
+	const PlaybackStateInfo pb = getPlaybackStateInfo();
+	out << "\n-- Playback --\n";
+	out << "playing:     " << boolStr(pb.playing)
+	    << "  stopped: " << boolStr(pb.stopped)
+	    << "  transitioning: " << boolStr(pb.transitioning) << "\n";
+	out << "seekable:    " << boolStr(pb.seekable)
+	    << "  rate: " << pb.rate << "\n";
+	out << "position:    " << pb.position
+	    << "  time: " << pb.timeMs << " ms"
+	    << "  length: " << static_cast<int>(pb.lengthMs) << " ms\n";
+	out << "media:       attached=" << boolStr(pb.mediaAttached)
+	    << "  prepared=" << boolStr(pb.startupPrepared)
+	    << "  geom=" << boolStr(pb.geometryKnown)
+	    << "  frame=" << boolStr(pb.hasReceivedVideoFrame) << "\n";
+	out << "path:        " << naStr(getCurrentPath()) << "\n";
+
+	// --- Media readiness ---
+	const MediaReadinessInfo rd = getMediaReadinessInfo();
+	out << "\n-- Media Readiness --\n";
+	out << "video tracks:    " << rd.videoTrackCount
+	    << " (" << boolStr(rd.videoTracksReady) << ")"
+	    << "  audio: " << rd.audioTrackCount
+	    << " (" << boolStr(rd.audioTracksReady) << ")"
+	    << "  subtitle: " << rd.subtitleTrackCount
+	    << " (" << boolStr(rd.subtitleTracksReady) << ")\n";
+	out << "navigation: " << boolStr(rd.navigationReady)
+	    << "  titles: " << rd.titleCount
+	    << "  chapters: " << rd.chapterCount
+	    << "  programs: " << rd.programCount << "\n";
+	out << "parse status: ";
+	switch (rd.parseStatus) {
+	case MediaParseStatus::None:      out << "none";      break;
+	case MediaParseStatus::Pending:   out << "pending";   break;
+	case MediaParseStatus::Skipped:   out << "skipped";   break;
+	case MediaParseStatus::Failed:    out << "failed";    break;
+	case MediaParseStatus::Timeout:   out << "timeout";   break;
+	case MediaParseStatus::Cancelled: out << "cancelled"; break;
+	case MediaParseStatus::Done:      out << "done";      break;
+	}
+	out << "  active: " << boolStr(rd.parseActive)
+	    << "  requested: " << boolStr(rd.parseRequested) << "\n";
+
+	// --- Video state ---
+	const VideoStateInfo vs = getVideoStateInfo();
+	out << "\n-- Video --\n";
+	out << "source:   " << vs.sourceWidth << "x" << vs.sourceHeight
+	    << "  render: " << vs.renderWidth << "x" << vs.renderHeight << "\n";
+	out << "aspect:   " << vs.displayAspectRatio
+	    << "  sar: " << vs.pixelAspectNumerator << "/" << vs.pixelAspectDenominator << "\n";
+	out << "loaded:   " << boolStr(vs.loaded)
+	    << "  hasVout: " << boolStr(vs.hasVideoOutput)
+	    << " (" << vs.videoOutputCount << ")\n";
+	out << "tracks:   " << vs.trackCount
+	    << "  adjust: " << boolStr(vs.videoAdjustmentsEnabled)
+	    << "  canPause: " << boolStr(canPause()) << "\n";
+
+	// --- Audio state ---
+	const AudioStateInfo as = getAudioStateInfo();
+	out << "\n-- Audio --\n";
+	out << "ready:    " << boolStr(as.ready)
+	    << "  tracks: " << as.trackCount
+	    << "  volume: " << as.volume
+	    << "  muted: " << boolStr(as.muted) << "\n";
+	out << "device:   " << naStr(as.deviceId) << "\n";
+	out << "delay:    " << as.audioDelayMs << " ms\n";
+	if (as.callbackPerformance.available) {
+		const auto & cp = as.callbackPerformance;
+		out << "callbacks: count=" << cp.callbackCount
+		    << "  rate=" << cp.callbackRateHz << " Hz"
+		    << "  avg=" << cp.averageCallbackMicros << " us"
+		    << "  max=" << cp.maxCallbackMicros << " us\n";
+		out << "           frames=" << cp.frameCount
+		    << "  samples=" << cp.sampleCount << "\n";
+	}
+
+	// --- Media stats ---
+	const MediaStats ms = getMediaStats();
+	out << "\n-- Media Stats --\n";
+	if (ms.available) {
+		out << "input:   " << ms.readBytes << " bytes"
+		    << "  bitrate: " << ms.inputBitrate << "\n";
+		out << "demux:   " << ms.demuxReadBytes << " bytes"
+		    << "  bitrate: " << ms.demuxBitrate
+		    << "  corrupt: " << ms.demuxCorrupted
+		    << "  disc: " << ms.demuxDiscontinuity << "\n";
+		const uint64_t droppedFrames = ms.latePictures + ms.lostPictures;
+		out << "video:   decoded=" << ms.decodedVideo
+		    << "  displayed=" << ms.displayedPictures
+		    << "  dropped=" << droppedFrames
+		    << " (late=" << ms.latePictures
+		    << " lost=" << ms.lostPictures << ")\n";
+		out << "audio:   decoded=" << ms.decodedAudio
+		    << "  played=" << ms.playedAudioBuffers
+		    << "  lost=" << ms.lostAudioBuffers << "\n";
+	} else {
+		out << "(unavailable)\n";
+	}
+
+	// --- Status / error messages ---
+	out << "\n-- Messages --\n";
+	const std::string & status = getLastStatusMessage();
+	const std::string & error  = getLastErrorMessage();
+	out << "status: " << naStr(status) << "\n";
+	out << "error:  " << naStr(error) << "\n";
+
+	// --- libVLC log (last 10 entries) ---
+	const std::vector<LibVlcLogEntry> logEntries = getLibVlcLogEntries();
+	out << "\n-- libVLC Log (last " << std::min<size_t>(logEntries.size(), 10) << " of " << logEntries.size() << ") --\n";
+	if (logEntries.empty()) {
+		out << "(empty - enable libVLC logging to capture entries)\n";
+	} else {
+		const int firstIndex = std::max(0, static_cast<int>(logEntries.size()) - 10);
+		for (int i = static_cast<int>(logEntries.size()) - 1; i >= firstIndex; --i) {
+			const auto & entry = logEntries[static_cast<size_t>(i)];
+			const char * levelStr = "notice";
+			switch (entry.level) {
+			case LIBVLC_DEBUG:   levelStr = "debug";   break;
+			case LIBVLC_WARNING: levelStr = "warning"; break;
+			case LIBVLC_ERROR:   levelStr = "error";   break;
+			default:             levelStr = "notice";  break;
+			}
+			out << "[" << levelStr << "] " << entry.message;
+			if (!entry.module.empty()) {
+				out << "  (" << entry.module << ")";
+			}
+			out << "\n";
+		}
+	}
+
+	out << "\n===================================\n";
+	return out.str();
 }
 
 void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
