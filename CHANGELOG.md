@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **GL workflow: fixed cross-context sync** — `glFlush()` is now called before releasing the VLC GL context in `makeCurrent(false)`, ensuring all render commands (including the frame fence) are submitted to the GPU before the main context tries to wait on them; `GL_SYNC_FLUSH_COMMANDS_BIT` only flushes the waiting context, not the producer context, so without this flush the main thread could stall unnecessarily
+- **GL workflow: linear texture filtering** — the VLC render target is now allocated with `GL_LINEAR` min/mag filters so that video scaled up or down during rendering uses bilinear filtering instead of the driver default
+- **GL workflow: 10-bit texture format** — `videoResize()` now selects `GL_RGB10_A2` for the render target and `render_cfg->opengl_format` when `cfg->bitdepth > 8`, matching the existing D3D11 path (`DXGI_FORMAT_R10G10B10A2_UNORM`); the allocated GL pixel format is tracked in `allocatedGlPixelFormat` so the exposed-texture FBO stays in sync and reallocates on format changes
+
 ## 1.0.2
 
 - fixed addon version reporting so the numeric version fields and version string stay in sync at `1.0.2`

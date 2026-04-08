@@ -910,6 +910,8 @@ void ofxVlc4::VideoComponent::prepareStartupVideoResources() {
 		return;
 	}
 
+	const int glPixelFormat = owner.pendingGlPixelFormat.load();
+
 	owner.pixelAspectNumerator.store(sarNum > 0 ? sarNum : 1u);
 	owner.pixelAspectDenominator.store(sarDen > 0 ? sarDen : 1u);
 	owner.renderWidth.store(width);
@@ -917,8 +919,8 @@ void ofxVlc4::VideoComponent::prepareStartupVideoResources() {
 	owner.videoWidth.store(width);
 	owner.videoHeight.store(height);
 	refreshDisplayAspectRatio();
-	ensureVideoRenderTargetCapacity(width, height);
-	ensureExposedTextureFboCapacity(width, height);
+	ensureVideoRenderTargetCapacity(width, height, glPixelFormat);
+	ensureExposedTextureFboCapacity(width, height, glPixelFormat);
 	owner.exposedTextureDirty.store(true);
 }
 
@@ -976,18 +978,30 @@ void ofxVlc4::VideoComponent::applyVideoLogo() {
 	libvlc_video_set_logo_int(player, libvlc_logo_repeat, owner.logoRepeat);
 }
 
-void ofxVlc4::VideoComponent::ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight) {
+void ofxVlc4::VideoComponent::ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight, int glPixelFormat) {
 	if (requiredWidth == 0 || requiredHeight == 0 || owner.shuttingDown.load()) {
 		return;
 	}
 
-	if (!owner.videoTexture.isAllocated() || requiredWidth > owner.allocatedVideoWidth || requiredHeight > owner.allocatedVideoHeight) {
+	const bool formatChanged = glPixelFormat != owner.allocatedGlPixelFormat;
+	if (!owner.videoTexture.isAllocated() || requiredWidth > owner.allocatedVideoWidth || requiredHeight > owner.allocatedVideoHeight || formatChanged) {
 		clearPublishedFrameFenceLocked();
 		owner.allocatedVideoWidth = std::max(owner.allocatedVideoWidth, requiredWidth);
 		owner.allocatedVideoHeight = std::max(owner.allocatedVideoHeight, requiredHeight);
+		if (formatChanged) {
+			owner.allocatedGlPixelFormat = glPixelFormat;
+		}
 		owner.videoTexture.clear();
-		owner.videoTexture.allocate(owner.allocatedVideoWidth, owner.allocatedVideoHeight, GL_RGBA);
+		owner.videoTexture.allocate(owner.allocatedVideoWidth, owner.allocatedVideoHeight, owner.allocatedGlPixelFormat);
 		owner.videoTexture.getTextureData().bFlipTexture = true;
+		{
+			const GLenum texTarget = owner.videoTexture.getTextureData().textureTarget;
+			const GLuint texId = owner.videoTexture.getTextureData().textureID;
+			glBindTexture(texTarget, texId);
+			glTexParameteri(texTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(texTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glBindTexture(texTarget, 0);
+		}
 		if (owner.vlcFramebufferId == 0) {
 			glGenFramebuffers(1, &owner.vlcFramebufferId);
 		}
@@ -1005,7 +1019,7 @@ void ofxVlc4::VideoComponent::ensureVideoRenderTargetCapacity(unsigned requiredW
 	}
 }
 
-void ofxVlc4::VideoComponent::ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight) {
+void ofxVlc4::VideoComponent::ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight, int glPixelFormat) {
 	if (requiredWidth == 0 || requiredHeight == 0 || owner.shuttingDown.load()) {
 		return;
 	}
@@ -1017,10 +1031,14 @@ void ofxVlc4::VideoComponent::ensureExposedTextureFboCapacity(unsigned requiredW
 	const unsigned targetWidth = std::max(currentWidth, requiredWidth);
 	const unsigned targetHeight = std::max(currentHeight, requiredHeight);
 
+	const bool formatMismatch = owner.exposedTextureFbo.isAllocated() &&
+		static_cast<int>(owner.exposedTextureFbo.getTexture().getTextureData().glInternalFormat) != glPixelFormat;
+
 	if (!owner.exposedTextureFbo.isAllocated() ||
 		targetWidth != currentWidth ||
-		targetHeight != currentHeight) {
-		owner.exposedTextureFbo.allocate(targetWidth, targetHeight, GL_RGBA);
+		targetHeight != currentHeight ||
+		formatMismatch) {
+		owner.exposedTextureFbo.allocate(targetWidth, targetHeight, glPixelFormat);
 		owner.exposedTextureFbo.getTexture().getTextureData().bFlipTexture = true;
 		clearAllocatedFbo(owner.exposedTextureFbo);
 	}
@@ -1036,6 +1054,8 @@ bool ofxVlc4::VideoComponent::applyPendingVideoResize() {
 	if (newRenderWidth == 0 || newRenderHeight == 0) {
 		return false;
 	}
+
+	const int newGlPixelFormat = owner.pendingGlPixelFormat.load();
 
 	unsigned visibleWidth = newRenderWidth;
 	unsigned visibleHeight = newRenderHeight;
@@ -1057,7 +1077,7 @@ bool ofxVlc4::VideoComponent::applyPendingVideoResize() {
 	owner.videoWidth.store(visibleWidth);
 	owner.videoHeight.store(visibleHeight);
 	refreshDisplayAspectRatio();
-	ensureVideoRenderTargetCapacity(newRenderWidth, newRenderHeight);
+	ensureVideoRenderTargetCapacity(newRenderWidth, newRenderHeight, newGlPixelFormat);
 	owner.isVideoLoaded.store(true);
 	owner.exposedTextureDirty.store(true);
 	return true;
@@ -1142,14 +1162,17 @@ bool ofxVlc4::VideoComponent::videoResize(const libvlc_video_render_cfg_t * cfg,
 #endif
 	}
 
-	render_cfg->opengl_format = GL_RGBA;
+	const int glPixelFormat = (cfg->bitdepth > 8) ? static_cast<int>(GL_RGB10_A2) : static_cast<int>(GL_RGBA);
+	render_cfg->opengl_format = static_cast<unsigned>(glPixelFormat);
 	render_cfg->full_range = true;
 	render_cfg->colorspace = libvlc_video_colorspace_BT709;
 	render_cfg->primaries = libvlc_video_primaries_BT709;
 	render_cfg->transfer = libvlc_video_transfer_func_SRGB;
 	render_cfg->orientation = libvlc_video_orient_top_left;
 
-	if (cfg->width != owner.renderWidth.load() || cfg->height != owner.renderHeight.load()) {
+	if (cfg->width != owner.renderWidth.load() || cfg->height != owner.renderHeight.load() ||
+		glPixelFormat != owner.pendingGlPixelFormat.load()) {
+		owner.pendingGlPixelFormat.store(glPixelFormat);
 		owner.pendingRenderWidth.store(cfg->width);
 		owner.pendingRenderHeight.store(cfg->height);
 		owner.pendingResize.store(true);
@@ -1324,8 +1347,9 @@ void ofxVlc4::VideoComponent::videoSwap() {
 
 	clearPublishedFrameFenceLocked();
 	owner.videoFrameRuntime.publishedVideoFrameFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-	// The consumer wait path uses GL_SYNC_FLUSH_COMMANDS_BIT, so avoid forcing a
-	// producer-side flush on every frame publish.
+	// The producer context is flushed in makeCurrent(false) after this call
+	// returns, which ensures the fence is visible to other contexts before
+	// the consumer attempts to wait on it.
 }
 
 bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
@@ -1373,6 +1397,13 @@ bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
 		bindVlcRenderTarget();
 	} else {
 		unbindVlcRenderTarget();
+		// Flush pending GL commands before releasing the context so that the
+		// fence inserted in videoSwap() and any preceding render commands are
+		// submitted to the GPU.  Without this, glClientWaitSync on the main
+		// context may stall because the producer-side commands haven't been
+		// sent yet (GL_SYNC_FLUSH_COMMANDS_BIT only flushes the waiting
+		// context, not the producer context).
+		glFlush();
 		glfwMakeContextCurrent(nullptr);
 	}
 
@@ -1405,8 +1436,9 @@ bool ofxVlc4::VideoComponent::drawCurrentFrame(const VideoStateInfo & state, flo
 
 void ofxVlc4::VideoComponent::refreshExposedTextureLocked(const VideoStateInfo & state) {
 	const auto [sourceWidth, sourceHeight] = visibleVideoSourceSize(state);
+	const int glPixelFormat = owner.allocatedGlPixelFormat;
 	if (sourceWidth > 0 && sourceHeight > 0 && !state.frameReceived) {
-		ensureExposedTextureFboCapacity(sourceWidth, sourceHeight);
+		ensureExposedTextureFboCapacity(sourceWidth, sourceHeight, glPixelFormat);
 		clearAllocatedFbo(owner.exposedTextureFbo);
 		return;
 	}
@@ -1416,7 +1448,7 @@ void ofxVlc4::VideoComponent::refreshExposedTextureLocked(const VideoStateInfo &
 	}
 
 	waitForPublishedFrameFenceLocked();
-	ensureExposedTextureFboCapacity(sourceWidth, sourceHeight);
+	ensureExposedTextureFboCapacity(sourceWidth, sourceHeight, glPixelFormat);
 	const bool fullFboOverwrite =
 		owner.exposedTextureFbo.isAllocated() &&
 		static_cast<unsigned>(owner.exposedTextureFbo.getWidth()) == sourceWidth &&
