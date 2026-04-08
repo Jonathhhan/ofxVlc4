@@ -553,6 +553,11 @@ void PlaybackController::resetTransportState() {
 	playbackTransport.pauseRequested.store(false);
 	playbackTransport.audioPausedSignal.store(false);
 	playbackTransport.lastKnownPlaybackPosition.store(0.0f, std::memory_order_relaxed);
+	playbackTransport.bufferCache.store(0.0f, std::memory_order_relaxed);
+	playbackTransport.seekableLatched.store(false, std::memory_order_relaxed);
+	playbackTransport.pausableLatched.store(false, std::memory_order_relaxed);
+	playbackTransport.cachedVideoOutputCount.store(0, std::memory_order_relaxed);
+	playbackTransport.corked.store(false, std::memory_order_relaxed);
 	clearPendingActivationRequest();
 	playbackTransport.activeDirectMediaSource.clear();
 	playbackTransport.activeDirectMediaOptions.clear();
@@ -783,6 +788,29 @@ void PlaybackController::handleMediaPlayerEvent(const libvlc_event_t * event) {
 		onMediaPlayerStopped();
 		return;
 	case libvlc_MediaPlayerEncounteredError:
+		onMediaPlayerEncounteredError();
+		return;
+	case libvlc_MediaPlayerPaused:
+		onMediaPlayerPaused();
+		return;
+	case libvlc_MediaPlayerVout:
+		onMediaPlayerVout(static_cast<unsigned>(event->u.media_player_vout.new_count));
+		return;
+	case libvlc_MediaPlayerBuffering:
+		onMediaPlayerBuffering(event->u.media_player_buffering.new_cache);
+		return;
+	case libvlc_MediaPlayerSeekableChanged:
+		onMediaPlayerSeekableChanged(event->u.media_player_seekable_changed.new_seekable != 0);
+		return;
+	case libvlc_MediaPlayerPausableChanged:
+		onMediaPlayerPausableChanged(event->u.media_player_pausable_changed.new_pausable != 0);
+		return;
+	case libvlc_MediaPlayerCorked:
+		onMediaPlayerCorked();
+		return;
+	case libvlc_MediaPlayerUncorked:
+		onMediaPlayerUncorked();
+		return;
 	default:
 		return;
 	}
@@ -812,6 +840,11 @@ void PlaybackController::onMediaPlayerStopped() {
 	playbackTransport.manualStopRequestTimeMs.store(0);
 	playbackTransport.manualStopRetryIssued.store(false);
 	playbackTransport.lastKnownPlaybackPosition.store(0.0f, std::memory_order_relaxed);
+	playbackTransport.bufferCache.store(0.0f, std::memory_order_relaxed);
+	playbackTransport.seekableLatched.store(false, std::memory_order_relaxed);
+	playbackTransport.pausableLatched.store(false, std::memory_order_relaxed);
+	playbackTransport.cachedVideoOutputCount.store(0, std::memory_order_relaxed);
+	playbackTransport.corked.store(false, std::memory_order_relaxed);
 	clearWatchTimeState();
 	const int pendingManualStops = playbackTransport.pendingManualStopEvents.fetch_sub(1);
 	if (pendingManualStops > 0) {
@@ -834,6 +867,54 @@ void PlaybackController::onMediaPlayerStopped() {
 			playbackTransport.playNextRequested.store(true);
 		}
 	}
+}
+
+void PlaybackController::onMediaPlayerPaused() {
+	playbackTransport.audioPausedSignal.store(true);
+}
+
+void PlaybackController::onMediaPlayerVout(unsigned count) {
+	playbackTransport.cachedVideoOutputCount.store(count, std::memory_order_relaxed);
+}
+
+void PlaybackController::onMediaPlayerBuffering(float cache) {
+	playbackTransport.bufferCache.store(cache, std::memory_order_relaxed);
+}
+
+void PlaybackController::onMediaPlayerSeekableChanged(bool seekable) {
+	playbackTransport.seekableLatched.store(seekable, std::memory_order_relaxed);
+}
+
+void PlaybackController::onMediaPlayerPausableChanged(bool pausable) {
+	playbackTransport.pausableLatched.store(pausable, std::memory_order_relaxed);
+}
+
+void PlaybackController::onMediaPlayerEncounteredError() {
+	owner.setError("VLC encountered a playback error.");
+}
+
+void PlaybackController::onMediaPlayerCorked() {
+	playbackTransport.corked.store(true, std::memory_order_relaxed);
+}
+
+void PlaybackController::onMediaPlayerUncorked() {
+	playbackTransport.corked.store(false, std::memory_order_relaxed);
+}
+
+float PlaybackController::getBufferCache() const {
+	return playbackTransport.bufferCache.load(std::memory_order_relaxed);
+}
+
+bool PlaybackController::isCorked() const {
+	return playbackTransport.corked.load(std::memory_order_relaxed);
+}
+
+unsigned PlaybackController::getCachedVideoOutputCount() const {
+	return playbackTransport.cachedVideoOutputCount.load(std::memory_order_relaxed);
+}
+
+bool PlaybackController::isPausableLatched() const {
+	return playbackTransport.pausableLatched.load(std::memory_order_relaxed);
 }
 
 void PlaybackController::prepareForClose() {

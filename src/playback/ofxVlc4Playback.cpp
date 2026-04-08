@@ -162,6 +162,14 @@ bool ofxVlc4::isSeekable() const {
 	return playbackController->isSeekable();
 }
 
+float ofxVlc4::getBufferCache() const {
+	return playbackController->getBufferCache();
+}
+
+bool ofxVlc4::isCorked() const {
+	return playbackController->isCorked();
+}
+
 float ofxVlc4::getPosition() const {
 	return playbackController->getPosition();
 }

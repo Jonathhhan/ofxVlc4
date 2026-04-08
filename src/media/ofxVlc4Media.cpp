@@ -2938,6 +2938,9 @@ ofxVlc4::PlaybackStateInfo ofxVlc4::MediaComponent::getPlaybackStateInfo() const
 		isTransientPlaybackState(playerState);
 	state.restartPending = !locallyStopped && playback().isPlaybackRestartPending();
 	state.seekable = !locallyStopped && mediaAttached && hasMediaPlayer ? libvlc_media_player_is_seekable(player) : false;
+	state.bufferCache = playback().getBufferCache();
+	state.corked = playback().isCorked();
+	state.pausable = playback().isPausableLatched();
 	state.position = playback().getPosition();
 	state.timeMs = playback().getTime();
 	state.lengthMs = playback().getLength();

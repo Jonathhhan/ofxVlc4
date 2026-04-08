@@ -82,6 +82,14 @@ void VlcCoreSession::attachPlayerEvents(void * data, EventCallback callback) {
 	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerTitleListChanged, callback, data);
 	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerTitleSelectionChanged, callback, data);
 	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerChapterChanged, callback, data);
+	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerPaused, callback, data);
+	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerBuffering, callback, data);
+	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerVout, callback, data);
+	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerSeekableChanged, callback, data);
+	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerPausableChanged, callback, data);
+	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerEncounteredError, callback, data);
+	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerCorked, callback, data);
+	libvlc_event_attach(mediaPlayerEventManager, libvlc_MediaPlayerUncorked, callback, data);
 }
 
 void VlcCoreSession::detachPlayerEvents(void * data, EventCallback callback) {
@@ -110,6 +118,14 @@ void VlcCoreSession::detachPlayerEvents(void * data, EventCallback callback) {
 	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerTitleListChanged, callback, data);
 	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerTitleSelectionChanged, callback, data);
 	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerChapterChanged, callback, data);
+	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerPaused, callback, data);
+	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerBuffering, callback, data);
+	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerVout, callback, data);
+	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerSeekableChanged, callback, data);
+	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerPausableChanged, callback, data);
+	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerEncounteredError, callback, data);
+	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerCorked, callback, data);
+	libvlc_event_detach(mediaPlayerEventManager, libvlc_MediaPlayerUncorked, callback, data);
 	mediaPlayerEventManager = nullptr;
 }
 

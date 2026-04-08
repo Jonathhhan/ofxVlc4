@@ -835,6 +835,9 @@ public:
 		bool transitioning = false;
 		bool restartPending = false;
 		bool seekable = false;
+		float bufferCache = 0.0f;
+		bool corked = false;
+		bool pausable = false;
 		float position = 0.0f;
 		int timeMs = 0;
 		float lengthMs = 0.0f;
@@ -2364,6 +2367,8 @@ public:
 	bool isPlaybackTransitioning() const;
 	bool isPlaybackRestartPending() const;
 	bool isSeekable() const;
+	float getBufferCache() const;
+	bool isCorked() const;
 	float getPosition() const;
 	int getTime() const;
 	void setTime(int ms);
