@@ -16,10 +16,14 @@ public:
 	void pause(double nowSeconds);
 	void stop();
 	void seek(double seconds, double nowSeconds = 0.0);
+	void seekFraction(double fraction, double nowSeconds = 0.0);
 	void setTempoMultiplier(double multiplier, double nowSeconds);
 	void setMessageCallback(MidiMessageCallback callback);
 	void clearMessageCallback();
 	bool hasMessageCallback() const;
+	void setFinishedCallback(MidiFinishedCallback callback);
+	void clearFinishedCallback();
+	bool hasFinishedCallback() const;
 	void setSyncSettings(const MidiSyncSettings & settings);
 	MidiSyncSettings getSyncSettings() const;
 	void setLoopEnabled(bool enabled);
@@ -33,6 +37,7 @@ public:
 
 	double getDurationSeconds() const;
 	double getPositionSeconds() const;
+	double getPositionFraction() const;
 	double getTempoMultiplier() const;
 	double getCurrentBpm() const;
 	const std::string & getPath() const;
@@ -71,6 +76,7 @@ private:
 	size_t lastDispatchBegin = 0;
 	size_t lastDispatchEnd = 0;
 	MidiMessageCallback messageCallback;
+	MidiFinishedCallback finishedCallback;
 	MidiSyncSettings syncSettings;
 	double nextSyncSeconds = 0.0;
 	int nextQuarterFramePiece = 0;

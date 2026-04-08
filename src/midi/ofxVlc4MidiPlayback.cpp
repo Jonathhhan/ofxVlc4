@@ -85,6 +85,9 @@ void MidiPlaybackSession::update(double nowSeconds) {
 		finished = true;
 		sendTransportStop();
 		allNotesOff();
+		if (finishedCallback) {
+			finishedCallback();
+		}
 		return;
 	}
 
@@ -163,6 +166,10 @@ void MidiPlaybackSession::seek(double seconds, double nowSeconds) {
 	allNotesOff();
 }
 
+void MidiPlaybackSession::seekFraction(double fraction, double nowSeconds) {
+	seek(std::clamp(fraction, 0.0, 1.0) * durationSeconds, nowSeconds);
+}
+
 void MidiPlaybackSession::setTempoMultiplier(double multiplier, double nowSeconds) {
 	const double clamped = std::clamp(multiplier, 0.1, 4.0);
 	if (tempoMultiplier == clamped) {
@@ -187,6 +194,18 @@ void MidiPlaybackSession::clearMessageCallback() {
 
 bool MidiPlaybackSession::hasMessageCallback() const {
 	return static_cast<bool>(messageCallback);
+}
+
+void MidiPlaybackSession::setFinishedCallback(MidiFinishedCallback callback) {
+	finishedCallback = std::move(callback);
+}
+
+void MidiPlaybackSession::clearFinishedCallback() {
+	finishedCallback = {};
+}
+
+bool MidiPlaybackSession::hasFinishedCallback() const {
+	return static_cast<bool>(finishedCallback);
 }
 
 void MidiPlaybackSession::setSyncSettings(const MidiSyncSettings & settings) {
@@ -231,6 +250,13 @@ double MidiPlaybackSession::getDurationSeconds() const {
 
 double MidiPlaybackSession::getPositionSeconds() const {
 	return playheadSeconds;
+}
+
+double MidiPlaybackSession::getPositionFraction() const {
+	if (durationSeconds <= 0.0) {
+		return 0.0;
+	}
+	return std::clamp(playheadSeconds / durationSeconds, 0.0, 1.0);
 }
 
 double MidiPlaybackSession::getTempoMultiplier() const {

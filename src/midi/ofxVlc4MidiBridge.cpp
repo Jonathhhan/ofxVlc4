@@ -147,10 +147,13 @@ void MidiTimelineCursor::seekSeconds(double seconds) {
 		return;
 	}
 
-	index = 0;
-	while (index < source->size() && (*source)[index].seconds < seconds) {
-		++index;
-	}
+	MidiChannelMessage key;
+	key.seconds = seconds;
+	const auto it = std::lower_bound(source->begin(), source->end(), key,
+		[](const MidiChannelMessage & a, const MidiChannelMessage & b) {
+			return a.seconds < b.seconds;
+		});
+	index = static_cast<size_t>(std::distance(source->begin(), it));
 }
 
 size_t MidiTimelineCursor::advanceUntil(double seconds) {
