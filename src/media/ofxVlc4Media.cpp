@@ -588,6 +588,7 @@ bool ofxVlc4::MediaComponent::reapplyCurrentMediaForFilterChainChange(const std:
 	if (wasPlaying || wasPaused) {
 		audio().applyEqualizerSettings();
 		audio().clearPendingEqualizerApplyOnPlay();
+		video().clearPendingVideoAdjustApplyOnPlay();
 		libvlc_media_player_play(player);
 		if (wasPaused) {
 			libvlc_media_player_set_pause(player, 1);
