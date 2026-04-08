@@ -539,14 +539,14 @@ const char * ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile profil
 
 ofxVlc4MuxOptions ofxVlc4::recordingMuxOptionsForProfile(
 	ofxVlc4RecordingMuxProfile profile,
-	int audioRuntime.sampleRate,
+	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
 	uint64_t muxTimeoutMs) {
 	ofxVlc4MuxOptions options;
 	options.containerMux = recordingMuxContainerForProfile(profile);
 	options.audioCodec = recordingMuxAudioCodecForProfile(profile);
-	options.audioSampleRate = std::max(8000, audioRuntime.sampleRate);
+	options.audioSampleRate = std::max(8000, sampleRate);
 	options.audioChannels = std::max(1, channelCount);
 	options.deleteSourceFilesOnSuccess = deleteSourceFilesOnSuccess;
 	options.muxTimeoutMs = muxTimeoutMs;
@@ -564,7 +564,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	std::string outputBasePath,
 	const ofTexture & texture,
 	const ofxVlc4RecordingPreset & preset,
-	int audioRuntime.sampleRate,
+	int sampleRate,
 	int channelCount,
 	uint64_t muxTimeoutMs) {
 	ofxVlc4RecordingSessionConfig config = textureRecordingSessionConfig(
@@ -572,7 +572,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 		texture,
 		preset.audioSource,
 		preset.muxProfile,
-		audioRuntime.sampleRate,
+		sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
 		muxTimeoutMs);
@@ -591,7 +591,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	const ofTexture & texture,
 	ofxVlc4RecordingAudioSource audioSource,
 	ofxVlc4RecordingMuxProfile muxProfile,
-	int audioRuntime.sampleRate,
+	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
 	uint64_t muxTimeoutMs) {
@@ -603,7 +603,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	config.muxOnStop = true;
 	config.muxOptions = recordingMuxOptionsForProfile(
 		muxProfile,
-		audioRuntime.sampleRate,
+		sampleRate,
 		channelCount,
 		deleteSourceFilesOnSuccess,
 		muxTimeoutMs);
@@ -613,14 +613,14 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	std::string outputBasePath,
 	const ofxVlc4RecordingPreset & preset,
-	int audioRuntime.sampleRate,
+	int sampleRate,
 	int channelCount,
 	uint64_t muxTimeoutMs) {
 	ofxVlc4RecordingSessionConfig config = windowRecordingSessionConfig(
 		std::move(outputBasePath),
 		preset.audioSource,
 		preset.muxProfile,
-		audioRuntime.sampleRate,
+		sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
 		muxTimeoutMs);
@@ -638,7 +638,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	std::string outputBasePath,
 	ofxVlc4RecordingAudioSource audioSource,
 	ofxVlc4RecordingMuxProfile muxProfile,
-	int audioRuntime.sampleRate,
+	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
 	uint64_t muxTimeoutMs) {
@@ -649,7 +649,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	config.muxOnStop = true;
 	config.muxOptions = recordingMuxOptionsForProfile(
 		muxProfile,
-		audioRuntime.sampleRate,
+		sampleRate,
 		channelCount,
 		deleteSourceFilesOnSuccess,
 		muxTimeoutMs);
