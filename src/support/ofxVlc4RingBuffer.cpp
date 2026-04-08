@@ -4,7 +4,7 @@
 #include <cstring>
 
 namespace {
-static size_t nextPowerOfTwo(size_t value) {
+size_t nextPowerOfTwo(size_t value) {
 	if (value < 2) return 2;
 	--value;
 	for (size_t shift = 1; shift < sizeof(size_t) * 8; shift <<= 1) {
@@ -33,6 +33,8 @@ void ofxVlc4RingBuffer::clear() {
 	_readStart.store(0, std::memory_order_relaxed);
 	_writeStart.store(0, std::memory_order_relaxed);
 	_version.fetch_add(1, std::memory_order_release);
+	_overruns.store(0, std::memory_order_relaxed);
+	_underruns.store(0, std::memory_order_relaxed);
 	std::fill(_buffer.begin(), _buffer.end(), 0.0f);
 }
 

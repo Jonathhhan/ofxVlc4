@@ -282,11 +282,11 @@ void VlcCoreSession::appendLog(const VlcCoreLogEntry & entry) {
 		return;
 	}
 
-	libVlcLogEntries.push_back(entry);
-	if (libVlcLogEntries.size() > kLogCapacity) {
-		const size_t overflow = libVlcLogEntries.size() - kLogCapacity;
+	if (libVlcLogEntries.size() >= kLogCapacity) {
+		const size_t overflow = libVlcLogEntries.size() - kLogCapacity + 1;
 		libVlcLogEntries.erase(
 			libVlcLogEntries.begin(),
 			libVlcLogEntries.begin() + overflow);
 	}
+	libVlcLogEntries.push_back(entry);
 }

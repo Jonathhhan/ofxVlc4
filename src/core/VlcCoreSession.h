@@ -32,6 +32,9 @@ public:
 	VlcCoreSession() = default;
 	~VlcCoreSession();
 
+	VlcCoreSession(const VlcCoreSession &) = delete;
+	VlcCoreSession & operator=(const VlcCoreSession &) = delete;
+
 	// Phase-1 refactor landing zone: raw libVLC lifetime and event plumbing move here first.
 	void reset();
 
