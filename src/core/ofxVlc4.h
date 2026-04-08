@@ -2269,6 +2269,12 @@ public:
 	bool isTeletextTransparencyEnabled() const;
 	void setTeletextTransparencyEnabled(bool enabled);
 	void sendTeletextKey(TeletextKey key);
+	void sendTeletextKeyRed();
+	void sendTeletextKeyGreen();
+	void sendTeletextKeyYellow();
+	void sendTeletextKeyBlue();
+	void sendTeletextKeyIndex();
+	void toggleTeletextTransparency();
 	std::vector<MediaTrackInfo> getVideoTracks() const;
 	std::vector<MediaTrackInfo> getAudioTracks() const;
 	std::vector<MediaTrackInfo> getSubtitleTracks() const;

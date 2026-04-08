@@ -2655,6 +2655,30 @@ void ofxVlc4::sendTeletextKey(TeletextKey key) {
 	videoComponent->sendTeletextKey(key);
 }
 
+void ofxVlc4::sendTeletextKeyRed() {
+	sendTeletextKey(TeletextKey::Red);
+}
+
+void ofxVlc4::sendTeletextKeyGreen() {
+	sendTeletextKey(TeletextKey::Green);
+}
+
+void ofxVlc4::sendTeletextKeyYellow() {
+	sendTeletextKey(TeletextKey::Yellow);
+}
+
+void ofxVlc4::sendTeletextKeyBlue() {
+	sendTeletextKey(TeletextKey::Blue);
+}
+
+void ofxVlc4::sendTeletextKeyIndex() {
+	sendTeletextKey(TeletextKey::Index);
+}
+
+void ofxVlc4::toggleTeletextTransparency() {
+	setTeletextTransparencyEnabled(!isTeletextTransparencyEnabled());
+}
+
 bool ofxVlc4::isKeyInputEnabled() const {
 	return videoComponent->isKeyInputEnabled();
 }
