@@ -435,7 +435,13 @@ void ofxVlc4::VideoComponent::waitForPublishedFrameFenceLocked() {
 		publishedFence,
 		GL_SYNC_FLUSH_COMMANDS_BIT,
 		1000000000ULL);
-	if (waitResult == GL_TIMEOUT_EXPIRED) {
+	if (waitResult == GL_WAIT_FAILED) {
+		owner.logWarning("GL sync wait failed; frame texture may be incomplete.");
+	} else if (waitResult == GL_TIMEOUT_EXPIRED) {
+		// CPU wait timed out; hand the wait off to the GPU pipeline so that
+		// subsequent draw commands on this context are still ordered after the
+		// fence, then continue.
+		owner.logWarning("GL sync wait timed out; handing fence to GPU pipeline.");
 		glWaitSync(publishedFence, 0, GL_TIMEOUT_IGNORED);
 	}
 	glDeleteSync(publishedFence);
@@ -1357,7 +1363,7 @@ bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
 #endif
 	}
 
-	if (!owner.vlcWindow) {
+	if (!owner.vlcWindow || !owner.vlcWindow->getGLFWWindow()) {
 		return false;
 	}
 

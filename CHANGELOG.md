@@ -5,6 +5,10 @@
 - **GL workflow: fixed cross-context sync** — `glFlush()` is now called before releasing the VLC GL context in `makeCurrent(false)`, ensuring all render commands (including the frame fence) are submitted to the GPU before the main context tries to wait on them; `GL_SYNC_FLUSH_COMMANDS_BIT` only flushes the waiting context, not the producer context, so without this flush the main thread could stall unnecessarily
 - **GL workflow: linear texture filtering** — the VLC render target is now allocated with `GL_LINEAR` min/mag filters so that video scaled up or down during rendering uses bilinear filtering instead of the driver default
 - **GL workflow: 10-bit texture format** — `videoResize()` now selects `GL_RGB10_A2` for the render target and `render_cfg->opengl_format` when `cfg->bitdepth > 8`, matching the existing D3D11 path (`DXGI_FORMAT_R10G10B10A2_UNORM`); the allocated GL pixel format is tracked in `allocatedGlPixelFormat` so the exposed-texture FBO stays in sync and reallocates on format changes
+- **GL workflow: disabled vsync on VLC render context** — `vlcWindow->setVerticalSync(false)` replaces the previous `true`; VLC renders exclusively to an FBO and never swaps the window's default framebuffer, so enabling vsync was unnecessary and could throttle rendering on some drivers
+- **GL workflow: validated GLFW window handle in `makeCurrent`** — the check now also verifies `vlcWindow->getGLFWWindow() != nullptr` so that a failed GLFW window creation cannot silently pass a null handle to `glfwMakeContextCurrent`
+- **GL workflow: diagnostic warnings for sync failures** — `waitForPublishedFrameFenceLocked` now emits a warning when `glClientWaitSync` returns `GL_WAIT_FAILED` or `GL_TIMEOUT_EXPIRED`, making GPU stall and sync-object error conditions visible in the log; the GPU-side `glWaitSync` fallback on timeout is preserved to keep draw-order guarantees intact
+- **GL workflow: warn on unshared context** — a log warning is emitted at construction if `mainWindow` is not available, because without context sharing the VLC render texture is not visible to the main context
 
 ## 1.0.2
 
