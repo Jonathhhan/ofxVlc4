@@ -567,8 +567,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	const ofTexture & texture,
 	const ofxVlc4RecordingPreset & preset,
 	int sampleRate,
-	int channelCount,
-	uint64_t muxTimeoutMs) {
+	int channelCount) {
 	ofxVlc4RecordingSessionConfig config = textureRecordingSessionConfig(
 		std::move(outputBasePath),
 		texture,
@@ -577,7 +576,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
-		muxTimeoutMs);
+		preset.muxTimeoutMs);
 	config.targetWidth = std::max(0, preset.targetWidth);
 	config.targetHeight = std::max(0, preset.targetHeight);
 	if (preset.audioBitrateKbps > 0 &&
@@ -616,8 +615,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	std::string outputBasePath,
 	const ofxVlc4RecordingPreset & preset,
 	int sampleRate,
-	int channelCount,
-	uint64_t muxTimeoutMs) {
+	int channelCount) {
 	ofxVlc4RecordingSessionConfig config = windowRecordingSessionConfig(
 		std::move(outputBasePath),
 		preset.audioSource,
@@ -625,7 +623,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
-		muxTimeoutMs);
+		preset.muxTimeoutMs);
 	config.targetWidth = std::max(0, preset.targetWidth);
 	config.targetHeight = std::max(0, preset.targetHeight);
 	if (preset.audioBitrateKbps > 0 &&
