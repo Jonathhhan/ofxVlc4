@@ -544,3 +544,26 @@ Current recorder-side optimizations include:
 - recorder performance counters for pending frames, latency, drops, and map failures
 
 For a focused surface to test that behavior, use `ofxVlc4RecorderExample`.
+
+## Tests
+
+The addon ships a CMake-based unit-test suite in `tests/`. The tests compile without a real openFrameworks, GLFW, or VLC installation — stubs in `tests/stubs/` and `tests/stubs_gl/` supply the minimal type definitions required.
+
+Six test binaries are built:
+
+- `test_ringbuffer` — ring-buffer push/pop, wrap-around, and audio callback helpers (`src/support/ofxVlc4RingBuffer.cpp`)
+- `test_midi_analysis` — MIDI file/event parsing and timecode utilities (`src/midi/ofxVlc4MidiAnalysis.cpp`)
+- `test_utils` — pure string/math helpers from `src/support/ofxVlc4Utils.h`
+- `test_mux_helpers` — filesystem and string helpers from `src/support/ofxVlc4MuxHelpers.h`
+- `test_playlist` — in-memory playlist add/remove/move logic mirroring `MediaLibrary`'s locked operations; no OF/GLFW/VLC dependency
+- `test_gl` — `hasCurrentGlContext()` and `clearAllocatedFbo()` from `ofxVlc4Utils.h`, using controllable GL stubs in `tests/stubs_gl/`
+
+To build and run all tests:
+
+```bash
+mkdir -p /tmp/test-build
+cd /tmp/test-build
+cmake /path/to/ofxVlc4/tests
+make
+ctest
+```
