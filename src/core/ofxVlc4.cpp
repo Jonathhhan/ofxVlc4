@@ -644,7 +644,8 @@ ofxVlc4MuxOptions ofxVlc4::recordingMuxOptionsForProfile(
 	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
-	uint64_t muxTimeoutMs) {
+	uint64_t muxTimeoutMs,
+	int audioBitrateKbps) {
 	ofxVlc4MuxOptions options;
 	options.containerMux = recordingMuxContainerForProfile(profile);
 	options.audioCodec = recordingMuxAudioCodecForProfile(profile);
@@ -652,14 +653,15 @@ ofxVlc4MuxOptions ofxVlc4::recordingMuxOptionsForProfile(
 	options.audioChannels = std::max(1, channelCount);
 	options.deleteSourceFilesOnSuccess = deleteSourceFilesOnSuccess;
 	options.muxTimeoutMs = muxTimeoutMs;
-	options.audioBitrateKbps =
-		(profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
-		 profile == ofxVlc4RecordingMuxProfile::MkvLpcm)
-			? 0
-			: (profile == ofxVlc4RecordingMuxProfile::MkvOpus ||
-			   profile == ofxVlc4RecordingMuxProfile::WebmOpus)
-				? 160
-				: 192;
+	const bool isLossless = options.audioCodec == "flac" || options.audioCodec == "lpcm";
+	if (isLossless) {
+		options.audioBitrateKbps = 0;
+	} else if (audioBitrateKbps > 0) {
+		options.audioBitrateKbps = audioBitrateKbps;
+	} else {
+		options.audioBitrateKbps =
+			(options.audioCodec == "opus") ? 160 : 192;
+	}
 	return options;
 }
 
@@ -677,14 +679,10 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
-		preset.muxTimeoutMs);
+		preset.muxTimeoutMs,
+		preset.audioBitrateKbps);
 	config.targetWidth = std::max(0, preset.targetWidth);
 	config.targetHeight = std::max(0, preset.targetHeight);
-	if (preset.audioBitrateKbps > 0 &&
-		config.muxOptions.audioCodec != "flac" &&
-		config.muxOptions.audioCodec != "lpcm") {
-		config.muxOptions.audioBitrateKbps = preset.audioBitrateKbps;
-	}
 	return config;
 }
 
@@ -696,7 +694,8 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
-	uint64_t muxTimeoutMs) {
+	uint64_t muxTimeoutMs,
+	int audioBitrateKbps) {
 	ofxVlc4RecordingSessionConfig config;
 	config.outputBasePath = std::move(outputBasePath);
 	config.source = ofxVlc4RecordingSource::Texture;
@@ -708,7 +707,8 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		deleteSourceFilesOnSuccess,
-		muxTimeoutMs);
+		muxTimeoutMs,
+		audioBitrateKbps);
 	return config;
 }
 
@@ -724,14 +724,10 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
-		preset.muxTimeoutMs);
+		preset.muxTimeoutMs,
+		preset.audioBitrateKbps);
 	config.targetWidth = std::max(0, preset.targetWidth);
 	config.targetHeight = std::max(0, preset.targetHeight);
-	if (preset.audioBitrateKbps > 0 &&
-		config.muxOptions.audioCodec != "flac" &&
-		config.muxOptions.audioCodec != "lpcm") {
-		config.muxOptions.audioBitrateKbps = preset.audioBitrateKbps;
-	}
 	return config;
 }
 
@@ -742,7 +738,8 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
-	uint64_t muxTimeoutMs) {
+	uint64_t muxTimeoutMs,
+	int audioBitrateKbps) {
 	ofxVlc4RecordingSessionConfig config;
 	config.outputBasePath = std::move(outputBasePath);
 	config.source = ofxVlc4RecordingSource::Window;
@@ -753,7 +750,8 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		deleteSourceFilesOnSuccess,
-		muxTimeoutMs);
+		muxTimeoutMs,
+		audioBitrateKbps);
 	return config;
 }
 
