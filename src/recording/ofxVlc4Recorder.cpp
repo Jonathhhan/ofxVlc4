@@ -1,5 +1,6 @@
 #include "ofxVlc4.h"
 #include "ofxVlc4Recorder.h"
+#include "support/ofxVlc4MuxHelpers.h"
 
 #include <algorithm>
 #include <chrono>
@@ -10,6 +11,8 @@
 #include <thread>
 
 namespace {
+
+using namespace ofxVlc4MuxHelpers;
 
 struct RecordingOutputPaths {
 	std::string audioPath;
@@ -48,116 +51,6 @@ std::string buildRecordingOutputPath(const std::string & name, const std::string
 RecordingOutputPaths buildRecordingOutputPaths(const std::string & name) {
 	const std::string outputStem = buildRecordingOutputStem(name);
 	return {outputStem + ".wav", outputStem + ".ts"};
-}
-
-std::string normalizeSoutPath(const std::string & path) {
-	std::string normalized = std::filesystem::path(path).lexically_normal().generic_string();
-	size_t position = 0;
-	while ((position = normalized.find('\'', position)) != std::string::npos) {
-		normalized.insert(position, "\\");
-		position += 2;
-	}
-	return normalized;
-}
-
-std::string pathToFileUri(const std::string & path) {
-	const std::string genericPath = std::filesystem::absolute(path).lexically_normal().generic_string();
-	std::ostringstream uri;
-	uri << "file:///";
-	for (const unsigned char ch : genericPath) {
-		if ((ch >= 'A' && ch <= 'Z') ||
-			(ch >= 'a' && ch <= 'z') ||
-			(ch >= '0' && ch <= '9') ||
-			ch == '-' || ch == '_' || ch == '.' || ch == '~' ||
-			ch == '/' || ch == ':') {
-			uri << static_cast<char>(ch);
-		} else {
-			static constexpr char kHexDigits[] = "0123456789ABCDEF";
-			uri << '%' << kHexDigits[(ch >> 4) & 0x0F] << kHexDigits[ch & 0x0F];
-		}
-	}
-	return uri.str();
-}
-
-bool waitForRecordingFile(const std::string & path, uint64_t timeoutMs) {
-	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
-	uintmax_t previousSize = 0;
-	int stableCount = 0;
-	static constexpr int kMinStableCount = 3;
-	while (std::chrono::steady_clock::now() < deadline) {
-		std::error_code error;
-		if (std::filesystem::exists(path, error)) {
-			const uintmax_t currentSize = std::filesystem::file_size(path, error);
-			if (!error && currentSize > 0) {
-				if (currentSize == previousSize) {
-					if (++stableCount >= kMinStableCount) {
-						return true;
-					}
-				} else {
-					stableCount = 0;
-					previousSize = currentSize;
-				}
-			}
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-	}
-	return previousSize > 0;
-}
-
-bool waitForRecordingFile(
-	const std::string & path,
-	uint64_t timeoutMs,
-	const std::atomic<bool> * cancelRequested) {
-	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
-	uintmax_t previousSize = 0;
-	int stableCount = 0;
-	static constexpr int kMinStableCount = 3;
-	while (std::chrono::steady_clock::now() < deadline) {
-		if (cancelRequested && cancelRequested->load(std::memory_order_acquire)) {
-			return false;
-		}
-
-		std::error_code error;
-		if (std::filesystem::exists(path, error)) {
-			const uintmax_t currentSize = std::filesystem::file_size(path, error);
-			if (!error && currentSize > 0) {
-				if (currentSize == previousSize) {
-					if (++stableCount >= kMinStableCount) {
-						return true;
-					}
-				} else {
-					stableCount = 0;
-					previousSize = currentSize;
-				}
-			}
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-	}
-	return previousSize > 0;
-}
-
-bool removeRecordingFile(const std::string & path, uint64_t timeoutMs) {
-	if (path.empty()) {
-		return true;
-	}
-
-	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
-	do {
-		std::error_code error;
-		if (!std::filesystem::exists(path, error)) {
-			return !error;
-		}
-		if (std::filesystem::remove(path, error)) {
-			return true;
-		}
-		if (!error && !std::filesystem::exists(path, error)) {
-			return !error;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-	} while (std::chrono::steady_clock::now() < deadline);
-
-	std::error_code error;
-	return !std::filesystem::exists(path, error);
 }
 
 }
