@@ -42,6 +42,8 @@ void ofxVlc4RingBuffer::reset() {
 	_readStart.store(0, std::memory_order_release);
 	_writeStart.store(0, std::memory_order_release);
 	_version.fetch_add(1, std::memory_order_release);
+	_overruns.store(0, std::memory_order_relaxed);
+	_underruns.store(0, std::memory_order_relaxed);
 }
 
 size_t ofxVlc4RingBuffer::getNumReadableSamples() const {
@@ -96,8 +98,11 @@ size_t ofxVlc4RingBuffer::readBegin(const float *& first, size_t & firstCount, c
 	first = &_buffer[readPosition];
 	second = &_buffer[0];
 
-	if (writePosition >= readPosition) {
+	if (writePosition > readPosition) {
 		firstCount = readable;
+		secondCount = 0;
+	} else if (readable == 0) {
+		firstCount = 0;
 		secondCount = 0;
 	} else {
 		firstCount = _capacity - readPosition;
