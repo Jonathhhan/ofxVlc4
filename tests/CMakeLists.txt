@@ -27,3 +27,18 @@ target_compile_definitions(test_ringbuffer PRIVATE
 )
 
 add_test(NAME ringbuffer COMMAND test_ringbuffer)
+
+# ---------------------------------------------------------------------------
+# Utility tests (isUri, trimWhitespace, sanitizeFileStem, filter chains, ...)
+# ofxVlc4Utils.h is header-only; the stubs provide OF/GLFW/VLC stand-ins.
+# ---------------------------------------------------------------------------
+add_executable(test_utils
+    test_utils.cpp
+)
+
+target_include_directories(test_utils PRIVATE
+    "${STUBS_DIR}"
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME utils COMMAND test_utils)

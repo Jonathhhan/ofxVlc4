@@ -64,7 +64,12 @@ std::string pathToFileUri(const std::string & path) {
 	const std::string genericPath = std::filesystem::absolute(path).lexically_normal().generic_string();
 	std::ostringstream uri;
 	uri << "file:///";
-	for (const unsigned char ch : genericPath) {
+	// On POSIX, genericPath starts with '/'. That slash is already represented
+	// by the third slash in "file:///", so skip it to avoid a spurious fourth
+	// slash (e.g. "file:////home/..." instead of "file:///home/...").
+	const size_t start = (!genericPath.empty() && genericPath[0] == '/') ? 1 : 0;
+	for (size_t i = start; i < genericPath.size(); ++i) {
+		const unsigned char ch = static_cast<unsigned char>(genericPath[i]);
 		if ((ch >= 'A' && ch <= 'Z') ||
 			(ch >= 'a' && ch <= 'z') ||
 			(ch >= '0' && ch <= '9') ||
@@ -176,6 +181,16 @@ bool ofxVlc4::muxRecordingFilesInternal(
 			*errorOut = "Mux container is empty.";
 		}
 		return false;
+	}
+	// Only alphanumeric characters are valid in a VLC mux/sout module name.
+	// Reject anything else to prevent sout string injection.
+	for (const char c : normalizedMux) {
+		if (!std::isalnum(static_cast<unsigned char>(c))) {
+			if (errorOut) {
+				*errorOut = "Mux container name contains invalid characters.";
+			}
+			return false;
+		}
 	}
 	if (normalizedAudioCodec.empty()) {
 		if (errorOut) {
@@ -315,7 +330,7 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		return fail("Recording mux cancelled.");
 	}
 	if (!success) {
-		return fail("Timed out or failed while muxing benchmark recording.");
+		return fail("Timed out or failed while muxing recording.");
 	}
 	return true;
 }
