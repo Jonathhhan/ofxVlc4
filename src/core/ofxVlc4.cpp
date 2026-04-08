@@ -556,6 +556,8 @@ std::string ofxVlc4::recordingMuxAudioCodecForProfile(ofxVlc4RecordingMuxProfile
 		return "lpcm";
 	case ofxVlc4RecordingMuxProfile::OggVorbis:
 		return "vorb";
+	case ofxVlc4RecordingMuxProfile::MovAac:
+		return "mp4a";
 	}
 	return "mp4a";
 }
@@ -572,8 +574,16 @@ const char * ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile profil
 		return "MKV / LPCM";
 	case ofxVlc4RecordingMuxProfile::OggVorbis:
 		return "OGG / VORBIS";
+	case ofxVlc4RecordingMuxProfile::MovAac:
+		return "MOV / AAC";
 	}
 	return "MP4 / AAC";
+}
+
+bool ofxVlc4::recordingVideoCodecUsesMovContainer(ofxVlc4RecordingVideoCodecPreset preset) {
+	return preset == ofxVlc4RecordingVideoCodecPreset::Hap ||
+		preset == ofxVlc4RecordingVideoCodecPreset::HapAlpha ||
+		preset == ofxVlc4RecordingVideoCodecPreset::HapQ;
 }
 
 ofxVlc4MuxOptions ofxVlc4::recordingMuxOptionsForProfile(
