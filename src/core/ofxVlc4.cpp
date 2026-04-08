@@ -1348,6 +1348,7 @@ void ofxVlc4::setRecordingPreset(const ofxVlc4RecordingPreset & preset) {
 	setVideoRecordingCodecPreset(preset.videoCodecPreset);
 	setVideoReadbackBufferCount(preset.readbackBufferCount);
 	setVideoReadbackPolicy(preset.readbackPolicy);
+	setRecordingAudioRingBufferSeconds(preset.audioRingBufferSeconds);
 	if (const std::string compatibilityMessage =
 			recordingMuxProfileCompatibilityMessage(preset.muxProfile, preset.videoCodecPreset);
 		!compatibilityMessage.empty()) {
@@ -1363,6 +1364,7 @@ ofxVlc4RecordingPreset ofxVlc4::getRecordingPreset() const {
 	preset.videoCodecPreset = getVideoRecordingCodecPreset();
 	preset.readbackBufferCount = getVideoReadbackBufferCount();
 	preset.readbackPolicy = getVideoReadbackPolicy();
+	preset.audioRingBufferSeconds = getRecordingAudioRingBufferSeconds();
 	return preset;
 }
 
