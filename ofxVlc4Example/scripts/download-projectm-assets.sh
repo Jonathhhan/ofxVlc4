@@ -141,6 +141,6 @@ if [[ "$DOWNLOAD_PRESETS" -eq 1 ]]; then
 fi
 if [[ "$DOWNLOAD_TEXTURES" -eq 1 ]]; then
 	printf 'Installed texture pack from %s\n' "$TEXTURES_REPO_URL"
-	printf '  -> bin/data/textures          (ofxProjectM standalone)\n'
-	printf '  -> bin/data/presets/textures  (libvlc projectM audio visualizer)\n'
+	printf '  -> bin/data/textures (ofxProjectM standalone)\n'
+	printf '  -> bin/data/presets/textures (libvlc projectM audio visualizer)\n'
 fi
