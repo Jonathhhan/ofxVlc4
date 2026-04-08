@@ -124,12 +124,21 @@ std::string rendererStableId(
 
 const std::set<std::string> & defaultMediaExtensions() {
 	static const std::set<std::string> extensions = {
+		// Audio
 		".wav", ".mp3", ".flac", ".ogg", ".opus",
 		".m4a", ".aac", ".aiff", ".wma", ".mid", ".midi",
+		".mka", ".ac3", ".dts", ".ape", ".wv", ".amr",
+		".caf", ".spx", ".ra",
+		// Video
 		".mp4", ".mov", ".mkv", ".avi", ".wmv", ".asf",
 		".webm", ".m4v", ".mpg", ".mpeg", ".ts", ".mts",
 		".m2ts", ".m2v", ".vob", ".ogv", ".3gp", ".m3u8",
-		".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"
+		".flv", ".f4v", ".ogm", ".dv", ".mxf", ".qt",
+		".rm", ".rmvb", ".divx",
+		// Images
+		".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff", ".gif",
+		// Playlists
+		".m3u", ".pls", ".xspf"
 	};
 	return extensions;
 }

@@ -441,6 +441,12 @@ std::string ofxVlc4::recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPres
 		return "Hap5";
 	case ofxVlc4RecordingVideoCodecPreset::HapQ:
 		return "HapY";
+	case ofxVlc4RecordingVideoCodecPreset::VP8:
+		return "VP80";
+	case ofxVlc4RecordingVideoCodecPreset::VP9:
+		return "VP90";
+	case ofxVlc4RecordingVideoCodecPreset::Theora:
+		return "theo";
 	}
 	return "H264";
 }
@@ -465,6 +471,15 @@ ofxVlc4RecordingVideoCodecPreset ofxVlc4::recordingVideoCodecPresetForCodec(cons
 	if (normalizedCodec == "HAPY") {
 		return ofxVlc4RecordingVideoCodecPreset::HapQ;
 	}
+	if (normalizedCodec == "VP80" || normalizedCodec == "VP8") {
+		return ofxVlc4RecordingVideoCodecPreset::VP8;
+	}
+	if (normalizedCodec == "VP90" || normalizedCodec == "VP9") {
+		return ofxVlc4RecordingVideoCodecPreset::VP9;
+	}
+	if (normalizedCodec == "THEO" || normalizedCodec == "THEORA") {
+		return ofxVlc4RecordingVideoCodecPreset::Theora;
+	}
 	return ofxVlc4RecordingVideoCodecPreset::H264;
 }
 
@@ -484,6 +499,12 @@ const char * ofxVlc4::recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecP
 		return "HAP Alpha";
 	case ofxVlc4RecordingVideoCodecPreset::HapQ:
 		return "HAP Q";
+	case ofxVlc4RecordingVideoCodecPreset::VP8:
+		return "VP8";
+	case ofxVlc4RecordingVideoCodecPreset::VP9:
+		return "VP9";
+	case ofxVlc4RecordingVideoCodecPreset::Theora:
+		return "Theora";
 	}
 	return "H264";
 }
@@ -498,10 +519,23 @@ bool ofxVlc4::recordingMuxProfileSupportsVideoCodec(
 	if (isHap) {
 		return profile == ofxVlc4RecordingMuxProfile::MovAac;
 	}
+	const bool isOpenCodec =
+		preset == ofxVlc4RecordingVideoCodecPreset::VP8 ||
+		preset == ofxVlc4RecordingVideoCodecPreset::VP9 ||
+		preset == ofxVlc4RecordingVideoCodecPreset::Theora;
+	if (isOpenCodec) {
+		return profile == ofxVlc4RecordingMuxProfile::MkvOpus ||
+			profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
+			profile == ofxVlc4RecordingMuxProfile::MkvLpcm ||
+			profile == ofxVlc4RecordingMuxProfile::MkvAac ||
+			profile == ofxVlc4RecordingMuxProfile::OggVorbis ||
+			profile == ofxVlc4RecordingMuxProfile::WebmOpus;
+	}
 	if (preset == ofxVlc4RecordingVideoCodecPreset::H265) {
 		return profile == ofxVlc4RecordingMuxProfile::MkvOpus ||
 			profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
-			profile == ofxVlc4RecordingMuxProfile::MkvLpcm;
+			profile == ofxVlc4RecordingMuxProfile::MkvLpcm ||
+			profile == ofxVlc4RecordingMuxProfile::MkvAac;
 	}
 	return true;
 }
@@ -519,6 +553,13 @@ std::string ofxVlc4::recordingMuxProfileCompatibilityMessage(
 		preset == ofxVlc4RecordingVideoCodecPreset::HapQ;
 	if (isHap) {
 		return "HAP recording requires the MOV / AAC mux profile.";
+	}
+	const bool isOpenCodec =
+		preset == ofxVlc4RecordingVideoCodecPreset::VP8 ||
+		preset == ofxVlc4RecordingVideoCodecPreset::VP9 ||
+		preset == ofxVlc4RecordingVideoCodecPreset::Theora;
+	if (isOpenCodec) {
+		return "VP8, VP9, and Theora recording require an MKV, OGG, or WebM mux profile.";
 	}
 	if (preset == ofxVlc4RecordingVideoCodecPreset::H265) {
 		return "H265 / HEVC recording currently requires an MKV mux profile.";
@@ -540,6 +581,10 @@ std::string ofxVlc4::recordingMuxContainerForProfile(ofxVlc4RecordingMuxProfile 
 		return "ogg";
 	case ofxVlc4RecordingMuxProfile::MovAac:
 		return "mov";
+	case ofxVlc4RecordingMuxProfile::WebmOpus:
+		return "webm";
+	case ofxVlc4RecordingMuxProfile::MkvAac:
+		return "mkv";
 	}
 	return "mp4";
 }
@@ -557,6 +602,10 @@ std::string ofxVlc4::recordingMuxAudioCodecForProfile(ofxVlc4RecordingMuxProfile
 	case ofxVlc4RecordingMuxProfile::OggVorbis:
 		return "vorb";
 	case ofxVlc4RecordingMuxProfile::MovAac:
+		return "mp4a";
+	case ofxVlc4RecordingMuxProfile::WebmOpus:
+		return "opus";
+	case ofxVlc4RecordingMuxProfile::MkvAac:
 		return "mp4a";
 	}
 	return "mp4a";
@@ -576,6 +625,10 @@ const char * ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile profil
 		return "OGG / VORBIS";
 	case ofxVlc4RecordingMuxProfile::MovAac:
 		return "MOV / AAC";
+	case ofxVlc4RecordingMuxProfile::WebmOpus:
+		return "WEBM / OPUS";
+	case ofxVlc4RecordingMuxProfile::MkvAac:
+		return "MKV / AAC";
 	}
 	return "MP4 / AAC";
 }
@@ -591,7 +644,8 @@ ofxVlc4MuxOptions ofxVlc4::recordingMuxOptionsForProfile(
 	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
-	uint64_t muxTimeoutMs) {
+	uint64_t muxTimeoutMs,
+	int audioBitrateKbps) {
 	ofxVlc4MuxOptions options;
 	options.containerMux = recordingMuxContainerForProfile(profile);
 	options.audioCodec = recordingMuxAudioCodecForProfile(profile);
@@ -599,13 +653,15 @@ ofxVlc4MuxOptions ofxVlc4::recordingMuxOptionsForProfile(
 	options.audioChannels = std::max(1, channelCount);
 	options.deleteSourceFilesOnSuccess = deleteSourceFilesOnSuccess;
 	options.muxTimeoutMs = muxTimeoutMs;
-	options.audioBitrateKbps =
-		(profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
-		 profile == ofxVlc4RecordingMuxProfile::MkvLpcm)
-			? 0
-			: profile == ofxVlc4RecordingMuxProfile::MkvOpus
-				? 160
-				: 192;
+	const bool isLossless = options.audioCodec == "flac" || options.audioCodec == "lpcm";
+	if (isLossless) {
+		options.audioBitrateKbps = 0;
+	} else if (audioBitrateKbps > 0) {
+		options.audioBitrateKbps = audioBitrateKbps;
+	} else {
+		options.audioBitrateKbps =
+			(options.audioCodec == "opus") ? 160 : 192;
+	}
 	return options;
 }
 
@@ -623,14 +679,10 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
-		preset.muxTimeoutMs);
+		preset.muxTimeoutMs,
+		preset.audioBitrateKbps);
 	config.targetWidth = std::max(0, preset.targetWidth);
 	config.targetHeight = std::max(0, preset.targetHeight);
-	if (preset.audioBitrateKbps > 0 &&
-		config.muxOptions.audioCodec != "flac" &&
-		config.muxOptions.audioCodec != "lpcm") {
-		config.muxOptions.audioBitrateKbps = preset.audioBitrateKbps;
-	}
 	return config;
 }
 
@@ -642,7 +694,8 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
-	uint64_t muxTimeoutMs) {
+	uint64_t muxTimeoutMs,
+	int audioBitrateKbps) {
 	ofxVlc4RecordingSessionConfig config;
 	config.outputBasePath = std::move(outputBasePath);
 	config.source = ofxVlc4RecordingSource::Texture;
@@ -654,7 +707,8 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		deleteSourceFilesOnSuccess,
-		muxTimeoutMs);
+		muxTimeoutMs,
+		audioBitrateKbps);
 	return config;
 }
 
@@ -670,14 +724,10 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
-		preset.muxTimeoutMs);
+		preset.muxTimeoutMs,
+		preset.audioBitrateKbps);
 	config.targetWidth = std::max(0, preset.targetWidth);
 	config.targetHeight = std::max(0, preset.targetHeight);
-	if (preset.audioBitrateKbps > 0 &&
-		config.muxOptions.audioCodec != "flac" &&
-		config.muxOptions.audioCodec != "lpcm") {
-		config.muxOptions.audioBitrateKbps = preset.audioBitrateKbps;
-	}
 	return config;
 }
 
@@ -688,7 +738,8 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	int sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
-	uint64_t muxTimeoutMs) {
+	uint64_t muxTimeoutMs,
+	int audioBitrateKbps) {
 	ofxVlc4RecordingSessionConfig config;
 	config.outputBasePath = std::move(outputBasePath);
 	config.source = ofxVlc4RecordingSource::Window;
@@ -699,7 +750,8 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 		sampleRate,
 		channelCount,
 		deleteSourceFilesOnSuccess,
-		muxTimeoutMs);
+		muxTimeoutMs,
+		audioBitrateKbps);
 	return config;
 }
 

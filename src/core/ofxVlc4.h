@@ -77,7 +77,10 @@ enum class ofxVlc4RecordingVideoCodecPreset {
 	Mjpg,
 	Hap,
 	HapAlpha,
-	HapQ
+	HapQ,
+	VP8,
+	VP9,
+	Theora
 };
 
 enum class ofxVlc4RecordingMuxProfile {
@@ -86,7 +89,9 @@ enum class ofxVlc4RecordingMuxProfile {
 	MkvFlac,
 	MkvLpcm,
 	OggVorbis,
-	MovAac
+	MovAac,
+	WebmOpus,
+	MkvAac
 };
 
 struct ofxVlc4RecordingPreset {
@@ -1190,7 +1195,8 @@ public:
 		int sampleRate,
 		int channelCount,
 		bool deleteSourceFilesOnSuccess = false,
-		uint64_t muxTimeoutMs = 15000);
+		uint64_t muxTimeoutMs = 15000,
+		int audioBitrateKbps = 0);
 	static ofxVlc4RecordingSessionConfig textureRecordingSessionConfig(
 		std::string outputBasePath,
 		const ofTexture & texture,
@@ -1205,7 +1211,8 @@ public:
 		int sampleRate,
 		int channelCount,
 		bool deleteSourceFilesOnSuccess = false,
-		uint64_t muxTimeoutMs = 15000);
+		uint64_t muxTimeoutMs = 15000,
+		int audioBitrateKbps = 0);
 	static ofxVlc4RecordingSessionConfig windowRecordingSessionConfig(
 		std::string outputBasePath,
 		const ofxVlc4RecordingPreset & preset,
@@ -1218,7 +1225,8 @@ public:
 		int sampleRate,
 		int channelCount,
 		bool deleteSourceFilesOnSuccess = false,
-		uint64_t muxTimeoutMs = 15000);
+		uint64_t muxTimeoutMs = 15000,
+		int audioBitrateKbps = 0);
 
 	// init() owns the VLC instance/player lifetime for this wrapper and can safely be called again.
 	void update();
