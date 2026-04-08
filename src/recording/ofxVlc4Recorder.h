@@ -54,6 +54,8 @@ private:
 	friend class ofxVlc4;
 
 	static constexpr uint64_t kMaxWavDataBytes = 0xFFFFFFFFull;
+	static constexpr double kWavWarningThresholdRatio = 0.9;
+	static constexpr double kMinAudioRingBufferSeconds = 1.0;
 	void resetAudioCaptureState();
 	void resetAudioCaptureBuffer(int sampleRate, int channelCount);
 	void prepareAudioCaptureBuffer(int sampleRate, int channelCount);

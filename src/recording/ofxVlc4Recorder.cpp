@@ -1118,7 +1118,7 @@ size_t ofxVlc4Recorder::getVideoReadbackBufferCount() const {
 
 void ofxVlc4Recorder::setAudioRingBufferSeconds(double seconds) {
 	std::lock_guard<std::mutex> lock(audioRecordingMutex);
-	audioRingBufferSeconds = std::max(1.0, seconds);
+	audioRingBufferSeconds = std::max(kMinAudioRingBufferSeconds, seconds);
 }
 
 double ofxVlc4Recorder::getAudioRingBufferSeconds() const {
@@ -1701,7 +1701,7 @@ void ofxVlc4Recorder::writeInterleaved(const float * samples, size_t sampleCount
 
 		dataBytes += static_cast<uint64_t>(byteCount);
 
-		constexpr uint64_t kWavWarningThreshold = static_cast<uint64_t>(kMaxWavDataBytes * 0.9);
+		constexpr uint64_t kWavWarningThreshold = static_cast<uint64_t>(kMaxWavDataBytes * kWavWarningThresholdRatio);
 		if (!wavSizeLimitWarned && dataBytes >= kWavWarningThreshold) {
 			wavSizeLimitWarned = true;
 			ofLogWarning("ofxVlc4") << "Audio recording is approaching the WAV size limit (~4 GB). Stop the recording soon to avoid data loss.";
