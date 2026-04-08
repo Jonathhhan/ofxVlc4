@@ -87,10 +87,18 @@ static void testPathToFileUri() {
 
 	using ofxVlc4MuxHelpers::pathToFileUri;
 
+	// Exact URI format: exactly three slashes, no double-slash before the path.
+	{
+		const std::string uri = pathToFileUri("/tmp/video.ts");
+		CHECK_EQ(uri, "file:///tmp/video.ts");
+	}
+
 	// Result always starts with "file:///".
 	{
 		const std::string uri = pathToFileUri("/tmp/video.ts");
 		CHECK(uri.substr(0, 8) == "file:///");
+		// Must not have a fourth slash (was a previous bug on Unix).
+		CHECK(uri.size() < 9 || uri[8] != '/');
 	}
 
 	// Plain ASCII path segments pass through unencoded.
