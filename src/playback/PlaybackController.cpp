@@ -6,6 +6,7 @@
 #include "support/ofxVlc4Utils.h"
 #include "video/ofxVlc4Video.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
@@ -163,6 +164,7 @@ void PlaybackController::activatePlaylistIndexImmediate(int index, bool shouldPl
 	if (!player) return;
 	if (!getPlaylistSnapshot().contains(index)) return;
 
+	invalidateShuffleQueue();
 	setCurrentPlaylistIndex(index);
 	playbackTransport.activeDirectMediaSource.clear();
 	playbackTransport.activeDirectMediaOptions.clear();
@@ -563,6 +565,7 @@ void PlaybackController::resetTransportState() {
 	playbackTransport.activeDirectMediaOptions.clear();
 	playbackTransport.activeDirectMediaIsLocation = true;
 	playbackTransport.activeDirectMediaParseAsNetwork = false;
+	invalidateShuffleQueue();
 }
 
 void PlaybackController::clearPendingActivationRequest() {
@@ -574,6 +577,50 @@ void PlaybackController::clearPendingActivationRequest() {
 	playbackTransport.pendingDirectMediaLabel.clear();
 	playbackTransport.pendingDirectMediaIsLocation = true;
 	playbackTransport.pendingDirectMediaParseAsNetwork = false;
+}
+
+void PlaybackController::buildShuffleQueue(int excludeIndex) {
+	const PlaylistSnapshot playlist = getPlaylistSnapshot();
+	shuffleQueue.clear();
+	for (int i = 0; i < static_cast<int>(playlist.size); ++i) {
+		if (i != excludeIndex) {
+			shuffleQueue.push_back(i);
+		}
+	}
+	for (int i = static_cast<int>(shuffleQueue.size()) - 1; i > 0; --i) {
+		const int j = static_cast<int>(ofRandom(static_cast<float>(i + 1)));
+		std::swap(shuffleQueue[i], shuffleQueue[j]);
+	}
+	shuffleQueueBuilt = true;
+}
+
+void PlaybackController::invalidateShuffleQueue() {
+	shuffleQueue.clear();
+	shuffleQueueBuilt = false;
+}
+
+int PlaybackController::popNextFromShuffleQueue() {
+	const PlaylistSnapshot playlist = getPlaylistSnapshot();
+	while (!shuffleQueue.empty()) {
+		const int next = shuffleQueue.back();
+		shuffleQueue.pop_back();
+		if (playlist.contains(next)) {
+			return next;
+		}
+	}
+	return -1;
+}
+
+int PlaybackController::nextFromShuffleQueueLazy(int excludeIndex) {
+	if (!shuffleQueueBuilt) {
+		buildShuffleQueue(excludeIndex);
+	}
+	int next = popNextFromShuffleQueue();
+	if (next < 0 && getPlaybackMode() == ofxVlc4::PlaybackMode::Loop) {
+		buildShuffleQueue(excludeIndex);
+		next = popNextFromShuffleQueue();
+	}
+	return next;
 }
 
 void PlaybackController::handlePlaybackEnded() {
@@ -607,10 +654,19 @@ void PlaybackController::handlePlaybackEnded() {
 	}
 
 	if (isShuffleEnabled()) {
-		int next = getNextShuffleIndex();
+		int next = nextFromShuffleQueueLazy(activeIndex);
 		if (next >= 0) {
 			playIndex(next);
+			return;
 		}
+		playbackTransport.playNextRequested.store(false);
+		playbackTransport.playbackWanted.store(false);
+		playbackTransport.pauseRequested.store(false);
+		playbackTransport.audioPausedSignal.store(false);
+		resetAudioBuffer();
+		playbackTransport.lastKnownPlaybackPosition.store(0.0f, std::memory_order_relaxed);
+		playbackTransport.stoppedStateLatched.store(true);
+		clearCurrentMedia();
 		return;
 	}
 
@@ -1118,6 +1174,9 @@ std::string PlaybackController::getPlaybackModeString() const {
 
 void PlaybackController::setShuffleEnabled(bool enabled) {
 	setShuffleEnabledValue(enabled);
+	if (!enabled) {
+		invalidateShuffleQueue();
+	}
 	owner.setStatus(std::string("Shuffle ") + (enabled ? "enabled." : "disabled."));
 	owner.logNotice(std::string("Shuffle ") + (enabled ? "enabled." : "disabled."));
 }
@@ -1162,52 +1221,44 @@ int PlaybackController::getNextShuffleIndex() const {
 }
 
 void PlaybackController::nextMediaListItem() {
-	int nextIndex = -1;
 	const PlaylistSnapshot playlist = getPlaylistSnapshot();
 	if (playlist.size == 0) {
 		return;
 	}
-	if (!isShuffleEnabled()) {
-		nextIndex = (playlist.currentIndex + 1 < static_cast<int>(playlist.size)) ? (playlist.currentIndex + 1) : 0;
-	}
 	const bool shouldPlay = playbackTransport.playbackWanted.load();
 
 	if (isShuffleEnabled()) {
-		int next = getNextShuffleIndex();
+		int next = nextFromShuffleQueueLazy(playlist.currentIndex);
 		if (next >= 0) {
 			activatePlaylistIndex(next, shouldPlay);
 		}
+		owner.logNotice("Next playlist item selected.");
 		return;
 	}
 
-	if (nextIndex >= 0) {
-		activatePlaylistIndex(nextIndex, shouldPlay);
-	}
+	const int nextIndex = (playlist.currentIndex + 1 < static_cast<int>(playlist.size)) ? (playlist.currentIndex + 1) : 0;
+	activatePlaylistIndex(nextIndex, shouldPlay);
 	owner.logNotice("Next playlist item selected.");
 }
 
 void PlaybackController::previousMediaListItem() {
-	int previousIndex = -1;
 	const PlaylistSnapshot playlist = getPlaylistSnapshot();
 	if (playlist.size == 0) {
 		return;
 	}
-	if (!isShuffleEnabled()) {
-		previousIndex = (playlist.currentIndex > 0) ? (playlist.currentIndex - 1) : (static_cast<int>(playlist.size) - 1);
-	}
 	const bool shouldPlay = playbackTransport.playbackWanted.load();
 
 	if (isShuffleEnabled()) {
-		int previous = getNextShuffleIndex();
+		int previous = nextFromShuffleQueueLazy(playlist.currentIndex);
 		if (previous >= 0) {
 			activatePlaylistIndex(previous, shouldPlay);
 		}
+		owner.logNotice("Previous playlist item selected.");
 		return;
 	}
 
-	if (previousIndex >= 0) {
-		activatePlaylistIndex(previousIndex, shouldPlay);
-	}
+	const int previousIndex = (playlist.currentIndex > 0) ? (playlist.currentIndex - 1) : (static_cast<int>(playlist.size) - 1);
+	activatePlaylistIndex(previousIndex, shouldPlay);
 	owner.logNotice("Previous playlist item selected.");
 }
 

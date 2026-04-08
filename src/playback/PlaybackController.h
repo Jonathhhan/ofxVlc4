@@ -67,6 +67,7 @@ public:
 	std::string getPlaybackModeString() const;
 	void setShuffleEnabled(bool enabled);
 	bool isShuffleEnabled() const;
+	void invalidateShuffleQueue();
 	bool isPlaybackWanted() const;
 	bool isPauseRequested() const;
 	bool hasPendingManualStopEvents() const;
@@ -117,7 +118,12 @@ private:
 	void onMediaPlayerEncounteredError();
 	void onMediaPlayerCorked();
 	void onMediaPlayerUncorked();
+	void buildShuffleQueue(int excludeIndex);
+	int popNextFromShuffleQueue();
+	int nextFromShuffleQueueLazy(int excludeIndex);
 
 	ofxVlc4 & owner;
 	PlaybackTransportState playbackTransport;
+	std::vector<int> shuffleQueue;
+	bool shuffleQueueBuilt = false;
 };
