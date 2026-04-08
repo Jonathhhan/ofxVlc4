@@ -47,7 +47,7 @@ std::string buildRecordingOutputPath(const std::string & name, const std::string
 
 RecordingOutputPaths buildRecordingOutputPaths(const std::string & name) {
 	const std::string outputStem = buildRecordingOutputStem(name);
-	return {outputStem + ".wav", outputStem + ".mp4"};
+	return {outputStem + ".wav", outputStem + ".ts"};
 }
 
 std::string normalizeSoutPath(const std::string & path) {
@@ -82,15 +82,21 @@ std::string pathToFileUri(const std::string & path) {
 bool waitForRecordingFile(const std::string & path, uint64_t timeoutMs) {
 	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
 	uintmax_t previousSize = 0;
+	int stableCount = 0;
+	static constexpr int kMinStableCount = 3;
 	while (std::chrono::steady_clock::now() < deadline) {
 		std::error_code error;
 		if (std::filesystem::exists(path, error)) {
 			const uintmax_t currentSize = std::filesystem::file_size(path, error);
 			if (!error && currentSize > 0) {
 				if (currentSize == previousSize) {
-					return true;
+					if (++stableCount >= kMinStableCount) {
+						return true;
+					}
+				} else {
+					stableCount = 0;
+					previousSize = currentSize;
 				}
-				previousSize = currentSize;
 			}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -104,6 +110,8 @@ bool waitForRecordingFile(
 	const std::atomic<bool> * cancelRequested) {
 	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
 	uintmax_t previousSize = 0;
+	int stableCount = 0;
+	static constexpr int kMinStableCount = 3;
 	while (std::chrono::steady_clock::now() < deadline) {
 		if (cancelRequested && cancelRequested->load(std::memory_order_acquire)) {
 			return false;
@@ -114,9 +122,13 @@ bool waitForRecordingFile(
 			const uintmax_t currentSize = std::filesystem::file_size(path, error);
 			if (!error && currentSize > 0) {
 				if (currentSize == previousSize) {
-					return true;
+					if (++stableCount >= kMinStableCount) {
+						return true;
+					}
+				} else {
+					stableCount = 0;
+					previousSize = currentSize;
 				}
-				previousSize = currentSize;
 			}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
