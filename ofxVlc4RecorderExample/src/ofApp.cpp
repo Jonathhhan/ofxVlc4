@@ -616,7 +616,10 @@ void ofApp::cycleVideoRecordingCodec() {
 		ofxVlc4RecordingVideoCodecPreset::H264,
 		ofxVlc4RecordingVideoCodecPreset::H265,
 		ofxVlc4RecordingVideoCodecPreset::Mp4v,
-		ofxVlc4RecordingVideoCodecPreset::Mjpg
+		ofxVlc4RecordingVideoCodecPreset::Mjpg,
+		ofxVlc4RecordingVideoCodecPreset::Hap,
+		ofxVlc4RecordingVideoCodecPreset::HapAlpha,
+		ofxVlc4RecordingVideoCodecPreset::HapQ
 	};
 	const ofxVlc4RecordingVideoCodecPreset currentPreset = player->getVideoRecordingCodecPreset();
 	for (size_t i = 0; i < std::size(presets); ++i) {
@@ -646,6 +649,12 @@ void ofApp::cycleBenchmarkMuxProfile() {
 		return;
 	}
 
+	const bool isHap = ofxVlc4::recordingVideoCodecUsesMovContainer(codecPreset);
+	if (isHap) {
+		player->setRecordingMuxProfile(ofxVlc4RecordingMuxProfile::MovAac);
+		return;
+	}
+
 	player->setRecordingMuxProfile(
 		muxProfile == ofxVlc4RecordingMuxProfile::Mp4Aac
 			? ofxVlc4RecordingMuxProfile::MkvOpus
@@ -655,7 +664,9 @@ void ofApp::cycleBenchmarkMuxProfile() {
 					? ofxVlc4RecordingMuxProfile::MkvLpcm
 					: muxProfile == ofxVlc4RecordingMuxProfile::MkvLpcm
 						? ofxVlc4RecordingMuxProfile::OggVorbis
-						: ofxVlc4RecordingMuxProfile::Mp4Aac);
+						: muxProfile == ofxVlc4RecordingMuxProfile::OggVorbis
+							? ofxVlc4RecordingMuxProfile::MovAac
+							: ofxVlc4RecordingMuxProfile::Mp4Aac);
 }
 
 void ofApp::toggleBenchmarkMuxSourceCleanup() {
@@ -979,7 +990,10 @@ void ofApp::drawControlPanel() {
 			ofxVlc4RecordingVideoCodecPreset::H264,
 			ofxVlc4RecordingVideoCodecPreset::H265,
 			ofxVlc4RecordingVideoCodecPreset::Mp4v,
-			ofxVlc4RecordingVideoCodecPreset::Mjpg
+			ofxVlc4RecordingVideoCodecPreset::Mjpg,
+			ofxVlc4RecordingVideoCodecPreset::Hap,
+			ofxVlc4RecordingVideoCodecPreset::HapAlpha,
+			ofxVlc4RecordingVideoCodecPreset::HapQ
 		};
 		int codecIndex = 0;
 		for (size_t i = 0; i < std::size(codecPresets); ++i) {
@@ -1007,7 +1021,8 @@ void ofApp::drawControlPanel() {
 			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::MkvOpus),
 			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::MkvFlac),
 			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::MkvLpcm),
-			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::OggVorbis)
+			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::OggVorbis),
+			ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile::MovAac)
 		};
 		int muxProfileIndex = recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::Mp4Aac
 			? 0
@@ -1017,7 +1032,9 @@ void ofApp::drawControlPanel() {
 					? 2
 					: recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::MkvLpcm
 						? 3
-						: 4;
+						: recordingPreset.muxProfile == ofxVlc4RecordingMuxProfile::OggVorbis
+							? 4
+							: 5;
 		if (ImGui::Combo("Mux profile", &muxProfileIndex, muxProfileItems, IM_ARRAYSIZE(muxProfileItems))) {
 			recordingPreset.muxProfile = muxProfileIndex == 0
 				? ofxVlc4RecordingMuxProfile::Mp4Aac
@@ -1027,7 +1044,9 @@ void ofApp::drawControlPanel() {
 						? ofxVlc4RecordingMuxProfile::MkvFlac
 						: muxProfileIndex == 3
 							? ofxVlc4RecordingMuxProfile::MkvLpcm
-							: ofxVlc4RecordingMuxProfile::OggVorbis;
+							: muxProfileIndex == 4
+								? ofxVlc4RecordingMuxProfile::OggVorbis
+								: ofxVlc4RecordingMuxProfile::MovAac;
 			presetChanged = true;
 		}
 		if (const std::string compatibilityMessage =

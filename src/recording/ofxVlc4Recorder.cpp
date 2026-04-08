@@ -48,9 +48,9 @@ std::string buildRecordingOutputPath(const std::string & name, const std::string
 		: outputStem + fallbackExtension;
 }
 
-RecordingOutputPaths buildRecordingOutputPaths(const std::string & name) {
+RecordingOutputPaths buildRecordingOutputPaths(const std::string & name, const std::string & videoFallbackExtension = ".ts") {
 	const std::string outputStem = buildRecordingOutputStem(name);
-	return {outputStem + ".wav", outputStem + ".ts"};
+	return {outputStem + ".wav", outputStem + videoFallbackExtension};
 }
 
 }
@@ -431,11 +431,13 @@ bool ofxVlc4::startNamedTextureCaptureSession(
 		return true;
 	};
 	if (!options.includeAudioCapture) {
-		const std::string videoPath = buildRecordingOutputPath(name, ".mp4");
+		const std::string videoFallbackExt = recordingVideoCodecUsesMovContainer(getVideoRecordingCodecPreset()) ? ".mov" : ".mp4";
+		const std::string videoPath = buildRecordingOutputPath(name, videoFallbackExt);
 		return startTextureRecordingPlayback(videoPath, "Video recording started: " + videoPath);
 	}
 
-	const RecordingOutputPaths outputPaths = buildRecordingOutputPaths(name);
+	const std::string videoFallbackExt = recordingVideoCodecUsesMovContainer(getVideoRecordingCodecPreset()) ? ".mov" : ".ts";
+	const RecordingOutputPaths outputPaths = buildRecordingOutputPaths(name, videoFallbackExt);
 	if (!startTextureRecordingPlayback(outputPaths.videoPath, "Video recording started: " + outputPaths.videoPath)) {
 		return false;
 	}
@@ -1084,8 +1086,12 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		normalizedVideoCodec == "X265" ||
 		normalizedVideoCodec == "H265" ||
 		normalizedVideoCodec == "HEVC";
-	const int widthAlignment = requiresHevcAlignment ? 16 : 2;
-	const int heightAlignment = requiresHevcAlignment ? 8 : 2;
+	const bool requiresHapAlignment =
+		normalizedVideoCodec == "HAP1" ||
+		normalizedVideoCodec == "HAP5" ||
+		normalizedVideoCodec == "HAPY";
+	const int widthAlignment = requiresHevcAlignment ? 16 : (requiresHapAlignment ? 4 : 2);
+	const int heightAlignment = requiresHevcAlignment ? 8 : (requiresHapAlignment ? 4 : 2);
 	auto normalizeEncodedDimension = [](int requested, int source, int alignment) -> int {
 		int resolved = requested > 0 ? requested : source;
 		if (resolved <= 0) {
