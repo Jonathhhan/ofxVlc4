@@ -113,3 +113,41 @@ target_include_directories(test_gl PRIVATE
 )
 
 add_test(NAME gl COMMAND test_gl)
+
+# ---------------------------------------------------------------------------
+# test_midi_bridge
+# Tests MidiBridge (event-record ↔ channel-message conversion, filtering,
+# describe) and MidiTimelineCursor.  Depends only on the MIDI source files;
+# no OF, GLFW, or VLC stubs required.
+# ---------------------------------------------------------------------------
+
+add_executable(test_midi_bridge
+    test_midi_bridge.cpp
+    "${SRC_DIR}/midi/ofxVlc4MidiAnalysis.cpp"
+    "${SRC_DIR}/midi/ofxVlc4MidiBridge.cpp"
+)
+
+target_include_directories(test_midi_bridge PRIVATE
+    "${SRC_DIR}/midi"
+)
+
+add_test(NAME midi_bridge COMMAND test_midi_bridge)
+
+# ---------------------------------------------------------------------------
+# test_midi_playback
+# Tests MidiPlaybackSession (load/clear, play/pause/stop, seek, update
+# dispatch, tempo, sync, loop).  Depends on all three MIDI source files.
+# ---------------------------------------------------------------------------
+
+add_executable(test_midi_playback
+    test_midi_playback.cpp
+    "${SRC_DIR}/midi/ofxVlc4MidiAnalysis.cpp"
+    "${SRC_DIR}/midi/ofxVlc4MidiBridge.cpp"
+    "${SRC_DIR}/midi/ofxVlc4MidiPlayback.cpp"
+)
+
+target_include_directories(test_midi_playback PRIVATE
+    "${SRC_DIR}/midi"
+)
+
+add_test(NAME midi_playback COMMAND test_midi_playback)

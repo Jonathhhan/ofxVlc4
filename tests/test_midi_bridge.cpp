@@ -205,8 +205,11 @@ static void testToMessageMeta() {
 	CHECK_EQ(message.type, MidiMessageType::Meta);
 }
 
+// System Real-Time events from MIDI files (e.g. MIDI Clock 0xF8) have
+// data1 = -1, so toMessage() returns false before reaching the switch — these
+// messages are dispatched directly by MidiPlaybackSession, not via toMessage.
 static void testToMessageSystemRealTime() {
-	beginSuite("toMessage: System Real-Time (MIDI Clock 0xF8)");
+	beginSuite("toMessage: System Real-Time (MIDI Clock 0xF8) returns false");
 
 	MidiEventRecord e;
 	e.kind = "clock";
@@ -217,9 +220,10 @@ static void testToMessageSystemRealTime() {
 	e.bytes = { 0xF8 };
 
 	MidiChannelMessage message;
-	MidiBridge::toMessage(e, message);
+	const bool result = MidiBridge::toMessage(e, message);
 
-	CHECK_EQ(message.type, MidiMessageType::SystemRealTime);
+	// RT messages with no data byte short-circuit out (data1 < 0).
+	CHECK(!result);
 }
 
 static void testToMessageBytesPreserved() {
