@@ -254,6 +254,11 @@ void fftInPlace(std::vector<std::complex<float>> & values) {
 		return;
 	}
 
+	// fftInPlace requires a power-of-two input size
+	if ((size & (size - 1)) != 0) {
+		return;
+	}
+
 	unsigned int bitCount = 0;
 	for (size_t value = size; value > 1; value >>= 1u) {
 		++bitCount;
@@ -843,7 +848,8 @@ ofxVlc4::EqualizerPresetInfo ofxVlc4::AudioComponent::getEqualizerPresetInfo(int
 	}
 
 	info.index = index;
-	info.name = trimWhitespace(libvlc_audio_equalizer_get_preset_name(static_cast<unsigned>(index)));
+	const char * presetNamePtr = libvlc_audio_equalizer_get_preset_name(static_cast<unsigned>(index));
+	info.name = trimWhitespace(presetNamePtr ? presetNamePtr : "");
 	info.preamp = ofClamp(libvlc_audio_equalizer_get_preamp(preset), -20.0f, 20.0f);
 	info.bandAmps.resize(owner.m_impl->effectsRuntime.equalizerBandAmps.size(), 0.0f);
 	for (unsigned bandIndex = 0; bandIndex < info.bandAmps.size(); ++bandIndex) {
@@ -892,12 +898,11 @@ int ofxVlc4::AudioComponent::findMatchingEqualizerPresetIndex(float toleranceDb)
 
 std::string ofxVlc4::AudioComponent::exportCurrentEqualizerPreset() const {
 	std::ostringstream stream;
-	stream << "name="
-		   << trimWhitespace(
-				  owner.m_impl->effectsRuntime.currentEqualizerPresetIndex >= 0
-					  ? libvlc_audio_equalizer_get_preset_name(static_cast<unsigned>(owner.m_impl->effectsRuntime.currentEqualizerPresetIndex))
-					  : "")
-		   << "\n";
+	const char * exportPresetNamePtr =
+		owner.m_impl->effectsRuntime.currentEqualizerPresetIndex >= 0
+			? libvlc_audio_equalizer_get_preset_name(static_cast<unsigned>(owner.m_impl->effectsRuntime.currentEqualizerPresetIndex))
+			: nullptr;
+	stream << "name=" << trimWhitespace(exportPresetNamePtr ? exportPresetNamePtr : "") << "\n";
 	stream << "preamp=" << ofToString(owner.m_impl->effectsRuntime.equalizerPreamp, 3) << "\n";
 	stream << "bands=";
 	for (size_t bandIndex = 0; bandIndex < owner.m_impl->effectsRuntime.equalizerBandAmps.size(); ++bandIndex) {

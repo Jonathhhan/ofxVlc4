@@ -83,7 +83,7 @@ inline bool waitForRecordingFile(const std::string & path, uint64_t timeoutMs) {
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(kFilePollIntervalMs));
 	}
-	return previousSize > 0;
+	return false;
 }
 
 // Overload that additionally accepts an optional cancellation flag.  The wait
@@ -116,7 +116,7 @@ inline bool waitForRecordingFile(
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(kFilePollIntervalMs));
 	}
-	return previousSize > 0;
+	return false;
 }
 
 // Retries std::filesystem::remove until it succeeds or the deadline is
