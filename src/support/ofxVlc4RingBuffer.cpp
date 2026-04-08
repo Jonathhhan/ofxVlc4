@@ -96,11 +96,14 @@ size_t ofxVlc4RingBuffer::readBegin(const float *& first, size_t & firstCount, c
 	first = &_buffer[readPosition];
 	second = &_buffer[0];
 
-	if (writePosition >= readPosition) {
+	if (writePosition > readPosition) {
 		firstCount = readable;
 		secondCount = 0;
 	} else {
-		firstCount = _capacity - readPosition;
+		// writePosition <= readPosition: data wraps around the end of the buffer,
+		// or the buffer is completely full (writePosition == readPosition after
+		// a modular wrap). Use the split-read path in both cases.
+		firstCount = std::min(_capacity - readPosition, readable);
 		secondCount = readable - firstCount;
 	}
 
