@@ -1574,6 +1574,8 @@ void ofxVlc4::setRecordingPreset(const ofxVlc4RecordingPreset & preset) {
 	setVideoRecordingFrameRate(preset.videoFrameRate);
 	setVideoRecordingBitrateKbps(preset.videoBitrateKbps);
 	setVideoRecordingCodecPreset(preset.videoCodecPreset);
+	setVideoReadbackBufferCount(preset.readbackBufferCount);
+	setVideoReadbackPolicy(preset.readbackPolicy);
 	if (const std::string compatibilityMessage =
 			recordingMuxProfileCompatibilityMessage(preset.muxProfile, preset.videoCodecPreset);
 		!compatibilityMessage.empty()) {
@@ -1587,6 +1589,8 @@ ofxVlc4RecordingPreset ofxVlc4::getRecordingPreset() const {
 	preset.videoFrameRate = getVideoRecordingFrameRate();
 	preset.videoBitrateKbps = getVideoRecordingBitrateKbps();
 	preset.videoCodecPreset = getVideoRecordingCodecPreset();
+	preset.readbackBufferCount = getVideoReadbackBufferCount();
+	preset.readbackPolicy = getVideoReadbackPolicy();
 	return preset;
 }
 

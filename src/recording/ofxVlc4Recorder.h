@@ -53,8 +53,9 @@ public:
 private:
 	friend class ofxVlc4;
 
-	static constexpr double kBufferedAudioSeconds = 4.0;
 	static constexpr uint64_t kMaxWavDataBytes = 0xFFFFFFFFull;
+	static constexpr double kWavWarningThresholdRatio = 0.9;
+	static constexpr double kMinAudioRingBufferSeconds = 1.0;
 	void resetAudioCaptureState();
 	void resetAudioCaptureBuffer(int sampleRate, int channelCount);
 	void prepareAudioCaptureBuffer(int sampleRate, int channelCount);
@@ -81,6 +82,8 @@ private:
 	ofxVlc4VideoReadbackPolicy getVideoReadbackPolicy() const;
 	void setVideoReadbackBufferCount(size_t bufferCount);
 	size_t getVideoReadbackBufferCount() const;
+	void setAudioRingBufferSeconds(double seconds);
+	double getAudioRingBufferSeconds() const;
 	libvlc_media_t * beginVideoCapture(
 		const ofTexture & texture,
 		const std::string & videoPath,
@@ -119,6 +122,8 @@ private:
 	int sampleRate = 0;
 	int channelCount = 0;
 	uint64_t dataBytes = 0;
+	bool wavSizeLimitWarned = false;
+	double audioRingBufferSeconds = 4.0;
 	std::string outputPath;
 	std::string lastFinishedAudioPath;
 	std::string videoOutputPath;
