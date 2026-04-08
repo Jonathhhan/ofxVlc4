@@ -294,7 +294,7 @@ void ofxVlc4::AudioComponent::clearSpectrumAnalysisCache() const {
 	spectrumCachePointCount = 0;
 	spectrumLastUpdateMicros = 0;
 	cachedSpectrumLevels.clear();
-	owner.smoothedSpectrumLevels.clear();
+	owner.analysisRuntime.smoothedSpectrumLevels.clear();
 }
 
 void ofxVlc4::AudioComponent::ensureSpectrumWindowPrepared() const {
@@ -336,17 +336,17 @@ void ofxVlc4::submitRecordedAudioSamples(const float * samples, size_t sampleCou
 }
 
 void ofxVlc4::AudioComponent::prepareStartupAudioResources() {
-	if (!owner.audioCaptureEnabled) {
+	if (!owner.playerConfigRuntime.audioCaptureEnabled) {
 		return;
 	}
 
-	const AudioCaptureSampleFormat configuredFormat = owner.audioCaptureSampleFormat;
-	const int configuredRate = normalizeAudioCaptureSampleRate(owner.audioCaptureSampleRate);
-	const int configuredChannels = normalizeAudioCaptureChannelCount(owner.audioCaptureChannelCount);
+	const AudioCaptureSampleFormat configuredFormat = owner.playerConfigRuntime.audioCaptureSampleFormat;
+	const int configuredRate = normalizeAudioCaptureSampleRate(owner.playerConfigRuntime.audioCaptureSampleRate);
+	const int configuredChannels = normalizeAudioCaptureChannelCount(owner.playerConfigRuntime.audioCaptureChannelCount);
 
-	owner.activeAudioCaptureSampleFormat.store(static_cast<int>(configuredFormat), std::memory_order_relaxed);
-	owner.sampleRate.store(configuredRate);
-	owner.channels.store(configuredChannels);
+	owner.playerConfigRuntime.activeAudioCaptureSampleFormat.store(static_cast<int>(configuredFormat), std::memory_order_relaxed);
+	owner.audioRuntime.sampleRate.store(configuredRate);
+	owner.audioRuntime.channels.store(configuredChannels);
 	prepareRingBuffer();
 	resetBuffer();
 	prepareRecorderAudioBuffer(configuredRate, configuredChannels);
@@ -354,37 +354,37 @@ void ofxVlc4::AudioComponent::prepareStartupAudioResources() {
 }
 
 const char * ofxVlc4::AudioComponent::getStartupAudioCaptureSampleFormatCode() const {
-	return audioCaptureSampleFormatCode(owner.audioCaptureSampleFormat);
+	return audioCaptureSampleFormatCode(owner.playerConfigRuntime.audioCaptureSampleFormat);
 }
 
 unsigned int ofxVlc4::AudioComponent::getStartupAudioCaptureSampleRate() const {
-	return static_cast<unsigned int>(normalizeAudioCaptureSampleRate(owner.audioCaptureSampleRate));
+	return static_cast<unsigned int>(normalizeAudioCaptureSampleRate(owner.playerConfigRuntime.audioCaptureSampleRate));
 }
 
 unsigned int ofxVlc4::AudioComponent::getStartupAudioCaptureChannelCount() const {
-	return static_cast<unsigned int>(normalizeAudioCaptureChannelCount(owner.audioCaptureChannelCount));
+	return static_cast<unsigned int>(normalizeAudioCaptureChannelCount(owner.playerConfigRuntime.audioCaptureChannelCount));
 }
 
 void ofxVlc4::AudioComponent::prepareRingBuffer() {
-	const int configuredRate = normalizeAudioCaptureSampleRate(owner.audioCaptureSampleRate);
-	const int configuredChannels = normalizeAudioCaptureChannelCount(owner.audioCaptureChannelCount);
-	const int rate = std::max(owner.sampleRate.load(), configuredRate);
-	const int channelCount = std::max(owner.channels.load(), configuredChannels);
-	owner.sampleRate.store(rate);
-	owner.channels.store(channelCount);
+	const int configuredRate = normalizeAudioCaptureSampleRate(owner.playerConfigRuntime.audioCaptureSampleRate);
+	const int configuredChannels = normalizeAudioCaptureChannelCount(owner.playerConfigRuntime.audioCaptureChannelCount);
+	const int rate = std::max(owner.audioRuntime.sampleRate.load(), configuredRate);
+	const int channelCount = std::max(owner.audioRuntime.channels.load(), configuredChannels);
+	owner.audioRuntime.sampleRate.store(rate);
+	owner.audioRuntime.channels.store(channelCount);
 
 	const size_t requestedSamples =
 		static_cast<size_t>(rate) *
 		static_cast<size_t>(channelCount) *
-		normalizeAudioCaptureBufferSeconds(owner.audioCaptureBufferSeconds);
+		normalizeAudioCaptureBufferSeconds(owner.playerConfigRuntime.audioCaptureBufferSeconds);
 
-	std::lock_guard<std::mutex> lock(owner.audioMutex);
-	owner.ringBuffer.allocate(requestedSamples);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioMutex);
+	owner.audioBufferRuntime.ringBuffer.allocate(requestedSamples);
 }
 
 void ofxVlc4::AudioComponent::resetBuffer() {
-	std::lock_guard<std::mutex> lock(owner.audioMutex);
-	owner.ringBuffer.reset();
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioMutex);
+	owner.audioBufferRuntime.ringBuffer.reset();
 	clearSpectrumAnalysisCache();
 }
 
@@ -418,16 +418,16 @@ void ofxVlc4::AudioComponent::applyCurrentVolumeToPlayer() {
 		return;
 	}
 
-	libvlc_audio_set_volume(player, ofClamp(owner.currentVolume.load(std::memory_order_relaxed), 0, 100));
+	libvlc_audio_set_volume(player, ofClamp(owner.audioRuntime.currentVolume.load(std::memory_order_relaxed), 0, 100));
 }
 
 void ofxVlc4::AudioComponent::applyAudioOutputModule() {
 	libvlc_media_player_t * player = owner.sessionPlayer();
-	if (!player || owner.audioOutputModuleName.empty()) {
+	if (!player || owner.playerConfigRuntime.audioOutputModuleName.empty()) {
 		return;
 	}
 
-	if (libvlc_audio_output_set(player, owner.audioOutputModuleName.c_str()) != 0) {
+	if (libvlc_audio_output_set(player, owner.playerConfigRuntime.audioOutputModuleName.c_str()) != 0) {
 		owner.logWarning("Audio output module could not be applied.");
 	}
 }
@@ -444,17 +444,17 @@ void ofxVlc4::AudioComponent::applyAudioOutputDevice() {
 		libvlc_free(currentDevice);
 	}
 
-	if (owner.audioOutputDeviceId.empty() && !hasCurrentDevice) {
+	if (owner.playerConfigRuntime.audioOutputDeviceId.empty() && !hasCurrentDevice) {
 		return;
 	}
 
 	if (libvlc_audio_output_device_set(
 			player,
-			owner.audioOutputDeviceId.empty() ? nullptr : owner.audioOutputDeviceId.c_str()) != 0) {
+			owner.playerConfigRuntime.audioOutputDeviceId.empty() ? nullptr : owner.playerConfigRuntime.audioOutputDeviceId.c_str()) != 0) {
 		owner.logWarning("Audio output device could not be applied.");
 	}
 
-	updateAudioStateFromDeviceEvent(owner.audioOutputDeviceId);
+	updateAudioStateFromDeviceEvent(owner.playerConfigRuntime.audioOutputDeviceId);
 }
 
 void ofxVlc4::AudioComponent::applyAudioStereoMode() {
@@ -463,12 +463,12 @@ void ofxVlc4::AudioComponent::applyAudioStereoMode() {
 		return;
 	}
 
-	if (libvlc_audio_set_stereomode(player, toLibvlcAudioStereoMode(owner.audioStereoMode)) != 0) {
-		owner.logWarning(std::string("Audio stereo mode could not be applied: ") + audioStereoModeLabel(owner.audioStereoMode) + ".");
+	if (libvlc_audio_set_stereomode(player, toLibvlcAudioStereoMode(owner.playerConfigRuntime.audioStereoMode)) != 0) {
+		owner.logWarning(std::string("Audio stereo mode could not be applied: ") + audioStereoModeLabel(owner.playerConfigRuntime.audioStereoMode) + ".");
 	}
 
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo.stereoMode = owner.audioStereoMode;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio.stereoMode = owner.playerConfigRuntime.audioStereoMode;
 }
 
 void ofxVlc4::AudioComponent::applyAudioMixMode() {
@@ -477,12 +477,12 @@ void ofxVlc4::AudioComponent::applyAudioMixMode() {
 		return;
 	}
 
-	if (libvlc_audio_set_mixmode(player, toLibvlcAudioMixMode(owner.audioMixMode)) != 0) {
-		owner.logWarning(std::string("Audio mix mode could not be applied: ") + audioMixModeLabel(owner.audioMixMode) + ".");
+	if (libvlc_audio_set_mixmode(player, toLibvlcAudioMixMode(owner.playerConfigRuntime.audioMixMode)) != 0) {
+		owner.logWarning(std::string("Audio mix mode could not be applied: ") + audioMixModeLabel(owner.playerConfigRuntime.audioMixMode) + ".");
 	}
 
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo.mixMode = owner.audioMixMode;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio.mixMode = owner.playerConfigRuntime.audioMixMode;
 }
 
 void ofxVlc4::AudioComponent::applyEqualizerSettings() {
@@ -491,7 +491,7 @@ void ofxVlc4::AudioComponent::applyEqualizerSettings() {
 		return;
 	}
 
-	if (!owner.equalizerEnabled) {
+	if (!owner.effectsRuntime.equalizerEnabled) {
 		owner.logVerbose("Equalizer disabled: clearing player equalizer.");
 		libvlc_media_player_set_equalizer(player, nullptr);
 		return;
@@ -504,12 +504,12 @@ void ofxVlc4::AudioComponent::applyEqualizerSettings() {
 	}
 
 	owner.logVerbose(
-		"Applying equalizer: preamp=" + ofToString(owner.equalizerPreamp, 2) +
-		" bands=" + ofToString(owner.equalizerBandAmps.size()) + ".");
-	for (unsigned index = 0; index < owner.equalizerBandAmps.size(); ++index) {
-		libvlc_audio_equalizer_set_amp_at_index(equalizer, owner.equalizerBandAmps[index], index);
+		"Applying equalizer: preamp=" + ofToString(owner.effectsRuntime.equalizerPreamp, 2) +
+		" bands=" + ofToString(owner.effectsRuntime.equalizerBandAmps.size()) + ".");
+	for (unsigned index = 0; index < owner.effectsRuntime.equalizerBandAmps.size(); ++index) {
+		libvlc_audio_equalizer_set_amp_at_index(equalizer, owner.effectsRuntime.equalizerBandAmps[index], index);
 	}
-	libvlc_audio_equalizer_set_preamp(equalizer, owner.equalizerPreamp);
+	libvlc_audio_equalizer_set_preamp(equalizer, owner.effectsRuntime.equalizerPreamp);
 	libvlc_media_player_set_equalizer(player, equalizer);
 	libvlc_audio_equalizer_release(equalizer);
 }
@@ -539,7 +539,7 @@ void ofxVlc4::AudioComponent::applyPendingEqualizerOnPlay() {
 }
 
 void ofxVlc4::AudioComponent::setPendingEqualizerApplyOnPlay(bool pending) {
-	owner.pendingEqualizerApplyOnPlay.store(pending);
+	owner.playbackPolicyRuntime.pendingEqualizerApplyOnPlay.store(pending);
 }
 
 void ofxVlc4::AudioComponent::clearPendingEqualizerApplyOnPlay() {
@@ -547,7 +547,7 @@ void ofxVlc4::AudioComponent::clearPendingEqualizerApplyOnPlay() {
 }
 
 bool ofxVlc4::AudioComponent::hasPendingEqualizerApplyOnPlay() const {
-	return owner.pendingEqualizerApplyOnPlay.load();
+	return owner.playbackPolicyRuntime.pendingEqualizerApplyOnPlay.load();
 }
 
 void ofxVlc4::AudioComponent::applyPlaybackRate() {
@@ -556,7 +556,7 @@ void ofxVlc4::AudioComponent::applyPlaybackRate() {
 		return;
 	}
 
-	if (libvlc_media_player_set_rate(player, owner.playbackRate) != 0) {
+	if (libvlc_media_player_set_rate(player, owner.playerConfigRuntime.playbackRate) != 0) {
 		owner.logWarning("Playback rate could not be applied.");
 	}
 }
@@ -567,12 +567,12 @@ void ofxVlc4::AudioComponent::applyAudioDelay() {
 		return;
 	}
 
-	if (libvlc_audio_set_delay(player, owner.audioDelayUs) != 0) {
+	if (libvlc_audio_set_delay(player, owner.playerConfigRuntime.audioDelayUs) != 0) {
 		owner.logWarning("Audio delay could not be applied.");
 	}
 
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo.audioDelayMs = static_cast<int>(owner.audioDelayUs / 1000);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio.audioDelayMs = static_cast<int>(owner.playerConfigRuntime.audioDelayUs / 1000);
 }
 
 std::vector<ofxVlc4::AudioOutputModuleInfo> ofxVlc4::AudioComponent::getAudioOutputModules() const {
@@ -587,7 +587,7 @@ std::vector<ofxVlc4::AudioOutputModuleInfo> ofxVlc4::AudioComponent::getAudioOut
 		AudioOutputModuleInfo info;
 		info.name = trimWhitespace(module->psz_name ? module->psz_name : "");
 		info.description = trimWhitespace(module->psz_description ? module->psz_description : "");
-		info.current = !owner.audioOutputModuleName.empty() && info.name == owner.audioOutputModuleName;
+		info.current = !owner.playerConfigRuntime.audioOutputModuleName.empty() && info.name == owner.playerConfigRuntime.audioOutputModuleName;
 		modules.push_back(std::move(info));
 	}
 
@@ -623,24 +623,24 @@ std::vector<ofxVlc4::AudioFilterInfo> ofxVlc4::AudioComponent::getAudioFilters()
 }
 
 const std::string & ofxVlc4::AudioComponent::getAudioFilterChain() const {
-	return owner.audioFilterChain;
+	return owner.playerConfigRuntime.audioFilterChain;
 }
 
 ofxVlc4::MediaComponent & ofxVlc4::AudioComponent::media() const {
-	return *owner.mediaComponent;
+	return *owner.subsystemRuntime.mediaComponent;
 }
 
 PlaybackController & ofxVlc4::AudioComponent::playback() const {
-	return *owner.playbackController;
+	return *owner.subsystemRuntime.playbackController;
 }
 
 ofxVlc4Recorder & ofxVlc4::AudioComponent::recorder() const {
-	return owner.recorder;
+	return owner.recordingObjectRuntime.recorder;
 }
 
 void ofxVlc4::AudioComponent::setAudioFilterChain(const std::string & filterChain) {
-	owner.audioFilterChain = trimWhitespace(filterChain);
-	if (owner.audioFilterChain.empty()) {
+	owner.playerConfigRuntime.audioFilterChain = trimWhitespace(filterChain);
+	if (owner.playerConfigRuntime.audioFilterChain.empty()) {
 		if (media().reapplyCurrentMediaForFilterChainChange("Audio")) {
 			owner.logNotice("Audio filter chain cleared.");
 			return;
@@ -651,31 +651,31 @@ void ofxVlc4::AudioComponent::setAudioFilterChain(const std::string & filterChai
 	}
 
 	if (media().reapplyCurrentMediaForFilterChainChange("Audio")) {
-		owner.logNotice("Audio filter chain: " + owner.audioFilterChain + ".");
+		owner.logNotice("Audio filter chain: " + owner.playerConfigRuntime.audioFilterChain + ".");
 		return;
 	}
 
 	owner.setStatus("Audio filter chain set. Reload media to apply.");
-	owner.logNotice("Audio filter chain: " + owner.audioFilterChain + ".");
+	owner.logNotice("Audio filter chain: " + owner.playerConfigRuntime.audioFilterChain + ".");
 }
 
 const std::string & ofxVlc4::AudioComponent::getSelectedAudioOutputModuleName() const {
-	return owner.audioOutputModuleName;
+	return owner.playerConfigRuntime.audioOutputModuleName;
 }
 
 bool ofxVlc4::AudioComponent::selectAudioOutputModule(const std::string & moduleName) {
 	const std::string trimmedModuleName = trimWhitespace(moduleName);
-	if (owner.audioOutputModuleName == trimmedModuleName) {
+	if (owner.playerConfigRuntime.audioOutputModuleName == trimmedModuleName) {
 		return true;
 	}
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	if (!player) {
-		owner.audioOutputModuleName = trimmedModuleName;
+		owner.playerConfigRuntime.audioOutputModuleName = trimmedModuleName;
 		return true;
 	}
 	if (trimmedModuleName.empty()) {
-		owner.audioOutputModuleName.clear();
-		owner.audioOutputDeviceId.clear();
+		owner.playerConfigRuntime.audioOutputModuleName.clear();
+		owner.playerConfigRuntime.audioOutputDeviceId.clear();
 		owner.setStatus(player ? "Audio output module reset for the next init." : "Audio output module reset.");
 		owner.logNotice(
 			player
@@ -684,16 +684,16 @@ bool ofxVlc4::AudioComponent::selectAudioOutputModule(const std::string & module
 		return true;
 	}
 
-	owner.audioOutputModuleName = trimmedModuleName;
+	owner.playerConfigRuntime.audioOutputModuleName = trimmedModuleName;
 	if (libvlc_audio_output_set(player, trimmedModuleName.c_str()) != 0) {
-		owner.audioOutputModuleName.clear();
+		owner.playerConfigRuntime.audioOutputModuleName.clear();
 		owner.logWarning("Audio output module could not be applied.");
 		return false;
 	}
 
 	applyAudioOutputDevice();
 	owner.setStatus("Audio output module set.");
-	owner.logNotice("Audio output module: " + owner.audioOutputModuleName + ".");
+	owner.logNotice("Audio output module: " + owner.playerConfigRuntime.audioOutputModuleName + ".");
 	return true;
 }
 
@@ -704,7 +704,7 @@ std::vector<ofxVlc4::AudioOutputDeviceInfo> ofxVlc4::AudioComponent::getAudioOut
 		return devices;
 	}
 
-	std::string currentDeviceId = owner.audioOutputDeviceId;
+	std::string currentDeviceId = owner.playerConfigRuntime.audioOutputDeviceId;
 	char * currentDevice = libvlc_audio_output_device_get(player);
 	if (currentDevice) {
 		currentDeviceId = currentDevice;
@@ -729,23 +729,23 @@ std::vector<ofxVlc4::AudioOutputDeviceInfo> ofxVlc4::AudioComponent::getAudioOut
 
 std::string ofxVlc4::AudioComponent::getSelectedAudioOutputDeviceId() const {
 	const AudioStateInfo info = getAudioStateInfo();
-	return info.deviceKnown ? info.deviceId : owner.audioOutputDeviceId;
+	return info.deviceKnown ? info.deviceId : owner.playerConfigRuntime.audioOutputDeviceId;
 }
 
 bool ofxVlc4::AudioComponent::selectAudioOutputDevice(const std::string & deviceId) {
-	owner.audioOutputDeviceId = trimWhitespace(deviceId);
+	owner.playerConfigRuntime.audioOutputDeviceId = trimWhitespace(deviceId);
 	applyAudioOutputDevice();
-	owner.setStatus(owner.audioOutputDeviceId.empty() ? "Audio output device reset." : "Audio output device set.");
+	owner.setStatus(owner.playerConfigRuntime.audioOutputDeviceId.empty() ? "Audio output device reset." : "Audio output device set.");
 	owner.logNotice(
-		owner.audioOutputDeviceId.empty()
+		owner.playerConfigRuntime.audioOutputDeviceId.empty()
 			? "Audio output device reset."
-			: ("Audio output device: " + owner.audioOutputDeviceId + "."));
+			: ("Audio output device: " + owner.playerConfigRuntime.audioOutputDeviceId + "."));
 	return true;
 }
 
 int ofxVlc4::AudioComponent::getVolume() const {
 	const AudioStateInfo info = getAudioStateInfo();
-	return info.volumeKnown ? info.volume : owner.currentVolume.load(std::memory_order_relaxed);
+	return info.volumeKnown ? info.volume : owner.audioRuntime.currentVolume.load(std::memory_order_relaxed);
 }
 
 void ofxVlc4::AudioComponent::setVolume(int volume) {
@@ -757,7 +757,7 @@ void ofxVlc4::AudioComponent::setVolume(int volume) {
 
 bool ofxVlc4::AudioComponent::isMuted() const {
 	const AudioStateInfo info = getAudioStateInfo();
-	return info.mutedKnown ? info.muted : owner.audioOutputMuted.load(std::memory_order_relaxed);
+	return info.mutedKnown ? info.muted : owner.audioRuntime.outputMuted.load(std::memory_order_relaxed);
 }
 
 void ofxVlc4::AudioComponent::toggleMute() {
@@ -773,33 +773,33 @@ void ofxVlc4::AudioComponent::toggleMute() {
 }
 
 bool ofxVlc4::AudioComponent::isEqualizerEnabled() const {
-	return owner.equalizerEnabled;
+	return owner.effectsRuntime.equalizerEnabled;
 }
 
 void ofxVlc4::AudioComponent::setEqualizerEnabled(bool enabled) {
-	owner.equalizerEnabled = enabled;
+	owner.effectsRuntime.equalizerEnabled = enabled;
 	applyOrQueueEqualizerSettings();
 	owner.setStatus(std::string("Equalizer ") + (enabled ? "enabled." : "disabled."));
 	owner.logNotice(std::string("Equalizer ") + (enabled ? "enabled." : "disabled."));
 }
 
 float ofxVlc4::AudioComponent::getEqualizerPreamp() const {
-	return owner.equalizerPreamp;
+	return owner.effectsRuntime.equalizerPreamp;
 }
 
 void ofxVlc4::AudioComponent::setEqualizerPreamp(float preamp) {
-	owner.equalizerEnabled = true;
-	owner.equalizerPreamp = ofClamp(preamp, -20.0f, 20.0f);
-	owner.currentEqualizerPresetIndex = -1;
+	owner.effectsRuntime.equalizerEnabled = true;
+	owner.effectsRuntime.equalizerPreamp = ofClamp(preamp, -20.0f, 20.0f);
+	owner.effectsRuntime.currentEqualizerPresetIndex = -1;
 	applyOrQueueEqualizerSettings();
 }
 
 int ofxVlc4::AudioComponent::getEqualizerBandCount() const {
-	return static_cast<int>(owner.equalizerBandAmps.size());
+	return static_cast<int>(owner.effectsRuntime.equalizerBandAmps.size());
 }
 
 float ofxVlc4::AudioComponent::getEqualizerBandFrequency(int index) const {
-	if (index < 0 || index >= static_cast<int>(owner.equalizerBandAmps.size())) {
+	if (index < 0 || index >= static_cast<int>(owner.effectsRuntime.equalizerBandAmps.size())) {
 		return -1.0f;
 	}
 
@@ -807,11 +807,11 @@ float ofxVlc4::AudioComponent::getEqualizerBandFrequency(int index) const {
 }
 
 float ofxVlc4::AudioComponent::getEqualizerBandAmp(int index) const {
-	if (index < 0 || index >= static_cast<int>(owner.equalizerBandAmps.size())) {
+	if (index < 0 || index >= static_cast<int>(owner.effectsRuntime.equalizerBandAmps.size())) {
 		return 0.0f;
 	}
 
-	return owner.equalizerBandAmps[static_cast<size_t>(index)];
+	return owner.effectsRuntime.equalizerBandAmps[static_cast<size_t>(index)];
 }
 
 int ofxVlc4::AudioComponent::getEqualizerPresetCount() const {
@@ -844,7 +844,7 @@ ofxVlc4::EqualizerPresetInfo ofxVlc4::AudioComponent::getEqualizerPresetInfo(int
 	info.index = index;
 	info.name = trimWhitespace(libvlc_audio_equalizer_get_preset_name(static_cast<unsigned>(index)));
 	info.preamp = ofClamp(libvlc_audio_equalizer_get_preamp(preset), -20.0f, 20.0f);
-	info.bandAmps.resize(owner.equalizerBandAmps.size(), 0.0f);
+	info.bandAmps.resize(owner.effectsRuntime.equalizerBandAmps.size(), 0.0f);
 	for (unsigned bandIndex = 0; bandIndex < info.bandAmps.size(); ++bandIndex) {
 		info.bandAmps[bandIndex] = ofClamp(
 			libvlc_audio_equalizer_get_amp_at_index(preset, bandIndex),
@@ -854,8 +854,8 @@ ofxVlc4::EqualizerPresetInfo ofxVlc4::AudioComponent::getEqualizerPresetInfo(int
 	libvlc_audio_equalizer_release(preset);
 
 	info.matchesCurrent =
-		std::abs(info.preamp - owner.equalizerPreamp) <= kEqualizerPresetMatchToleranceDb &&
-		equalizerBandsMatch(info.bandAmps, owner.equalizerBandAmps, kEqualizerPresetMatchToleranceDb);
+		std::abs(info.preamp - owner.effectsRuntime.equalizerPreamp) <= kEqualizerPresetMatchToleranceDb &&
+		equalizerBandsMatch(info.bandAmps, owner.effectsRuntime.equalizerBandAmps, kEqualizerPresetMatchToleranceDb);
 	return info;
 }
 
@@ -870,7 +870,7 @@ std::vector<ofxVlc4::EqualizerPresetInfo> ofxVlc4::AudioComponent::getEqualizerP
 }
 
 int ofxVlc4::AudioComponent::getCurrentEqualizerPresetIndex() const {
-	return owner.currentEqualizerPresetIndex;
+	return owner.effectsRuntime.currentEqualizerPresetIndex;
 }
 
 int ofxVlc4::AudioComponent::findMatchingEqualizerPresetIndex(float toleranceDb) const {
@@ -881,8 +881,8 @@ int ofxVlc4::AudioComponent::findMatchingEqualizerPresetIndex(float toleranceDb)
 		if (preset.index < 0) {
 			continue;
 		}
-		if (std::abs(preset.preamp - owner.equalizerPreamp) <= resolvedTolerance &&
-			equalizerBandsMatch(preset.bandAmps, owner.equalizerBandAmps, resolvedTolerance)) {
+		if (std::abs(preset.preamp - owner.effectsRuntime.equalizerPreamp) <= resolvedTolerance &&
+			equalizerBandsMatch(preset.bandAmps, owner.effectsRuntime.equalizerBandAmps, resolvedTolerance)) {
 			return preset.index;
 		}
 	}
@@ -893,17 +893,17 @@ std::string ofxVlc4::AudioComponent::exportCurrentEqualizerPreset() const {
 	std::ostringstream stream;
 	stream << "name="
 		   << trimWhitespace(
-				  owner.currentEqualizerPresetIndex >= 0
-					  ? libvlc_audio_equalizer_get_preset_name(static_cast<unsigned>(owner.currentEqualizerPresetIndex))
+				  owner.effectsRuntime.currentEqualizerPresetIndex >= 0
+					  ? libvlc_audio_equalizer_get_preset_name(static_cast<unsigned>(owner.effectsRuntime.currentEqualizerPresetIndex))
 					  : "")
 		   << "\n";
-	stream << "preamp=" << ofToString(owner.equalizerPreamp, 3) << "\n";
+	stream << "preamp=" << ofToString(owner.effectsRuntime.equalizerPreamp, 3) << "\n";
 	stream << "bands=";
-	for (size_t bandIndex = 0; bandIndex < owner.equalizerBandAmps.size(); ++bandIndex) {
+	for (size_t bandIndex = 0; bandIndex < owner.effectsRuntime.equalizerBandAmps.size(); ++bandIndex) {
 		if (bandIndex > 0) {
 			stream << ",";
 		}
-		stream << ofToString(owner.equalizerBandAmps[bandIndex], 3);
+		stream << ofToString(owner.effectsRuntime.equalizerBandAmps[bandIndex], 3);
 	}
 	return stream.str();
 }
@@ -922,8 +922,8 @@ bool ofxVlc4::AudioComponent::importEqualizerPreset(const std::string & serializ
 		}
 	}
 
-	float importedPreamp = owner.equalizerPreamp;
-	std::vector<float> importedBandAmps = owner.equalizerBandAmps;
+	float importedPreamp = owner.effectsRuntime.equalizerPreamp;
+	std::vector<float> importedBandAmps = owner.effectsRuntime.equalizerBandAmps;
 	bool hasPreamp = false;
 	bool hasBands = false;
 
@@ -948,7 +948,7 @@ bool ofxVlc4::AudioComponent::importEqualizerPreset(const std::string & serializ
 					parsedBandAmps.push_back(ofClamp(ofToFloat(token), -20.0f, 20.0f));
 				}
 			}
-			if (parsedBandAmps.size() == owner.equalizerBandAmps.size()) {
+			if (parsedBandAmps.size() == owner.effectsRuntime.equalizerBandAmps.size()) {
 				importedBandAmps = std::move(parsedBandAmps);
 				hasBands = true;
 			}
@@ -960,10 +960,10 @@ bool ofxVlc4::AudioComponent::importEqualizerPreset(const std::string & serializ
 		return false;
 	}
 
-	owner.equalizerEnabled = true;
-	owner.equalizerPreamp = importedPreamp;
-	owner.equalizerBandAmps = std::move(importedBandAmps);
-	owner.currentEqualizerPresetIndex = findMatchingEqualizerPresetIndex(kEqualizerPresetMatchToleranceDb);
+	owner.effectsRuntime.equalizerEnabled = true;
+	owner.effectsRuntime.equalizerPreamp = importedPreamp;
+	owner.effectsRuntime.equalizerBandAmps = std::move(importedBandAmps);
+	owner.effectsRuntime.currentEqualizerPresetIndex = findMatchingEqualizerPresetIndex(kEqualizerPresetMatchToleranceDb);
 	applyOrQueueEqualizerSettings();
 	owner.setStatus("Equalizer preset imported.");
 	owner.logNotice("Equalizer preset imported.");
@@ -983,15 +983,15 @@ bool ofxVlc4::AudioComponent::applyEqualizerPreset(int index) {
 		return false;
 	}
 
-	owner.equalizerEnabled = true;
-	owner.equalizerPreamp = ofClamp(libvlc_audio_equalizer_get_preamp(preset), -20.0f, 20.0f);
-	for (unsigned bandIndex = 0; bandIndex < owner.equalizerBandAmps.size(); ++bandIndex) {
-		owner.equalizerBandAmps[bandIndex] = ofClamp(
+	owner.effectsRuntime.equalizerEnabled = true;
+	owner.effectsRuntime.equalizerPreamp = ofClamp(libvlc_audio_equalizer_get_preamp(preset), -20.0f, 20.0f);
+	for (unsigned bandIndex = 0; bandIndex < owner.effectsRuntime.equalizerBandAmps.size(); ++bandIndex) {
+		owner.effectsRuntime.equalizerBandAmps[bandIndex] = ofClamp(
 			libvlc_audio_equalizer_get_amp_at_index(preset, bandIndex),
 			-20.0f,
 			20.0f);
 	}
-	owner.currentEqualizerPresetIndex = index;
+	owner.effectsRuntime.currentEqualizerPresetIndex = index;
 	libvlc_audio_equalizer_release(preset);
 
 	applyOrQueueEqualizerSettings();
@@ -1004,21 +1004,21 @@ bool ofxVlc4::AudioComponent::applyEqualizerPreset(int index) {
 }
 
 void ofxVlc4::AudioComponent::setEqualizerBandAmp(int index, float amp) {
-	if (index < 0 || index >= static_cast<int>(owner.equalizerBandAmps.size())) {
+	if (index < 0 || index >= static_cast<int>(owner.effectsRuntime.equalizerBandAmps.size())) {
 		return;
 	}
 
-	owner.equalizerEnabled = true;
-	owner.equalizerBandAmps[static_cast<size_t>(index)] = ofClamp(amp, -20.0f, 20.0f);
-	owner.currentEqualizerPresetIndex = -1;
+	owner.effectsRuntime.equalizerEnabled = true;
+	owner.effectsRuntime.equalizerBandAmps[static_cast<size_t>(index)] = ofClamp(amp, -20.0f, 20.0f);
+	owner.effectsRuntime.currentEqualizerPresetIndex = -1;
 	applyOrQueueEqualizerSettings();
 }
 
 void ofxVlc4::AudioComponent::resetEqualizer() {
-	owner.equalizerEnabled = true;
-	owner.equalizerPreamp = ofxVlc4::kDefaultEqualizerPreampDb;
-	std::fill(owner.equalizerBandAmps.begin(), owner.equalizerBandAmps.end(), 0.0f);
-	owner.currentEqualizerPresetIndex = -1;
+	owner.effectsRuntime.equalizerEnabled = true;
+	owner.effectsRuntime.equalizerPreamp = ofxVlc4::kDefaultEqualizerPreampDb;
+	std::fill(owner.effectsRuntime.equalizerBandAmps.begin(), owner.effectsRuntime.equalizerBandAmps.end(), 0.0f);
+	owner.effectsRuntime.currentEqualizerPresetIndex = -1;
 	applyOrQueueEqualizerSettings();
 	owner.setStatus("Equalizer reset.");
 	owner.logNotice("Equalizer reset.");
@@ -1026,13 +1026,13 @@ void ofxVlc4::AudioComponent::resetEqualizer() {
 
 std::vector<float> ofxVlc4::AudioComponent::getEqualizerSpectrumLevels(size_t pointCount) const {
 	std::vector<float> levels(pointCount, 0.0f);
-	if (levels.empty() || owner.equalizerBandAmps.empty() || !owner.audioCaptureEnabled || !owner.isAudioReady.load()) {
+	if (levels.empty() || owner.effectsRuntime.equalizerBandAmps.empty() || !owner.playerConfigRuntime.audioCaptureEnabled || !owner.audioRuntime.ready.load()) {
 		clearSpectrumAnalysisCache();
 		return levels;
 	}
 
-	const int rate = owner.sampleRate.load();
-	const int channelCount = std::max(owner.channels.load(), 1);
+	const int rate = owner.audioRuntime.sampleRate.load();
+	const int channelCount = std::max(owner.audioRuntime.channels.load(), 1);
 	if (rate <= 0 || channelCount <= 0) {
 		clearSpectrumAnalysisCache();
 		return levels;
@@ -1043,8 +1043,8 @@ std::vector<float> ofxVlc4::AudioComponent::getEqualizerSpectrumLevels(size_t po
 	uint64_t audioVersion = 0;
 	const uint64_t nowMicros = ofGetElapsedTimeMicros();
 	{
-		std::lock_guard<std::mutex> lock(owner.audioMutex);
-		audioVersion = owner.ringBuffer.getVersion();
+		std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioMutex);
+		audioVersion = owner.audioBufferRuntime.ringBuffer.getVersion();
 		if (spectrumCacheValid &&
 			spectrumCachePointCount == pointCount &&
 			spectrumCacheSampleRate == rate &&
@@ -1057,13 +1057,13 @@ std::vector<float> ofxVlc4::AudioComponent::getEqualizerSpectrumLevels(size_t po
 			}
 		}
 
-		if (owner.ringBuffer.getNumReadableSamples() == 0) {
+		if (owner.audioBufferRuntime.ringBuffer.getNumReadableSamples() == 0) {
 			clearSpectrumAnalysisCache();
 			return levels;
 		}
 
 		spectrumInterleavedSamples.resize(interleavedSampleCount);
-		copiedSamples = owner.ringBuffer.peekLatest(spectrumInterleavedSamples.data(), interleavedSampleCount);
+		copiedSamples = owner.audioBufferRuntime.ringBuffer.peekLatest(spectrumInterleavedSamples.data(), interleavedSampleCount);
 	}
 	if (copiedSamples == 0) {
 		clearSpectrumAnalysisCache();
@@ -1094,7 +1094,7 @@ std::vector<float> ofxVlc4::AudioComponent::getEqualizerSpectrumLevels(size_t po
 	const float minEqFrequency = std::max(getEqualizerBandFrequency(0), kSpectrumMinFrequencyHz);
 	const float maxEqFrequency = std::min(
 		nyquist,
-		std::max(getEqualizerBandFrequency(static_cast<int>(owner.equalizerBandAmps.size()) - 1), minEqFrequency * 2.0f));
+		std::max(getEqualizerBandFrequency(static_cast<int>(owner.effectsRuntime.equalizerBandAmps.size()) - 1), minEqFrequency * 2.0f));
 	if (maxEqFrequency <= minEqFrequency) {
 		clearSpectrumAnalysisCache();
 		return levels;
@@ -1155,17 +1155,17 @@ std::vector<float> ofxVlc4::AudioComponent::getEqualizerSpectrumLevels(size_t po
 		spectrumPointDecibels.swap(spectrumSmoothedDecibels);
 	}
 
-	if (owner.smoothedSpectrumLevels.size() != levels.size()) {
-		owner.smoothedSpectrumLevels.assign(levels.size(), 0.0f);
+	if (owner.analysisRuntime.smoothedSpectrumLevels.size() != levels.size()) {
+		owner.analysisRuntime.smoothedSpectrumLevels.assign(levels.size(), 0.0f);
 	}
 	cachedSpectrumLevels.resize(levels.size(), 0.0f);
 
 	for (size_t pointIndex = 0; pointIndex < levels.size(); ++pointIndex) {
 		const float normalized = ofMap(spectrumPointDecibels[pointIndex], kSpectrumBottomDb, kSpectrumTopDb, 0.0f, 1.0f, true);
-		const float previous = owner.smoothedSpectrumLevels[pointIndex];
+		const float previous = owner.analysisRuntime.smoothedSpectrumLevels[pointIndex];
 		const float smoothing = normalized > previous ? kSpectrumAttack : kSpectrumRelease;
 		const float smoothed = previous + ((normalized - previous) * smoothing);
-		owner.smoothedSpectrumLevels[pointIndex] = smoothed;
+		owner.analysisRuntime.smoothedSpectrumLevels[pointIndex] = smoothed;
 		cachedSpectrumLevels[pointIndex] = smoothed;
 	}
 
@@ -1263,7 +1263,7 @@ ofxVlc4::AudioMixMode ofxVlc4::AudioComponent::getAudioMixMode() const {
 }
 
 void ofxVlc4::AudioComponent::setAudioMixMode(AudioMixMode mode) {
-	owner.audioMixMode = mode;
+	owner.playerConfigRuntime.audioMixMode = mode;
 	applyAudioMixMode();
 
 	owner.setStatus(std::string("Audio mix mode set to ") + audioMixModeLabel(mode) + ".");
@@ -1275,7 +1275,7 @@ ofxVlc4::AudioStereoMode ofxVlc4::AudioComponent::getAudioStereoMode() const {
 }
 
 void ofxVlc4::AudioComponent::setAudioStereoMode(AudioStereoMode mode) {
-	owner.audioStereoMode = mode;
+	owner.playerConfigRuntime.audioStereoMode = mode;
 	applyAudioStereoMode();
 
 	owner.setStatus(std::string("Audio stereo mode set to ") + audioStereoModeLabel(mode) + ".");
@@ -1283,19 +1283,19 @@ void ofxVlc4::AudioComponent::setAudioStereoMode(AudioStereoMode mode) {
 }
 
 float ofxVlc4::AudioComponent::getPlaybackRate() const {
-	return owner.playbackRate;
+	return owner.playerConfigRuntime.playbackRate;
 }
 
 void ofxVlc4::AudioComponent::setPlaybackRate(float rate) {
 	const float clampedRate = ofClamp(rate, 0.25f, 4.0f);
-	if (std::abs(owner.playbackRate - clampedRate) < 0.0001f) {
+	if (std::abs(owner.playerConfigRuntime.playbackRate - clampedRate) < 0.0001f) {
 		return;
 	}
 
-	owner.playbackRate = clampedRate;
+	owner.playerConfigRuntime.playbackRate = clampedRate;
 	applyPlaybackRate();
 	owner.setStatus("Playback rate set.");
-	owner.logVerbose("Playback rate: " + ofToString(owner.playbackRate, 2) + "x.");
+	owner.logVerbose("Playback rate: " + ofToString(owner.playerConfigRuntime.playbackRate, 2) + "x.");
 }
 
 int ofxVlc4::AudioComponent::getAudioDelayMs() const {
@@ -1308,14 +1308,14 @@ void ofxVlc4::AudioComponent::setAudioDelayMs(int delayMs) {
 		return;
 	}
 
-	owner.audioDelayUs = static_cast<int64_t>(clampedDelayMs) * 1000;
+	owner.playerConfigRuntime.audioDelayUs = static_cast<int64_t>(clampedDelayMs) * 1000;
 	applyAudioDelay();
 	owner.setStatus("Audio delay set.");
 	owner.logVerbose("Audio delay: " + ofToString(getAudioDelayMs()) + " ms.");
 }
 
 void ofxVlc4::AudioComponent::setAudioCaptureEnabled(bool enabled) {
-	if (owner.audioCaptureEnabled == enabled) {
+	if (owner.playerConfigRuntime.audioCaptureEnabled == enabled) {
 		return;
 	}
 
@@ -1324,173 +1324,173 @@ void ofxVlc4::AudioComponent::setAudioCaptureEnabled(bool enabled) {
 		return;
 	}
 
-	owner.audioCaptureEnabled = enabled;
+	owner.playerConfigRuntime.audioCaptureEnabled = enabled;
 	if (!enabled) {
-		owner.isAudioReady.store(false);
+		owner.audioRuntime.ready.store(false);
 		resetBuffer();
 	}
 }
 
 bool ofxVlc4::AudioComponent::isAudioCaptureEnabled() const {
-	return owner.audioCaptureEnabled;
+	return owner.playerConfigRuntime.audioCaptureEnabled;
 }
 
 ofxVlc4::AudioCaptureSampleFormat ofxVlc4::AudioComponent::getAudioCaptureSampleFormat() const {
-	return owner.audioCaptureSampleFormat;
+	return owner.playerConfigRuntime.audioCaptureSampleFormat;
 }
 
 void ofxVlc4::AudioComponent::setAudioCaptureSampleFormat(AudioCaptureSampleFormat format) {
-	owner.audioCaptureSampleFormat = format;
+	owner.playerConfigRuntime.audioCaptureSampleFormat = format;
 	owner.setStatus(std::string("Audio callback format set to ") + audioCaptureSampleFormatLabel(format) + ".");
 	owner.logNotice(std::string("Audio callback format: ") + audioCaptureSampleFormatLabel(format));
 }
 
 int ofxVlc4::AudioComponent::getAudioCaptureSampleRate() const {
-	return owner.audioCaptureSampleRate;
+	return owner.playerConfigRuntime.audioCaptureSampleRate;
 }
 
 void ofxVlc4::AudioComponent::setAudioCaptureSampleRate(int rate) {
-	owner.audioCaptureSampleRate = normalizeAudioCaptureSampleRate(rate);
-	owner.setStatus("Audio callback rate set to " + ofToString(owner.audioCaptureSampleRate) + " Hz.");
-	owner.logNotice("Audio callback rate: " + ofToString(owner.audioCaptureSampleRate) + " Hz");
+	owner.playerConfigRuntime.audioCaptureSampleRate = normalizeAudioCaptureSampleRate(rate);
+	owner.setStatus("Audio callback rate set to " + ofToString(owner.playerConfigRuntime.audioCaptureSampleRate) + " Hz.");
+	owner.logNotice("Audio callback rate: " + ofToString(owner.playerConfigRuntime.audioCaptureSampleRate) + " Hz");
 }
 
 int ofxVlc4::AudioComponent::getAudioCaptureChannelCount() const {
-	return owner.audioCaptureChannelCount;
+	return owner.playerConfigRuntime.audioCaptureChannelCount;
 }
 
 void ofxVlc4::AudioComponent::setAudioCaptureChannelCount(int channelCount) {
-	owner.audioCaptureChannelCount = normalizeAudioCaptureChannelCount(channelCount);
-	owner.setStatus("Audio callback channels set to " + ofToString(owner.audioCaptureChannelCount) + ".");
-	owner.logNotice("Audio callback channels: " + ofToString(owner.audioCaptureChannelCount));
+	owner.playerConfigRuntime.audioCaptureChannelCount = normalizeAudioCaptureChannelCount(channelCount);
+	owner.setStatus("Audio callback channels set to " + ofToString(owner.playerConfigRuntime.audioCaptureChannelCount) + ".");
+	owner.logNotice("Audio callback channels: " + ofToString(owner.playerConfigRuntime.audioCaptureChannelCount));
 }
 
 double ofxVlc4::AudioComponent::getAudioCaptureBufferSeconds() const {
-	return owner.audioCaptureBufferSeconds;
+	return owner.playerConfigRuntime.audioCaptureBufferSeconds;
 }
 
 void ofxVlc4::AudioComponent::setAudioCaptureBufferSeconds(double seconds) {
-	owner.audioCaptureBufferSeconds = normalizeAudioCaptureBufferSeconds(seconds);
-	if (owner.audioCaptureEnabled) {
+	owner.playerConfigRuntime.audioCaptureBufferSeconds = normalizeAudioCaptureBufferSeconds(seconds);
+	if (owner.playerConfigRuntime.audioCaptureEnabled) {
 		prepareRingBuffer();
 		resetBuffer();
 	}
-	owner.setStatus("Audio callback buffer set to " + ofToString(owner.audioCaptureBufferSeconds, 2) + " s.");
-	owner.logNotice("Audio callback buffer: " + ofToString(owner.audioCaptureBufferSeconds, 2) + " s");
+	owner.setStatus("Audio callback buffer set to " + ofToString(owner.playerConfigRuntime.audioCaptureBufferSeconds, 2) + " s.");
+	owner.logNotice("Audio callback buffer: " + ofToString(owner.playerConfigRuntime.audioCaptureBufferSeconds, 2) + " s");
 }
 
 void ofxVlc4::AudioComponent::resetAudioStateInfo() {
-	owner.audioCallbackCount.store(0, std::memory_order_relaxed);
-	owner.audioCallbackFrameCount.store(0, std::memory_order_relaxed);
-	owner.audioCallbackSampleCount.store(0, std::memory_order_relaxed);
-	owner.audioCallbackTotalMicros.store(0, std::memory_order_relaxed);
-	owner.audioCallbackMaxMicros.store(0, std::memory_order_relaxed);
-	owner.audioConversionTotalMicros.store(0, std::memory_order_relaxed);
-	owner.audioConversionMaxMicros.store(0, std::memory_order_relaxed);
-	owner.audioRingWriteTotalMicros.store(0, std::memory_order_relaxed);
-	owner.audioRingWriteMaxMicros.store(0, std::memory_order_relaxed);
-	owner.audioRecorderTotalMicros.store(0, std::memory_order_relaxed);
-	owner.audioRecorderMaxMicros.store(0, std::memory_order_relaxed);
-	owner.audioFirstCallbackSteadyMicros.store(0, std::memory_order_relaxed);
-	owner.audioLastCallbackSteadyMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.callbackCount.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.callbackFrameCount.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.callbackSampleCount.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.callbackTotalMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.callbackMaxMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.conversionTotalMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.conversionMaxMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.ringWriteTotalMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.ringWriteMaxMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.recorderTotalMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.recorderMaxMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.firstCallbackSteadyMicros.store(0, std::memory_order_relaxed);
+	owner.audioRuntime.lastCallbackSteadyMicros.store(0, std::memory_order_relaxed);
 
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo = {};
-	owner.audioStateInfo.trackCount = 0;
-	owner.audioStateInfo.tracksAvailable = false;
-	owner.audioStateInfo.volume = owner.currentVolume.load(std::memory_order_relaxed);
-	owner.audioStateInfo.volumeKnown = false;
-	owner.audioStateInfo.muted = owner.audioOutputMuted.load(std::memory_order_relaxed);
-	owner.audioStateInfo.mutedKnown = false;
-	owner.audioStateInfo.mixMode = owner.audioMixMode;
-	owner.audioStateInfo.stereoMode = owner.audioStereoMode;
-	owner.audioStateInfo.audioDelayMs = static_cast<int>(owner.audioDelayUs / 1000);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio = {};
+	owner.stateCacheRuntime.audio.trackCount = 0;
+	owner.stateCacheRuntime.audio.tracksAvailable = false;
+	owner.stateCacheRuntime.audio.volume = owner.audioRuntime.currentVolume.load(std::memory_order_relaxed);
+	owner.stateCacheRuntime.audio.volumeKnown = false;
+	owner.stateCacheRuntime.audio.muted = owner.audioRuntime.outputMuted.load(std::memory_order_relaxed);
+	owner.stateCacheRuntime.audio.mutedKnown = false;
+	owner.stateCacheRuntime.audio.mixMode = owner.playerConfigRuntime.audioMixMode;
+	owner.stateCacheRuntime.audio.stereoMode = owner.playerConfigRuntime.audioStereoMode;
+	owner.stateCacheRuntime.audio.audioDelayMs = static_cast<int>(owner.playerConfigRuntime.audioDelayUs / 1000);
 }
 
 void ofxVlc4::AudioComponent::updateAudioStateFromVolumeEvent(int volume) {
 	const int clampedVolume = ofClamp(volume, 0, 100);
-	owner.currentVolume.store(clampedVolume, std::memory_order_relaxed);
-	owner.audioOutputVolume.store(static_cast<float>(clampedVolume) / 100.0f, std::memory_order_relaxed);
+	owner.audioRuntime.currentVolume.store(clampedVolume, std::memory_order_relaxed);
+	owner.audioRuntime.outputVolume.store(static_cast<float>(clampedVolume) / 100.0f, std::memory_order_relaxed);
 
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo.volumeKnown = true;
-	owner.audioStateInfo.volume = clampedVolume;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio.volumeKnown = true;
+	owner.stateCacheRuntime.audio.volume = clampedVolume;
 }
 
 void ofxVlc4::AudioComponent::updateAudioStateFromMutedEvent(bool muted) {
-	owner.audioOutputMuted.store(muted, std::memory_order_relaxed);
+	owner.audioRuntime.outputMuted.store(muted, std::memory_order_relaxed);
 
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo.mutedKnown = true;
-	owner.audioStateInfo.muted = muted;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio.mutedKnown = true;
+	owner.stateCacheRuntime.audio.muted = muted;
 }
 
 void ofxVlc4::AudioComponent::updateAudioStateFromDeviceEvent(const std::string & deviceId) {
-	owner.audioOutputDeviceId = deviceId;
+	owner.playerConfigRuntime.audioOutputDeviceId = deviceId;
 
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo.deviceKnown = true;
-	owner.audioStateInfo.deviceId = deviceId;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio.deviceKnown = true;
+	owner.stateCacheRuntime.audio.deviceId = deviceId;
 }
 
 void ofxVlc4::AudioComponent::updateAudioStateFromAudioPts(int64_t ptsUs, int64_t systemUs) {
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo.audioPtsAvailable = ptsUs >= 0;
-	owner.audioStateInfo.audioPtsUs = ptsUs;
-	owner.audioStateInfo.audioPtsSystemUs = systemUs;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio.audioPtsAvailable = ptsUs >= 0;
+	owner.stateCacheRuntime.audio.audioPtsUs = ptsUs;
+	owner.stateCacheRuntime.audio.audioPtsSystemUs = systemUs;
 }
 
 void ofxVlc4::AudioComponent::clearAudioPtsState() {
-	std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-	owner.audioStateInfo.audioPtsAvailable = false;
-	owner.audioStateInfo.audioPtsUs = -1;
-	owner.audioStateInfo.audioPtsSystemUs = 0;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+	owner.stateCacheRuntime.audio.audioPtsAvailable = false;
+	owner.stateCacheRuntime.audio.audioPtsUs = -1;
+	owner.stateCacheRuntime.audio.audioPtsSystemUs = 0;
 }
 
 ofxVlc4::AudioStateInfo ofxVlc4::AudioComponent::getAudioStateInfo() const {
 	AudioStateInfo info;
 	{
-		std::lock_guard<std::mutex> lock(owner.audioStateMutex);
-		info = owner.audioStateInfo;
+		std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioStateMutex);
+		info = owner.stateCacheRuntime.audio;
 	}
 
-	info.ready = owner.isAudioReady.load();
+	info.ready = owner.audioRuntime.ready.load();
 	info.paused = playback().isAudioPauseSignaled();
 	info.tracksAvailable = info.trackCount > 0;
-	info.mixMode = owner.audioMixMode;
-	info.stereoMode = owner.audioStereoMode;
-	info.audioDelayMs = static_cast<int>(owner.audioDelayUs / 1000);
+	info.mixMode = owner.playerConfigRuntime.audioMixMode;
+	info.stereoMode = owner.playerConfigRuntime.audioStereoMode;
+	info.audioDelayMs = static_cast<int>(owner.playerConfigRuntime.audioDelayUs / 1000);
 
-	const uint64_t callbackCount = owner.audioCallbackCount.load(std::memory_order_relaxed);
+	const uint64_t callbackCount = owner.audioRuntime.callbackCount.load(std::memory_order_relaxed);
 	if (callbackCount > 0) {
 		AudioCallbackPerformanceInfo performance;
 		performance.available = true;
 		performance.callbackCount = callbackCount;
-		performance.frameCount = owner.audioCallbackFrameCount.load(std::memory_order_relaxed);
-		performance.sampleCount = owner.audioCallbackSampleCount.load(std::memory_order_relaxed);
-		performance.maxCallbackMicros = owner.audioCallbackMaxMicros.load(std::memory_order_relaxed);
-		performance.maxConversionMicros = owner.audioConversionMaxMicros.load(std::memory_order_relaxed);
-		performance.maxRingWriteMicros = owner.audioRingWriteMaxMicros.load(std::memory_order_relaxed);
-		performance.maxRecorderMicros = owner.audioRecorderMaxMicros.load(std::memory_order_relaxed);
+		performance.frameCount = owner.audioRuntime.callbackFrameCount.load(std::memory_order_relaxed);
+		performance.sampleCount = owner.audioRuntime.callbackSampleCount.load(std::memory_order_relaxed);
+		performance.maxCallbackMicros = owner.audioRuntime.callbackMaxMicros.load(std::memory_order_relaxed);
+		performance.maxConversionMicros = owner.audioRuntime.conversionMaxMicros.load(std::memory_order_relaxed);
+		performance.maxRingWriteMicros = owner.audioRuntime.ringWriteMaxMicros.load(std::memory_order_relaxed);
+		performance.maxRecorderMicros = owner.audioRuntime.recorderMaxMicros.load(std::memory_order_relaxed);
 		performance.averageFramesPerCallback =
 			static_cast<double>(performance.frameCount) / static_cast<double>(callbackCount);
 		performance.averageSamplesPerCallback =
 			static_cast<double>(performance.sampleCount) / static_cast<double>(callbackCount);
 		performance.averageCallbackMicros =
-			static_cast<double>(owner.audioCallbackTotalMicros.load(std::memory_order_relaxed)) / static_cast<double>(callbackCount);
+			static_cast<double>(owner.audioRuntime.callbackTotalMicros.load(std::memory_order_relaxed)) / static_cast<double>(callbackCount);
 		performance.averageConversionMicros =
-			static_cast<double>(owner.audioConversionTotalMicros.load(std::memory_order_relaxed)) / static_cast<double>(callbackCount);
+			static_cast<double>(owner.audioRuntime.conversionTotalMicros.load(std::memory_order_relaxed)) / static_cast<double>(callbackCount);
 		performance.averageRingWriteMicros =
-			static_cast<double>(owner.audioRingWriteTotalMicros.load(std::memory_order_relaxed)) / static_cast<double>(callbackCount);
+			static_cast<double>(owner.audioRuntime.ringWriteTotalMicros.load(std::memory_order_relaxed)) / static_cast<double>(callbackCount);
 		performance.averageRecorderMicros =
-			static_cast<double>(owner.audioRecorderTotalMicros.load(std::memory_order_relaxed)) / static_cast<double>(callbackCount);
+			static_cast<double>(owner.audioRuntime.recorderTotalMicros.load(std::memory_order_relaxed)) / static_cast<double>(callbackCount);
 		performance.averageOtherMicros = std::max(
 			0.0,
 			performance.averageCallbackMicros -
 				(performance.averageConversionMicros + performance.averageRingWriteMicros + performance.averageRecorderMicros));
 
-		const uint64_t firstMicros = owner.audioFirstCallbackSteadyMicros.load(std::memory_order_relaxed);
-		const uint64_t lastMicros = owner.audioLastCallbackSteadyMicros.load(std::memory_order_relaxed);
+		const uint64_t firstMicros = owner.audioRuntime.firstCallbackSteadyMicros.load(std::memory_order_relaxed);
+		const uint64_t lastMicros = owner.audioRuntime.lastCallbackSteadyMicros.load(std::memory_order_relaxed);
 		if (lastMicros > firstMicros) {
 			performance.callbackRateHz =
 				(static_cast<double>(callbackCount) * 1000000.0) /
@@ -1534,7 +1534,7 @@ void ofxVlc4::AudioComponent::applySubtitleDelay() {
 		return;
 	}
 
-	if (libvlc_video_set_spu_delay(player, owner.subtitleDelayUs) != 0) {
+	if (libvlc_video_set_spu_delay(player, owner.playerConfigRuntime.subtitleDelayUs) != 0) {
 		owner.logWarning("Subtitle delay could not be applied.");
 	}
 }
@@ -1545,14 +1545,14 @@ void ofxVlc4::AudioComponent::applySubtitleTextScale() {
 		return;
 	}
 
-	libvlc_video_set_spu_text_scale(player, owner.subtitleTextScale);
+	libvlc_video_set_spu_text_scale(player, owner.playerConfigRuntime.subtitleTextScale);
 }
 
 int ofxVlc4::AudioComponent::getSubtitleDelayMs() const {
 	if (libvlc_media_player_t * player = owner.sessionPlayer()) {
 		return static_cast<int>(libvlc_video_get_spu_delay(player) / 1000);
 	}
-	return static_cast<int>(owner.subtitleDelayUs / 1000);
+	return static_cast<int>(owner.playerConfigRuntime.subtitleDelayUs / 1000);
 }
 
 void ofxVlc4::AudioComponent::setSubtitleDelayMs(int delayMs) {
@@ -1561,7 +1561,7 @@ void ofxVlc4::AudioComponent::setSubtitleDelayMs(int delayMs) {
 		return;
 	}
 
-	owner.subtitleDelayUs = static_cast<int64_t>(clampedDelayMs) * 1000;
+	owner.playerConfigRuntime.subtitleDelayUs = static_cast<int64_t>(clampedDelayMs) * 1000;
 	applySubtitleDelay();
 	media().refreshSubtitleStateInfo();
 	owner.setStatus("Subtitle delay set.");
@@ -1572,32 +1572,32 @@ float ofxVlc4::AudioComponent::getSubtitleTextScale() const {
 	if (libvlc_media_player_t * player = owner.sessionPlayer()) {
 		return libvlc_video_get_spu_text_scale(player);
 	}
-	return owner.subtitleTextScale;
+	return owner.playerConfigRuntime.subtitleTextScale;
 }
 
 void ofxVlc4::AudioComponent::setSubtitleTextScale(float scale) {
 	const float clampedScale = ofClamp(scale, 0.1f, 5.0f);
-	if (std::abs(owner.subtitleTextScale - clampedScale) < 0.0001f) {
+	if (std::abs(owner.playerConfigRuntime.subtitleTextScale - clampedScale) < 0.0001f) {
 		return;
 	}
 
-	owner.subtitleTextScale = clampedScale;
+	owner.playerConfigRuntime.subtitleTextScale = clampedScale;
 	applySubtitleTextScale();
 	media().refreshSubtitleStateInfo();
 	owner.setStatus("Subtitle text scale set.");
-	owner.logVerbose("Subtitle text scale: " + ofToString(owner.subtitleTextScale, 2) + "x.");
+	owner.logVerbose("Subtitle text scale: " + ofToString(owner.playerConfigRuntime.subtitleTextScale, 2) + "x.");
 }
 
 bool ofxVlc4::AudioComponent::audioIsReady() const {
-	return owner.isAudioReady.load();
+	return owner.audioRuntime.ready.load();
 }
 
 uint64_t ofxVlc4::AudioComponent::getAudioOverrunCount() const {
-	return owner.ringBuffer.getOverrunCount();
+	return owner.audioBufferRuntime.ringBuffer.getOverrunCount();
 }
 
 uint64_t ofxVlc4::AudioComponent::getAudioUnderrunCount() const {
-	return owner.ringBuffer.getUnderrunCount();
+	return owner.audioBufferRuntime.ringBuffer.getUnderrunCount();
 }
 
 size_t ofxVlc4::AudioComponent::peekLatestAudioSamples(float * dst, size_t sampleCount) const {
@@ -1605,17 +1605,17 @@ size_t ofxVlc4::AudioComponent::peekLatestAudioSamples(float * dst, size_t sampl
 		return 0;
 	}
 
-	std::lock_guard<std::mutex> lock(owner.audioMutex);
-	return owner.ringBuffer.peekLatest(dst, sampleCount);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioMutex);
+	return owner.audioBufferRuntime.ringBuffer.peekLatest(dst, sampleCount);
 }
 
 void ofxVlc4::AudioComponent::readAudioIntoBuffer(ofSoundBuffer & buffer, float gain) {
-	std::lock_guard<std::mutex> lock(owner.audioMutex);
-	owner.ringBuffer.readIntoBuffer(buffer, gain);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioMutex);
+	owner.audioBufferRuntime.ringBuffer.readIntoBuffer(buffer, gain);
 }
 
 void ofxVlc4::AudioComponent::submitRecordedAudioSamples(const float * samples, size_t sampleCount) {
-	if (!owner.audioCaptureEnabled || !samples || sampleCount == 0) {
+	if (!owner.playerConfigRuntime.audioCaptureEnabled || !samples || sampleCount == 0) {
 		return;
 	}
 
@@ -1623,7 +1623,7 @@ void ofxVlc4::AudioComponent::submitRecordedAudioSamples(const float * samples, 
 }
 
 void ofxVlc4::AudioComponent::audioPlay(const void * samples, unsigned int count, int64_t pts) {
-	if (!owner.audioCaptureEnabled || !samples || count == 0) {
+	if (!owner.playerConfigRuntime.audioCaptureEnabled || !samples || count == 0) {
 		return;
 	}
 
@@ -1631,20 +1631,20 @@ void ofxVlc4::AudioComponent::audioPlay(const void * samples, unsigned int count
 	const uint64_t callbackStartMicros = static_cast<uint64_t>(
 		std::chrono::duration_cast<std::chrono::microseconds>(callbackStart.time_since_epoch()).count());
 	updateAudioStateFromAudioPts(pts, libvlc_clock());
-	owner.isAudioReady.store(true);
+	owner.audioRuntime.ready.store(true);
 
-	const size_t channelCount = static_cast<size_t>(std::max(1, owner.channels.load(std::memory_order_relaxed)));
+	const size_t channelCount = static_cast<size_t>(std::max(1, owner.audioRuntime.channels.load(std::memory_order_relaxed)));
 	const size_t sampleCount = static_cast<size_t>(count) * channelCount;
-	const float outputVolume = owner.audioOutputMuted.load(std::memory_order_relaxed)
+	const float outputVolume = owner.audioRuntime.outputMuted.load(std::memory_order_relaxed)
 		? 0.0f
-		: owner.audioOutputVolume.load(std::memory_order_relaxed);
+		: owner.audioRuntime.outputVolume.load(std::memory_order_relaxed);
 	uint64_t ringWriteMicros = 0;
 	uint64_t recorderMicros = 0;
 	const auto writeCapturedSamples = [&](const float * inputSamples, size_t inputSampleCount) {
 		const auto ringWriteStart = std::chrono::steady_clock::now();
 		{
-			std::lock_guard<std::mutex> lock(owner.audioMutex);
-			owner.ringBuffer.write(inputSamples, inputSampleCount);
+			std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.audioMutex);
+			owner.audioBufferRuntime.ringBuffer.write(inputSamples, inputSampleCount);
 		}
 		ringWriteMicros = static_cast<uint64_t>(
 			std::chrono::duration_cast<std::chrono::microseconds>(
@@ -1658,7 +1658,7 @@ void ofxVlc4::AudioComponent::audioPlay(const void * samples, unsigned int count
 	};
 
 	const AudioCaptureSampleFormat activeFormat =
-		static_cast<AudioCaptureSampleFormat>(owner.activeAudioCaptureSampleFormat.load(std::memory_order_relaxed));
+		static_cast<AudioCaptureSampleFormat>(owner.playerConfigRuntime.activeAudioCaptureSampleFormat.load(std::memory_order_relaxed));
 	const bool applyVolume = std::abs(outputVolume - 1.0f) > 0.0001f;
 	uint64_t conversionMicros = 0;
 	if (activeFormat == ofxVlc4::AudioCaptureSampleFormat::Float32 && !applyVolume) {
@@ -1706,30 +1706,30 @@ void ofxVlc4::AudioComponent::audioPlay(const void * samples, unsigned int count
 	const uint64_t callbackMicros = static_cast<uint64_t>(
 		std::chrono::duration_cast<std::chrono::microseconds>(
 			std::chrono::steady_clock::now() - callbackStart).count());
-	owner.audioCallbackCount.fetch_add(1, std::memory_order_relaxed);
-	owner.audioCallbackFrameCount.fetch_add(static_cast<uint64_t>(count), std::memory_order_relaxed);
-	owner.audioCallbackSampleCount.fetch_add(static_cast<uint64_t>(sampleCount), std::memory_order_relaxed);
-	owner.audioCallbackTotalMicros.fetch_add(callbackMicros, std::memory_order_relaxed);
-	owner.audioConversionTotalMicros.fetch_add(conversionMicros, std::memory_order_relaxed);
-	owner.audioRingWriteTotalMicros.fetch_add(ringWriteMicros, std::memory_order_relaxed);
-	owner.audioRecorderTotalMicros.fetch_add(recorderMicros, std::memory_order_relaxed);
-	updateAtomicMax(owner.audioCallbackMaxMicros, callbackMicros);
-	updateAtomicMax(owner.audioConversionMaxMicros, conversionMicros);
-	updateAtomicMax(owner.audioRingWriteMaxMicros, ringWriteMicros);
-	updateAtomicMax(owner.audioRecorderMaxMicros, recorderMicros);
+	owner.audioRuntime.callbackCount.fetch_add(1, std::memory_order_relaxed);
+	owner.audioRuntime.callbackFrameCount.fetch_add(static_cast<uint64_t>(count), std::memory_order_relaxed);
+	owner.audioRuntime.callbackSampleCount.fetch_add(static_cast<uint64_t>(sampleCount), std::memory_order_relaxed);
+	owner.audioRuntime.callbackTotalMicros.fetch_add(callbackMicros, std::memory_order_relaxed);
+	owner.audioRuntime.conversionTotalMicros.fetch_add(conversionMicros, std::memory_order_relaxed);
+	owner.audioRuntime.ringWriteTotalMicros.fetch_add(ringWriteMicros, std::memory_order_relaxed);
+	owner.audioRuntime.recorderTotalMicros.fetch_add(recorderMicros, std::memory_order_relaxed);
+	updateAtomicMax(owner.audioRuntime.callbackMaxMicros, callbackMicros);
+	updateAtomicMax(owner.audioRuntime.conversionMaxMicros, conversionMicros);
+	updateAtomicMax(owner.audioRuntime.ringWriteMaxMicros, ringWriteMicros);
+	updateAtomicMax(owner.audioRuntime.recorderMaxMicros, recorderMicros);
 
 	uint64_t expectedFirstMicros = 0;
-	owner.audioFirstCallbackSteadyMicros.compare_exchange_strong(
+	owner.audioRuntime.firstCallbackSteadyMicros.compare_exchange_strong(
 		expectedFirstMicros,
 		callbackStartMicros,
 		std::memory_order_relaxed,
 		std::memory_order_relaxed);
-	owner.audioLastCallbackSteadyMicros.store(steadyMicrosNow(), std::memory_order_relaxed);
+	owner.audioRuntime.lastCallbackSteadyMicros.store(steadyMicrosNow(), std::memory_order_relaxed);
 }
 
 void ofxVlc4::AudioComponent::audioSetVolume(float volume, bool mute) {
 	const float clampedVolume = std::max(0.0f, volume);
-	owner.audioOutputVolume.store(clampedVolume, std::memory_order_relaxed);
+	owner.audioRuntime.outputVolume.store(clampedVolume, std::memory_order_relaxed);
 	updateAudioStateFromVolumeEvent(static_cast<int>(std::round(clampedVolume * 100.0f)));
 	updateAudioStateFromMutedEvent(mute);
 }

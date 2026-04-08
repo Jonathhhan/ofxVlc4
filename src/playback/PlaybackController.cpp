@@ -37,13 +37,13 @@ PlaybackController::PlaybackController(ofxVlc4 & owner)
 }
 
 PlaybackController::PlaylistSnapshot PlaybackController::getPlaylistSnapshot() const {
-	std::lock_guard<std::mutex> lock(owner.playlistMutex);
-	return PlaylistSnapshot { owner.playlist.size(), owner.currentIndex };
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
+	return PlaylistSnapshot { owner.mediaLibrary.playlist.size(), owner.mediaLibrary.currentIndex };
 }
 
 void PlaybackController::setCurrentPlaylistIndex(int index) {
-	std::lock_guard<std::mutex> lock(owner.playlistMutex);
-	owner.currentIndex = index;
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
+	owner.mediaLibrary.currentIndex = index;
 }
 
 void PlaybackController::clearCurrentPlaylistIndex() {
@@ -51,15 +51,15 @@ void PlaybackController::clearCurrentPlaylistIndex() {
 }
 
 ofxVlc4::AudioComponent & PlaybackController::audio() const {
-	return *owner.audioComponent;
+	return *owner.subsystemRuntime.audioComponent;
 }
 
 ofxVlc4::VideoComponent & PlaybackController::video() const {
-	return *owner.videoComponent;
+	return *owner.subsystemRuntime.videoComponent;
 }
 
 ofxVlc4::MediaComponent & PlaybackController::media() const {
-	return *owner.mediaComponent;
+	return *owner.subsystemRuntime.mediaComponent;
 }
 
 void PlaybackController::resetAudioBuffer() {
@@ -91,19 +91,19 @@ void PlaybackController::clearAudioPtsState() {
 }
 
 void PlaybackController::setPlaybackModeValue(ofxVlc4::PlaybackMode mode) {
-	owner.playbackMode = mode;
+	owner.playbackPolicyRuntime.playbackMode = mode;
 }
 
 ofxVlc4::PlaybackMode PlaybackController::getPlaybackModeValue() const {
-	return owner.playbackMode;
+	return owner.playbackPolicyRuntime.playbackMode;
 }
 
 void PlaybackController::setShuffleEnabledValue(bool enabled) {
-	owner.shuffleEnabled = enabled;
+	owner.playbackPolicyRuntime.shuffleEnabled = enabled;
 }
 
 bool PlaybackController::isShuffleEnabledValue() const {
-	return owner.shuffleEnabled;
+	return owner.playbackPolicyRuntime.shuffleEnabled;
 }
 
 void PlaybackController::playIndex(int index) {
@@ -486,7 +486,7 @@ void PlaybackController::pause() {
 }
 
 void PlaybackController::stop() {
-	const bool shuttingDown = owner.shuttingDown.load();
+	const bool shuttingDown = owner.lifecycleRuntime.shuttingDown.load();
 	clearPendingActivationRequest();
 	playbackTransport.playNextRequested.store(false);
 	playbackTransport.playbackWanted.store(false);
@@ -745,7 +745,7 @@ void PlaybackController::processDeferredPlaybackActions() {
 		playbackTransport.manualStopRequestTimeMs.store(0);
 		playbackTransport.manualStopRetryIssued.store(false);
 		clearCurrentMedia();
-		if (!owner.shuttingDown.load()) {
+		if (!owner.lifecycleRuntime.shuttingDown.load()) {
 			owner.stopActiveRecorderSessions();
 		}
 	}
@@ -892,7 +892,7 @@ void PlaybackController::onMediaPlayerStopping() {
 void PlaybackController::onMediaPlayerStopped() {
 	playbackTransport.audioPausedSignal.store(false);
 	clearAudioPtsState();
-	owner.nativeRecordingActive.store(false);
+	owner.nativeRecordingRuntime.active.store(false);
 	playbackTransport.manualStopRequestTimeMs.store(0);
 	playbackTransport.manualStopRetryIssued.store(false);
 	playbackTransport.lastKnownPlaybackPosition.store(0.0f, std::memory_order_relaxed);

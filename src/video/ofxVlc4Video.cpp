@@ -411,7 +411,7 @@ std::pair<unsigned, unsigned> visibleVideoSourceSize(const ofxVlc4::VideoStateIn
 }
 
 ofxVlc4::MediaComponent & ofxVlc4::VideoComponent::media() const {
-	return *owner.mediaComponent;
+	return *owner.subsystemRuntime.mediaComponent;
 }
 
 ofxVlc4::VideoComponent::VideoComponent(ofxVlc4 & owner)
@@ -448,7 +448,7 @@ void ofxVlc4::VideoComponent::waitForPublishedFrameFenceLocked() {
 }
 
 void ofxVlc4::VideoComponent::clearPublishedFrameFence() {
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
 	clearPublishedFrameFenceLocked();
 }
 
@@ -479,7 +479,7 @@ void ofxVlc4::VideoComponent::applyVlcFullscreen() {
 		return;
 	}
 
-	libvlc_set_fullscreen(player, owner.vlcFullscreenEnabled);
+	libvlc_set_fullscreen(player, owner.videoPresentationRuntime.vlcFullscreenEnabled);
 }
 
 void ofxVlc4::VideoComponent::applyVideoInputHandling() {
@@ -488,8 +488,8 @@ void ofxVlc4::VideoComponent::applyVideoInputHandling() {
 		return;
 	}
 
-	libvlc_video_set_key_input(player, owner.keyInputEnabled ? 1u : 0u);
-	libvlc_video_set_mouse_input(player, owner.mouseInputEnabled ? 1u : 0u);
+	libvlc_video_set_key_input(player, owner.playerConfigRuntime.keyInputEnabled ? 1u : 0u);
+	libvlc_video_set_mouse_input(player, owner.playerConfigRuntime.mouseInputEnabled ? 1u : 0u);
 }
 
 void ofxVlc4::VideoComponent::applyVideoTitleDisplay() {
@@ -500,12 +500,12 @@ void ofxVlc4::VideoComponent::applyVideoTitleDisplay() {
 
 	libvlc_media_player_set_video_title_display(
 		player,
-		owner.videoTitleDisplayEnabled ? toLibvlcVideoTitlePosition(owner.videoTitleDisplayPosition) : libvlc_position_disable,
-		owner.videoTitleDisplayTimeoutMs);
+		owner.videoPresentationRuntime.videoTitleDisplayEnabled ? toLibvlcVideoTitlePosition(owner.videoPresentationRuntime.videoTitleDisplayPosition) : libvlc_position_disable,
+		owner.videoPresentationRuntime.videoTitleDisplayTimeoutMs);
 }
 
 ofxVlc4::VideoAdjustmentEngine ofxVlc4::VideoComponent::resolveActiveVideoAdjustmentEngine() const {
-	switch (owner.videoAdjustmentEngine) {
+	switch (owner.effectsRuntime.videoAdjustmentEngine) {
 	case ofxVlc4::VideoAdjustmentEngine::Shader:
 		return usesTextureVideoOutput() ? ofxVlc4::VideoAdjustmentEngine::Shader : ofxVlc4::VideoAdjustmentEngine::LibVlc;
 	case ofxVlc4::VideoAdjustmentEngine::LibVlc:
@@ -517,12 +517,12 @@ ofxVlc4::VideoAdjustmentEngine ofxVlc4::VideoComponent::resolveActiveVideoAdjust
 }
 
 bool ofxVlc4::VideoComponent::usesShaderVideoAdjustments() const {
-	return owner.videoAdjustmentsEnabled &&
+	return owner.effectsRuntime.videoAdjustmentsEnabled &&
 		resolveActiveVideoAdjustmentEngine() == ofxVlc4::VideoAdjustmentEngine::Shader;
 }
 
 void ofxVlc4::VideoComponent::ensureVideoAdjustShaderLoaded() {
-	if (owner.videoAdjustShaderReady || owner.shuttingDown.load()) {
+	if (owner.videoResourceRuntime.videoAdjustShaderReady || owner.lifecycleRuntime.shuttingDown.load()) {
 		return;
 	}
 
@@ -537,22 +537,22 @@ void ofxVlc4::VideoComponent::ensureVideoAdjustShaderLoaded() {
 	const std::string & resolvedFragmentShaderSource =
 		fragmentShaderSource.empty() ? kVideoAdjustFragmentShaderGl3 : fragmentShaderSource;
 
-	owner.videoAdjustShader.setupShaderFromSource(GL_VERTEX_SHADER, resolvedVertexShaderSource);
-	owner.videoAdjustShader.setupShaderFromSource(GL_FRAGMENT_SHADER, resolvedFragmentShaderSource);
-	owner.videoAdjustShader.bindDefaults();
-	owner.videoAdjustShaderReady = owner.videoAdjustShader.linkProgram();
+	owner.videoResourceRuntime.videoAdjustShader.setupShaderFromSource(GL_VERTEX_SHADER, resolvedVertexShaderSource);
+	owner.videoResourceRuntime.videoAdjustShader.setupShaderFromSource(GL_FRAGMENT_SHADER, resolvedFragmentShaderSource);
+	owner.videoResourceRuntime.videoAdjustShader.bindDefaults();
+	owner.videoResourceRuntime.videoAdjustShaderReady = owner.videoResourceRuntime.videoAdjustShader.linkProgram();
 }
 
 void ofxVlc4::VideoComponent::applyVideoAdjustments() {
 	const ofxVlc4::VideoAdjustmentEngine activeEngine = resolveActiveVideoAdjustmentEngine();
-	owner.activeVideoAdjustmentEngine = activeEngine;
+	owner.effectsRuntime.activeVideoAdjustmentEngine = activeEngine;
 
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	if (activeEngine == ofxVlc4::VideoAdjustmentEngine::Shader) {
 		if (player) {
 			libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 0);
 		}
-		owner.exposedTextureDirty.store(true);
+		owner.videoFrameRuntime.exposedTextureDirty.store(true);
 		return;
 	}
 
@@ -560,16 +560,16 @@ void ofxVlc4::VideoComponent::applyVideoAdjustments() {
 		return;
 	}
 
-	if (!owner.videoAdjustmentsEnabled) {
+	if (!owner.effectsRuntime.videoAdjustmentsEnabled) {
 		libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 0);
 		return;
 	}
 
-	libvlc_video_set_adjust_float(player, libvlc_adjust_Contrast, owner.videoAdjustContrast);
-	libvlc_video_set_adjust_float(player, libvlc_adjust_Brightness, owner.videoAdjustBrightness);
-	libvlc_video_set_adjust_float(player, libvlc_adjust_Hue, owner.videoAdjustHue);
-	libvlc_video_set_adjust_float(player, libvlc_adjust_Saturation, owner.videoAdjustSaturation);
-	libvlc_video_set_adjust_float(player, libvlc_adjust_Gamma, owner.videoAdjustGamma);
+	libvlc_video_set_adjust_float(player, libvlc_adjust_Contrast, owner.effectsRuntime.videoAdjustContrast);
+	libvlc_video_set_adjust_float(player, libvlc_adjust_Brightness, owner.effectsRuntime.videoAdjustBrightness);
+	libvlc_video_set_adjust_float(player, libvlc_adjust_Hue, owner.effectsRuntime.videoAdjustHue);
+	libvlc_video_set_adjust_float(player, libvlc_adjust_Saturation, owner.effectsRuntime.videoAdjustSaturation);
+	libvlc_video_set_adjust_float(player, libvlc_adjust_Gamma, owner.effectsRuntime.videoAdjustGamma);
 	libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 1);
 }
 
@@ -601,7 +601,7 @@ void ofxVlc4::VideoComponent::applyPendingVideoAdjustmentsOnPlay() {
 }
 
 void ofxVlc4::VideoComponent::setPendingVideoAdjustApplyOnPlay(bool pending) {
-	owner.pendingVideoAdjustApplyOnPlay.store(pending);
+	owner.playbackPolicyRuntime.pendingVideoAdjustApplyOnPlay.store(pending);
 }
 
 void ofxVlc4::VideoComponent::clearPendingVideoAdjustApplyOnPlay() {
@@ -609,7 +609,7 @@ void ofxVlc4::VideoComponent::clearPendingVideoAdjustApplyOnPlay() {
 }
 
 bool ofxVlc4::VideoComponent::hasPendingVideoAdjustApplyOnPlay() const {
-	return owner.pendingVideoAdjustApplyOnPlay.load();
+	return owner.playbackPolicyRuntime.pendingVideoAdjustApplyOnPlay.load();
 }
 
 void ofxVlc4::VideoComponent::applyVideoDeinterlace() {
@@ -620,8 +620,8 @@ void ofxVlc4::VideoComponent::applyVideoDeinterlace() {
 
 	if (libvlc_video_set_deinterlace(
 			player,
-			videoDeinterlaceState(owner.videoDeinterlaceMode),
-			videoDeinterlaceFilterName(owner.videoDeinterlaceMode)) != 0) {
+			videoDeinterlaceState(owner.videoPresentationRuntime.videoDeinterlaceMode),
+			videoDeinterlaceFilterName(owner.videoPresentationRuntime.videoDeinterlaceMode)) != 0) {
 		owner.logWarning("Video deinterlace could not be applied.");
 	}
 }
@@ -632,7 +632,7 @@ void ofxVlc4::VideoComponent::applyVideoAspectRatio() {
 		return;
 	}
 
-	libvlc_video_set_aspect_ratio(player, videoAspectRatioValue(owner.videoAspectRatioMode));
+	libvlc_video_set_aspect_ratio(player, videoAspectRatioValue(owner.videoPresentationRuntime.videoAspectRatioMode));
 }
 
 void ofxVlc4::VideoComponent::applyVideoCrop() {
@@ -641,7 +641,7 @@ void ofxVlc4::VideoComponent::applyVideoCrop() {
 		return;
 	}
 
-	const auto [numerator, denominator] = videoCropRatio(owner.videoCropMode);
+	const auto [numerator, denominator] = videoCropRatio(owner.videoPresentationRuntime.videoCropMode);
 	libvlc_video_set_crop_ratio(player, numerator, denominator);
 }
 
@@ -651,9 +651,9 @@ void ofxVlc4::VideoComponent::applyVideoScaleAndFit() {
 		return;
 	}
 
-	libvlc_video_set_display_fit(player, toLibvlcVideoFitMode(owner.videoDisplayFitMode));
-	if (owner.videoDisplayFitMode == VideoDisplayFitMode::Scale) {
-		libvlc_video_set_scale(player, owner.videoScale);
+	libvlc_video_set_display_fit(player, toLibvlcVideoFitMode(owner.videoPresentationRuntime.videoDisplayFitMode));
+	if (owner.videoPresentationRuntime.videoDisplayFitMode == VideoDisplayFitMode::Scale) {
+		libvlc_video_set_scale(player, owner.videoPresentationRuntime.videoScale);
 	} else {
 		libvlc_video_set_scale(player, 0.0f);
 	}
@@ -665,12 +665,12 @@ void ofxVlc4::VideoComponent::applyVideoProjectionMode() {
 		return;
 	}
 
-	if (owner.videoProjectionMode == VideoProjectionMode::Auto) {
+	if (owner.videoPresentationRuntime.videoProjectionMode == VideoProjectionMode::Auto) {
 		libvlc_video_unset_projection_mode(player);
 		return;
 	}
 
-	libvlc_video_set_projection_mode(player, toLibvlcProjectionMode(owner.videoProjectionMode));
+	libvlc_video_set_projection_mode(player, toLibvlcProjectionMode(owner.videoPresentationRuntime.videoProjectionMode));
 }
 
 void ofxVlc4::VideoComponent::applyVideoStereoMode() {
@@ -679,7 +679,7 @@ void ofxVlc4::VideoComponent::applyVideoStereoMode() {
 		return;
 	}
 
-	libvlc_video_set_video_stereo_mode(player, toLibvlcStereoMode(owner.videoStereoMode));
+	libvlc_video_set_video_stereo_mode(player, toLibvlcStereoMode(owner.videoPresentationRuntime.videoStereoMode));
 }
 
 void ofxVlc4::VideoComponent::applyVideoViewpoint(bool absolute) {
@@ -689,60 +689,60 @@ void ofxVlc4::VideoComponent::applyVideoViewpoint(bool absolute) {
 	}
 
 	libvlc_video_viewpoint_t viewpoint {};
-	viewpoint.f_yaw = owner.videoViewYaw;
-	viewpoint.f_pitch = owner.videoViewPitch;
-	viewpoint.f_roll = owner.videoViewRoll;
-	viewpoint.f_field_of_view = owner.videoViewFov;
+	viewpoint.f_yaw = owner.videoPresentationRuntime.videoViewYaw;
+	viewpoint.f_pitch = owner.videoPresentationRuntime.videoViewPitch;
+	viewpoint.f_roll = owner.videoPresentationRuntime.videoViewRoll;
+	viewpoint.f_field_of_view = owner.videoPresentationRuntime.videoViewFov;
 	libvlc_video_update_viewpoint(player, &viewpoint, absolute);
 }
 
 void ofxVlc4::VideoComponent::clearVideoHdrMetadata() {
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
-	owner.videoHdrMetadata = {};
-	owner.videoHdrMetadata.supported = owner.videoOutputBackend == VideoOutputBackend::D3D11Metadata ||
-		owner.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
+	owner.analysisRuntime.videoHdrMetadata = {};
+	owner.analysisRuntime.videoHdrMetadata.supported = owner.videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::D3D11Metadata ||
+		owner.videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata;
 }
 
 void ofxVlc4::VideoComponent::releaseD3D11Resources() {
 #ifdef TARGET_WIN32
-	if (owner.d3d11RenderTargetView) {
-		owner.d3d11RenderTargetView->Release();
-		owner.d3d11RenderTargetView = nullptr;
+	if (owner.videoResourceRuntime.d3d11RenderTargetView) {
+		owner.videoResourceRuntime.d3d11RenderTargetView->Release();
+		owner.videoResourceRuntime.d3d11RenderTargetView = nullptr;
 	}
-	if (owner.d3d11RenderTexture) {
-		owner.d3d11RenderTexture->Release();
-		owner.d3d11RenderTexture = nullptr;
+	if (owner.videoResourceRuntime.d3d11RenderTexture) {
+		owner.videoResourceRuntime.d3d11RenderTexture->Release();
+		owner.videoResourceRuntime.d3d11RenderTexture = nullptr;
 	}
-	if (owner.d3d11Multithread) {
-		owner.d3d11Multithread->Release();
-		owner.d3d11Multithread = nullptr;
+	if (owner.videoResourceRuntime.d3d11Multithread) {
+		owner.videoResourceRuntime.d3d11Multithread->Release();
+		owner.videoResourceRuntime.d3d11Multithread = nullptr;
 	}
-	if (owner.d3d11DeviceContext) {
-		owner.d3d11DeviceContext->Release();
-		owner.d3d11DeviceContext = nullptr;
+	if (owner.videoResourceRuntime.d3d11DeviceContext) {
+		owner.videoResourceRuntime.d3d11DeviceContext->Release();
+		owner.videoResourceRuntime.d3d11DeviceContext = nullptr;
 	}
-	if (owner.d3d11Device) {
-		owner.d3d11Device->Release();
-		owner.d3d11Device = nullptr;
+	if (owner.videoResourceRuntime.d3d11Device) {
+		owner.videoResourceRuntime.d3d11Device->Release();
+		owner.videoResourceRuntime.d3d11Device = nullptr;
 	}
-	owner.d3d11RenderDxgiFormat = 0;
+	owner.videoResourceRuntime.d3d11RenderDxgiFormat = 0;
 #endif
 }
 
 void ofxVlc4::VideoComponent::updateNativeVideoWindowVisibility() {
-	if (!owner.vlcWindow) {
+	if (!owner.videoResourceRuntime.vlcWindow) {
 		return;
 	}
 
-	GLFWwindow * glfwWindow = owner.vlcWindow->getGLFWWindow();
+	GLFWwindow * glfwWindow = owner.videoResourceRuntime.vlcWindow->getGLFWWindow();
 	if (!glfwWindow) {
 		return;
 	}
 
-	if (owner.activeVideoOutputBackend == VideoOutputBackend::NativeWindow && owner.sessionPlayer()) {
-		owner.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
-		owner.vlcWindow->setWindowShape(960, 540);
-		owner.vlcWindow->setWindowPosition(560, 24);
+	if (owner.videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::NativeWindow && owner.sessionPlayer()) {
+		owner.videoResourceRuntime.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
+		owner.videoResourceRuntime.vlcWindow->setWindowShape(960, 540);
+		owner.videoResourceRuntime.vlcWindow->setWindowPosition(560, 24);
 		glfwShowWindow(glfwWindow);
 	} else {
 		glfwHideWindow(glfwWindow);
@@ -750,7 +750,7 @@ void ofxVlc4::VideoComponent::updateNativeVideoWindowVisibility() {
 }
 
 bool ofxVlc4::VideoComponent::usesTextureVideoOutput() const {
-	return owner.activeVideoOutputBackend == VideoOutputBackend::Texture;
+	return owner.videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::Texture;
 }
 
 bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
@@ -763,7 +763,7 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 	releaseD3D11Resources();
 	updateNativeVideoWindowVisibility();
 
-	if (owner.videoOutputBackend == VideoOutputBackend::Texture) {
+	if (owner.videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::Texture) {
 		const bool configured = libvlc_video_set_output_callbacks(
 			player,
 			libvlc_video_engine_opengl,
@@ -778,12 +778,12 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 			owner.setError("Texture video output callbacks could not be configured.");
 			return false;
 		}
-		owner.activeVideoOutputBackend = VideoOutputBackend::Texture;
+		owner.videoPresentationRuntime.activeVideoOutputBackend = VideoOutputBackend::Texture;
 		updateNativeVideoWindowVisibility();
 		return true;
 	}
 
-	if (owner.videoOutputBackend == VideoOutputBackend::D3D11Metadata) {
+	if (owner.videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::D3D11Metadata) {
 #ifdef TARGET_WIN32
 		const bool configured = libvlc_video_set_output_callbacks(
 			player,
@@ -802,7 +802,7 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 			owner.setError("D3D11 video output callbacks could not be configured.");
 			return false;
 		}
-		owner.activeVideoOutputBackend = VideoOutputBackend::D3D11Metadata;
+		owner.videoPresentationRuntime.activeVideoOutputBackend = VideoOutputBackend::D3D11Metadata;
 		updateNativeVideoWindowVisibility();
 		owner.setStatus("D3D11 HDR metadata backend configured.");
 		owner.logNotice("Video output backend: D3D11 HDR metadata.");
@@ -814,44 +814,44 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 	}
 
 #ifdef TARGET_WIN32
-	if (!owner.vlcWindow || !owner.vlcWindow->getGLFWWindow()) {
+	if (!owner.videoResourceRuntime.vlcWindow || !owner.videoResourceRuntime.vlcWindow->getGLFWWindow()) {
 		owner.setError("Native video window is unavailable.");
 		return false;
 	}
 
-	void * hwnd = glfwGetWin32Window(owner.vlcWindow->getGLFWWindow());
+	void * hwnd = glfwGetWin32Window(owner.videoResourceRuntime.vlcWindow->getGLFWWindow());
 	if (!hwnd) {
 		owner.setError("Native window handle is unavailable.");
 		return false;
 	}
 
 	libvlc_media_player_set_hwnd(player, hwnd);
-	owner.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
+	owner.videoPresentationRuntime.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
 	updateNativeVideoWindowVisibility();
 	return true;
 #elif defined(TARGET_LINUX)
-	if (!owner.vlcWindow || !owner.vlcWindow->getGLFWWindow()) {
+	if (!owner.videoResourceRuntime.vlcWindow || !owner.videoResourceRuntime.vlcWindow->getGLFWWindow()) {
 		owner.setError("Native video window is unavailable.");
 		return false;
 	}
 
-	Window xwindow = glfwGetX11Window(owner.vlcWindow->getGLFWWindow());
+	Window xwindow = glfwGetX11Window(owner.videoResourceRuntime.vlcWindow->getGLFWWindow());
 	if (xwindow == 0) {
 		owner.setError("X11 native window handle is unavailable.");
 		return false;
 	}
 
 	libvlc_media_player_set_xwindow(player, static_cast<uint32_t>(xwindow));
-	owner.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
+	owner.videoPresentationRuntime.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
 	updateNativeVideoWindowVisibility();
 	return true;
 #elif defined(TARGET_OSX)
-	if (!owner.vlcWindow || !owner.vlcWindow->getGLFWWindow()) {
+	if (!owner.videoResourceRuntime.vlcWindow || !owner.videoResourceRuntime.vlcWindow->getGLFWWindow()) {
 		owner.setError("Native video window is unavailable.");
 		return false;
 	}
 
-	id cocoaWindow = glfwGetCocoaWindow(owner.vlcWindow->getGLFWWindow());
+	id cocoaWindow = glfwGetCocoaWindow(owner.videoResourceRuntime.vlcWindow->getGLFWWindow());
 	if (!cocoaWindow) {
 		owner.setError("Cocoa native window handle is unavailable.");
 		return false;
@@ -864,7 +864,7 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 	}
 
 	libvlc_media_player_set_nsobject(player, cocoaView);
-	owner.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
+	owner.videoPresentationRuntime.activeVideoOutputBackend = VideoOutputBackend::NativeWindow;
 	updateNativeVideoWindowVisibility();
 	return true;
 #else
@@ -874,7 +874,7 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 }
 
 void ofxVlc4::VideoComponent::prepareStartupVideoResources() {
-	if (owner.activeVideoOutputBackend != VideoOutputBackend::Texture) {
+	if (owner.videoPresentationRuntime.activeVideoOutputBackend != VideoOutputBackend::Texture) {
 		return;
 	}
 
@@ -886,18 +886,18 @@ void ofxVlc4::VideoComponent::prepareStartupVideoResources() {
 		return;
 	}
 
-	const int glPixelFormat = owner.pendingGlPixelFormat.load();
+	const int glPixelFormat = owner.videoGeometryRuntime.pendingGlPixelFormat.load();
 
-	owner.pixelAspectNumerator.store(sarNum > 0 ? sarNum : 1u);
-	owner.pixelAspectDenominator.store(sarDen > 0 ? sarDen : 1u);
-	owner.renderWidth.store(width);
-	owner.renderHeight.store(height);
-	owner.videoWidth.store(width);
-	owner.videoHeight.store(height);
+	owner.videoGeometryRuntime.pixelAspectNumerator.store(sarNum > 0 ? sarNum : 1u);
+	owner.videoGeometryRuntime.pixelAspectDenominator.store(sarDen > 0 ? sarDen : 1u);
+	owner.videoGeometryRuntime.renderWidth.store(width);
+	owner.videoGeometryRuntime.renderHeight.store(height);
+	owner.videoGeometryRuntime.videoWidth.store(width);
+	owner.videoGeometryRuntime.videoHeight.store(height);
 	refreshDisplayAspectRatio();
 	ensureVideoRenderTargetCapacity(width, height, glPixelFormat);
 	ensureExposedTextureFboCapacity(width, height, glPixelFormat);
-	owner.exposedTextureDirty.store(true);
+	owner.videoFrameRuntime.exposedTextureDirty.store(true);
 }
 
 void ofxVlc4::VideoComponent::applyTeletextSettings() {
@@ -906,8 +906,8 @@ void ofxVlc4::VideoComponent::applyTeletextSettings() {
 		return;
 	}
 
-	libvlc_video_set_teletext_transparency(player, owner.teletextTransparencyEnabled);
-	libvlc_video_set_teletext(player, owner.teletextPage);
+	libvlc_video_set_teletext_transparency(player, owner.videoPresentationRuntime.teletextTransparencyEnabled);
+	libvlc_video_set_teletext(player, owner.videoPresentationRuntime.teletextPage);
 }
 
 void ofxVlc4::VideoComponent::applyVideoMarquee() {
@@ -916,20 +916,20 @@ void ofxVlc4::VideoComponent::applyVideoMarquee() {
 		return;
 	}
 
-	libvlc_video_set_marquee_int(player, libvlc_marquee_Enable, owner.marqueeEnabled ? 1 : 0);
-	if (!owner.marqueeEnabled) {
+	libvlc_video_set_marquee_int(player, libvlc_marquee_Enable, owner.overlayRuntime.marqueeEnabled ? 1 : 0);
+	if (!owner.overlayRuntime.marqueeEnabled) {
 		return;
 	}
 
-	libvlc_video_set_marquee_string(player, libvlc_marquee_Text, owner.marqueeText.c_str());
-	libvlc_video_set_marquee_int(player, libvlc_marquee_Position, toLibvlcOverlayPosition(owner.marqueePosition));
-	libvlc_video_set_marquee_int(player, libvlc_marquee_Opacity, owner.marqueeOpacity);
-	libvlc_video_set_marquee_int(player, libvlc_marquee_Size, owner.marqueeSize);
-	libvlc_video_set_marquee_int(player, libvlc_marquee_Color, owner.marqueeColor);
-	libvlc_video_set_marquee_int(player, libvlc_marquee_Refresh, owner.marqueeRefresh);
-	libvlc_video_set_marquee_int(player, libvlc_marquee_Timeout, owner.marqueeTimeout);
-	libvlc_video_set_marquee_int(player, libvlc_marquee_X, owner.marqueeX);
-	libvlc_video_set_marquee_int(player, libvlc_marquee_Y, owner.marqueeY);
+	libvlc_video_set_marquee_string(player, libvlc_marquee_Text, owner.overlayRuntime.marqueeText.c_str());
+	libvlc_video_set_marquee_int(player, libvlc_marquee_Position, toLibvlcOverlayPosition(owner.overlayRuntime.marqueePosition));
+	libvlc_video_set_marquee_int(player, libvlc_marquee_Opacity, owner.overlayRuntime.marqueeOpacity);
+	libvlc_video_set_marquee_int(player, libvlc_marquee_Size, owner.overlayRuntime.marqueeSize);
+	libvlc_video_set_marquee_int(player, libvlc_marquee_Color, owner.overlayRuntime.marqueeColor);
+	libvlc_video_set_marquee_int(player, libvlc_marquee_Refresh, owner.overlayRuntime.marqueeRefresh);
+	libvlc_video_set_marquee_int(player, libvlc_marquee_Timeout, owner.overlayRuntime.marqueeTimeout);
+	libvlc_video_set_marquee_int(player, libvlc_marquee_X, owner.overlayRuntime.marqueeX);
+	libvlc_video_set_marquee_int(player, libvlc_marquee_Y, owner.overlayRuntime.marqueeY);
 }
 
 void ofxVlc4::VideoComponent::applyVideoLogo() {
@@ -938,100 +938,100 @@ void ofxVlc4::VideoComponent::applyVideoLogo() {
 		return;
 	}
 
-	const std::string resolvedLogoPath = normalizeOptionalPath(owner.logoPath);
-	const bool canEnableLogo = owner.logoEnabled && !trimWhitespace(resolvedLogoPath).empty();
+	const std::string resolvedLogoPath = normalizeOptionalPath(owner.overlayRuntime.logoPath);
+	const bool canEnableLogo = owner.overlayRuntime.logoEnabled && !trimWhitespace(resolvedLogoPath).empty();
 	libvlc_video_set_logo_int(player, libvlc_logo_enable, canEnableLogo ? 1 : 0);
 	if (!canEnableLogo) {
 		return;
 	}
 
 	libvlc_video_set_logo_string(player, libvlc_logo_file, resolvedLogoPath.c_str());
-	libvlc_video_set_logo_int(player, libvlc_logo_position, toLibvlcOverlayPosition(owner.logoPosition));
-	libvlc_video_set_logo_int(player, libvlc_logo_opacity, owner.logoOpacity);
-	libvlc_video_set_logo_int(player, libvlc_logo_x, owner.logoX);
-	libvlc_video_set_logo_int(player, libvlc_logo_y, owner.logoY);
-	libvlc_video_set_logo_int(player, libvlc_logo_delay, owner.logoDelay);
-	libvlc_video_set_logo_int(player, libvlc_logo_repeat, owner.logoRepeat);
+	libvlc_video_set_logo_int(player, libvlc_logo_position, toLibvlcOverlayPosition(owner.overlayRuntime.logoPosition));
+	libvlc_video_set_logo_int(player, libvlc_logo_opacity, owner.overlayRuntime.logoOpacity);
+	libvlc_video_set_logo_int(player, libvlc_logo_x, owner.overlayRuntime.logoX);
+	libvlc_video_set_logo_int(player, libvlc_logo_y, owner.overlayRuntime.logoY);
+	libvlc_video_set_logo_int(player, libvlc_logo_delay, owner.overlayRuntime.logoDelay);
+	libvlc_video_set_logo_int(player, libvlc_logo_repeat, owner.overlayRuntime.logoRepeat);
 }
 
 void ofxVlc4::VideoComponent::ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight, int glPixelFormat) {
-	if (requiredWidth == 0 || requiredHeight == 0 || owner.shuttingDown.load()) {
+	if (requiredWidth == 0 || requiredHeight == 0 || owner.lifecycleRuntime.shuttingDown.load()) {
 		return;
 	}
 
-	const bool formatChanged = glPixelFormat != owner.allocatedGlPixelFormat;
-	if (!owner.videoTexture.isAllocated() || requiredWidth > owner.allocatedVideoWidth || requiredHeight > owner.allocatedVideoHeight || formatChanged) {
+	const bool formatChanged = glPixelFormat != owner.videoGeometryRuntime.allocatedGlPixelFormat;
+	if (!owner.videoResourceRuntime.videoTexture.isAllocated() || requiredWidth > owner.videoGeometryRuntime.allocatedVideoWidth || requiredHeight > owner.videoGeometryRuntime.allocatedVideoHeight || formatChanged) {
 		clearPublishedFrameFenceLocked();
-		owner.allocatedVideoWidth = std::max(owner.allocatedVideoWidth, requiredWidth);
-		owner.allocatedVideoHeight = std::max(owner.allocatedVideoHeight, requiredHeight);
+		owner.videoGeometryRuntime.allocatedVideoWidth = std::max(owner.videoGeometryRuntime.allocatedVideoWidth, requiredWidth);
+		owner.videoGeometryRuntime.allocatedVideoHeight = std::max(owner.videoGeometryRuntime.allocatedVideoHeight, requiredHeight);
 		if (formatChanged) {
-			owner.allocatedGlPixelFormat = glPixelFormat;
+			owner.videoGeometryRuntime.allocatedGlPixelFormat = glPixelFormat;
 		}
-		owner.videoTexture.clear();
-		owner.videoTexture.allocate(owner.allocatedVideoWidth, owner.allocatedVideoHeight, owner.allocatedGlPixelFormat);
-		owner.videoTexture.getTextureData().bFlipTexture = true;
+		owner.videoResourceRuntime.videoTexture.clear();
+		owner.videoResourceRuntime.videoTexture.allocate(owner.videoGeometryRuntime.allocatedVideoWidth, owner.videoGeometryRuntime.allocatedVideoHeight, owner.videoGeometryRuntime.allocatedGlPixelFormat);
+		owner.videoResourceRuntime.videoTexture.getTextureData().bFlipTexture = true;
 		{
-			const GLenum texTarget = owner.videoTexture.getTextureData().textureTarget;
-			const GLuint texId = owner.videoTexture.getTextureData().textureID;
+			const GLenum texTarget = owner.videoResourceRuntime.videoTexture.getTextureData().textureTarget;
+			const GLuint texId = owner.videoResourceRuntime.videoTexture.getTextureData().textureID;
 			glBindTexture(texTarget, texId);
 			glTexParameteri(texTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(texTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glBindTexture(texTarget, 0);
 		}
-		if (owner.vlcFramebufferId == 0) {
-			glGenFramebuffers(1, &owner.vlcFramebufferId);
+		if (owner.videoResourceRuntime.vlcFramebufferId == 0) {
+			glGenFramebuffers(1, &owner.videoResourceRuntime.vlcFramebufferId);
 		}
-		glBindFramebuffer(GL_FRAMEBUFFER, owner.vlcFramebufferId);
+		glBindFramebuffer(GL_FRAMEBUFFER, owner.videoResourceRuntime.vlcFramebufferId);
 		glFramebufferTexture2D(
 			GL_FRAMEBUFFER,
 			GL_COLOR_ATTACHMENT0,
-			owner.videoTexture.getTextureData().textureTarget,
-			owner.videoTexture.getTextureData().textureID,
+			owner.videoResourceRuntime.videoTexture.getTextureData().textureTarget,
+			owner.videoResourceRuntime.videoTexture.getTextureData().textureID,
 			0);
 		glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		ofClear(0, 0, 0, 0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		owner.vlcFramebufferAttachmentDirty.store(true);
+		owner.videoFrameRuntime.vlcFramebufferAttachmentDirty.store(true);
 	}
 }
 
 void ofxVlc4::VideoComponent::ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight, int glPixelFormat) {
-	if (requiredWidth == 0 || requiredHeight == 0 || owner.shuttingDown.load()) {
+	if (requiredWidth == 0 || requiredHeight == 0 || owner.lifecycleRuntime.shuttingDown.load()) {
 		return;
 	}
 
 	const unsigned currentWidth =
-		owner.exposedTextureFbo.isAllocated() ? static_cast<unsigned>(owner.exposedTextureFbo.getWidth()) : 0u;
+		owner.videoResourceRuntime.exposedTextureFbo.isAllocated() ? static_cast<unsigned>(owner.videoResourceRuntime.exposedTextureFbo.getWidth()) : 0u;
 	const unsigned currentHeight =
-		owner.exposedTextureFbo.isAllocated() ? static_cast<unsigned>(owner.exposedTextureFbo.getHeight()) : 0u;
+		owner.videoResourceRuntime.exposedTextureFbo.isAllocated() ? static_cast<unsigned>(owner.videoResourceRuntime.exposedTextureFbo.getHeight()) : 0u;
 	const unsigned targetWidth = std::max(currentWidth, requiredWidth);
 	const unsigned targetHeight = std::max(currentHeight, requiredHeight);
 
-	const bool formatMismatch = owner.exposedTextureFbo.isAllocated() &&
-		static_cast<int>(owner.exposedTextureFbo.getTexture().getTextureData().glInternalFormat) != glPixelFormat;
+	const bool formatMismatch = owner.videoResourceRuntime.exposedTextureFbo.isAllocated() &&
+		static_cast<int>(owner.videoResourceRuntime.exposedTextureFbo.getTexture().getTextureData().glInternalFormat) != glPixelFormat;
 
-	if (!owner.exposedTextureFbo.isAllocated() ||
+	if (!owner.videoResourceRuntime.exposedTextureFbo.isAllocated() ||
 		targetWidth != currentWidth ||
 		targetHeight != currentHeight ||
 		formatMismatch) {
-		owner.exposedTextureFbo.allocate(targetWidth, targetHeight, glPixelFormat);
-		owner.exposedTextureFbo.getTexture().getTextureData().bFlipTexture = true;
-		clearAllocatedFbo(owner.exposedTextureFbo);
+		owner.videoResourceRuntime.exposedTextureFbo.allocate(targetWidth, targetHeight, glPixelFormat);
+		owner.videoResourceRuntime.exposedTextureFbo.getTexture().getTextureData().bFlipTexture = true;
+		clearAllocatedFbo(owner.videoResourceRuntime.exposedTextureFbo);
 	}
 }
 
 bool ofxVlc4::VideoComponent::applyPendingVideoResize() {
-	if (!owner.pendingResize.exchange(false)) {
+	if (!owner.videoGeometryRuntime.pendingResize.exchange(false)) {
 		return false;
 	}
 
-	const unsigned newRenderWidth = owner.pendingRenderWidth.load();
-	const unsigned newRenderHeight = owner.pendingRenderHeight.load();
+	const unsigned newRenderWidth = owner.videoGeometryRuntime.pendingRenderWidth.load();
+	const unsigned newRenderHeight = owner.videoGeometryRuntime.pendingRenderHeight.load();
 	if (newRenderWidth == 0 || newRenderHeight == 0) {
 		return false;
 	}
 
-	const int newGlPixelFormat = owner.pendingGlPixelFormat.load();
+	const int newGlPixelFormat = owner.videoGeometryRuntime.pendingGlPixelFormat.load();
 
 	unsigned visibleWidth = newRenderWidth;
 	unsigned visibleHeight = newRenderHeight;
@@ -1048,14 +1048,14 @@ bool ofxVlc4::VideoComponent::applyPendingVideoResize() {
 	}
 
 	refreshPixelAspectRatio();
-	owner.renderWidth.store(newRenderWidth);
-	owner.renderHeight.store(newRenderHeight);
-	owner.videoWidth.store(visibleWidth);
-	owner.videoHeight.store(visibleHeight);
+	owner.videoGeometryRuntime.renderWidth.store(newRenderWidth);
+	owner.videoGeometryRuntime.renderHeight.store(newRenderHeight);
+	owner.videoGeometryRuntime.videoWidth.store(visibleWidth);
+	owner.videoGeometryRuntime.videoHeight.store(visibleHeight);
 	refreshDisplayAspectRatio();
 	ensureVideoRenderTargetCapacity(newRenderWidth, newRenderHeight, newGlPixelFormat);
-	owner.isVideoLoaded.store(true);
-	owner.exposedTextureDirty.store(true);
+	owner.videoFrameRuntime.isVideoLoaded.store(true);
+	owner.videoFrameRuntime.exposedTextureDirty.store(true);
 	return true;
 }
 
@@ -1064,38 +1064,38 @@ bool ofxVlc4::VideoComponent::videoResize(const libvlc_video_render_cfg_t * cfg,
 		return false;
 	}
 
-	if (owner.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata) {
+	if (owner.videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata) {
 #ifdef TARGET_WIN32
 		const DXGI_FORMAT dxgiFormat = (cfg->bitdepth > 8) ? DXGI_FORMAT_R10G10B10A2_UNORM : DXGI_FORMAT_B8G8R8A8_UNORM;
 
 		{
-			std::lock_guard<std::mutex> lock(owner.videoMutex);
-			owner.videoHdrMetadata.supported = true;
-			owner.videoHdrMetadata.width = cfg->width;
-			owner.videoHdrMetadata.height = cfg->height;
-			owner.videoHdrMetadata.bitDepth = cfg->bitdepth;
-			owner.videoHdrMetadata.fullRange = cfg->full_range;
-			owner.videoHdrMetadata.colorspace = cfg->colorspace;
-			owner.videoHdrMetadata.primaries = cfg->primaries;
-			owner.videoHdrMetadata.transfer = cfg->transfer;
-			owner.videoHdrMetadata.available = false;
+			std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
+			owner.analysisRuntime.videoHdrMetadata.supported = true;
+			owner.analysisRuntime.videoHdrMetadata.width = cfg->width;
+			owner.analysisRuntime.videoHdrMetadata.height = cfg->height;
+			owner.analysisRuntime.videoHdrMetadata.bitDepth = cfg->bitdepth;
+			owner.analysisRuntime.videoHdrMetadata.fullRange = cfg->full_range;
+			owner.analysisRuntime.videoHdrMetadata.colorspace = cfg->colorspace;
+			owner.analysisRuntime.videoHdrMetadata.primaries = cfg->primaries;
+			owner.analysisRuntime.videoHdrMetadata.transfer = cfg->transfer;
+			owner.analysisRuntime.videoHdrMetadata.available = false;
 
-			if (!owner.d3d11Device) {
+			if (!owner.videoResourceRuntime.d3d11Device) {
 				return false;
 			}
 
-			if (!owner.d3d11RenderTexture ||
-				!owner.d3d11RenderTargetView ||
-				owner.renderWidth.load() != cfg->width ||
-				owner.renderHeight.load() != cfg->height ||
-				owner.d3d11RenderDxgiFormat != static_cast<int>(dxgiFormat)) {
-				if (owner.d3d11RenderTargetView) {
-					owner.d3d11RenderTargetView->Release();
-					owner.d3d11RenderTargetView = nullptr;
+			if (!owner.videoResourceRuntime.d3d11RenderTexture ||
+				!owner.videoResourceRuntime.d3d11RenderTargetView ||
+				owner.videoGeometryRuntime.renderWidth.load() != cfg->width ||
+				owner.videoGeometryRuntime.renderHeight.load() != cfg->height ||
+				owner.videoResourceRuntime.d3d11RenderDxgiFormat != static_cast<int>(dxgiFormat)) {
+				if (owner.videoResourceRuntime.d3d11RenderTargetView) {
+					owner.videoResourceRuntime.d3d11RenderTargetView->Release();
+					owner.videoResourceRuntime.d3d11RenderTargetView = nullptr;
 				}
-				if (owner.d3d11RenderTexture) {
-					owner.d3d11RenderTexture->Release();
-					owner.d3d11RenderTexture = nullptr;
+				if (owner.videoResourceRuntime.d3d11RenderTexture) {
+					owner.videoResourceRuntime.d3d11RenderTexture->Release();
+					owner.videoResourceRuntime.d3d11RenderTexture = nullptr;
 				}
 
 				D3D11_TEXTURE2D_DESC textureDesc {};
@@ -1108,23 +1108,23 @@ bool ofxVlc4::VideoComponent::videoResize(const libvlc_video_render_cfg_t * cfg,
 				textureDesc.Usage = D3D11_USAGE_DEFAULT;
 				textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
-				if (FAILED(owner.d3d11Device->CreateTexture2D(&textureDesc, nullptr, &owner.d3d11RenderTexture)) ||
-					FAILED(owner.d3d11Device->CreateRenderTargetView(owner.d3d11RenderTexture, nullptr, &owner.d3d11RenderTargetView))) {
+				if (FAILED(owner.videoResourceRuntime.d3d11Device->CreateTexture2D(&textureDesc, nullptr, &owner.videoResourceRuntime.d3d11RenderTexture)) ||
+					FAILED(owner.videoResourceRuntime.d3d11Device->CreateRenderTargetView(owner.videoResourceRuntime.d3d11RenderTexture, nullptr, &owner.videoResourceRuntime.d3d11RenderTargetView))) {
 					releaseD3D11Resources();
 					return false;
 				}
 
-				owner.d3d11RenderDxgiFormat = static_cast<int>(dxgiFormat);
+				owner.videoResourceRuntime.d3d11RenderDxgiFormat = static_cast<int>(dxgiFormat);
 			}
 		}
 
-		owner.renderWidth.store(cfg->width);
-		owner.renderHeight.store(cfg->height);
-		owner.videoWidth.store(cfg->width);
-		owner.videoHeight.store(cfg->height);
+		owner.videoGeometryRuntime.renderWidth.store(cfg->width);
+		owner.videoGeometryRuntime.renderHeight.store(cfg->height);
+		owner.videoGeometryRuntime.videoWidth.store(cfg->width);
+		owner.videoGeometryRuntime.videoHeight.store(cfg->height);
 		refreshDisplayAspectRatio();
-		owner.isVideoLoaded.store(true);
-		owner.exposedTextureDirty.store(true);
+		owner.videoFrameRuntime.isVideoLoaded.store(true);
+		owner.videoFrameRuntime.exposedTextureDirty.store(true);
 
 		render_cfg->dxgi_format = static_cast<int>(dxgiFormat);
 		render_cfg->full_range = cfg->full_range;
@@ -1146,12 +1146,12 @@ bool ofxVlc4::VideoComponent::videoResize(const libvlc_video_render_cfg_t * cfg,
 	render_cfg->transfer = libvlc_video_transfer_func_SRGB;
 	render_cfg->orientation = libvlc_video_orient_top_left;
 
-	if (cfg->width != owner.renderWidth.load() || cfg->height != owner.renderHeight.load() ||
-		glPixelFormat != owner.pendingGlPixelFormat.load()) {
-		owner.pendingGlPixelFormat.store(glPixelFormat);
-		owner.pendingRenderWidth.store(cfg->width);
-		owner.pendingRenderHeight.store(cfg->height);
-		owner.pendingResize.store(true);
+	if (cfg->width != owner.videoGeometryRuntime.renderWidth.load() || cfg->height != owner.videoGeometryRuntime.renderHeight.load() ||
+		glPixelFormat != owner.videoGeometryRuntime.pendingGlPixelFormat.load()) {
+		owner.videoGeometryRuntime.pendingGlPixelFormat.store(glPixelFormat);
+		owner.videoGeometryRuntime.pendingRenderWidth.store(cfg->width);
+		owner.videoGeometryRuntime.pendingRenderHeight.store(cfg->height);
+		owner.videoGeometryRuntime.pendingResize.store(true);
 	}
 
 	return true;
@@ -1193,9 +1193,9 @@ bool ofxVlc4::VideoComponent::videoOutputSetup(const libvlc_video_setup_device_c
 			featureLevels,
 			static_cast<UINT>(sizeof(featureLevels) / sizeof(featureLevels[0])),
 			D3D11_SDK_VERSION,
-			&owner.d3d11Device,
+			&owner.videoResourceRuntime.d3d11Device,
 			&createdFeatureLevel,
-			&owner.d3d11DeviceContext);
+			&owner.videoResourceRuntime.d3d11DeviceContext);
 		if (hr == E_INVALIDARG) {
 			hr = D3D11CreateDevice(
 				nullptr,
@@ -1205,16 +1205,16 @@ bool ofxVlc4::VideoComponent::videoOutputSetup(const libvlc_video_setup_device_c
 				featureLevels + 1,
 				static_cast<UINT>((sizeof(featureLevels) / sizeof(featureLevels[0])) - 1),
 				D3D11_SDK_VERSION,
-				&owner.d3d11Device,
+				&owner.videoResourceRuntime.d3d11Device,
 				&createdFeatureLevel,
-				&owner.d3d11DeviceContext);
+				&owner.videoResourceRuntime.d3d11DeviceContext);
 		}
 		if (SUCCEEDED(hr)) {
 			break;
 		}
 	}
 
-	if (FAILED(hr) || !owner.d3d11Device || !owner.d3d11DeviceContext) {
+	if (FAILED(hr) || !owner.videoResourceRuntime.d3d11Device || !owner.videoResourceRuntime.d3d11DeviceContext) {
 		releaseD3D11Resources();
 		owner.setError("D3D11 device creation failed.");
 		return false;
@@ -1222,12 +1222,12 @@ bool ofxVlc4::VideoComponent::videoOutputSetup(const libvlc_video_setup_device_c
 
 	(void)createdFeatureLevel;
 
-	owner.d3d11DeviceContext->QueryInterface(__uuidof(ID3D10Multithread), reinterpret_cast<void **>(&owner.d3d11Multithread));
-	if (owner.d3d11Multithread) {
-		owner.d3d11Multithread->SetMultithreadProtected(TRUE);
+	owner.videoResourceRuntime.d3d11DeviceContext->QueryInterface(__uuidof(ID3D10Multithread), reinterpret_cast<void **>(&owner.videoResourceRuntime.d3d11Multithread));
+	if (owner.videoResourceRuntime.d3d11Multithread) {
+		owner.videoResourceRuntime.d3d11Multithread->SetMultithreadProtected(TRUE);
 	}
 
-	out->d3d11.device_context = owner.d3d11DeviceContext;
+	out->d3d11.device_context = owner.videoResourceRuntime.d3d11DeviceContext;
 	out->d3d11.context_mutex = nullptr;
 	return true;
 #else
@@ -1251,72 +1251,72 @@ void ofxVlc4::VideoComponent::videoFrameMetadata(libvlc_video_metadata_type_t ty
 	}
 
 	const auto * hdr10 = static_cast<const libvlc_video_frame_hdr10_metadata_t *>(metadata);
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
-	owner.videoHdrMetadata.supported = true;
-	owner.videoHdrMetadata.available = true;
-	owner.videoHdrMetadata.redPrimaryX = hdr10->RedPrimary[0];
-	owner.videoHdrMetadata.redPrimaryY = hdr10->RedPrimary[1];
-	owner.videoHdrMetadata.greenPrimaryX = hdr10->GreenPrimary[0];
-	owner.videoHdrMetadata.greenPrimaryY = hdr10->GreenPrimary[1];
-	owner.videoHdrMetadata.bluePrimaryX = hdr10->BluePrimary[0];
-	owner.videoHdrMetadata.bluePrimaryY = hdr10->BluePrimary[1];
-	owner.videoHdrMetadata.whitePointX = hdr10->WhitePoint[0];
-	owner.videoHdrMetadata.whitePointY = hdr10->WhitePoint[1];
-	owner.videoHdrMetadata.maxMasteringLuminance = hdr10->MaxMasteringLuminance;
-	owner.videoHdrMetadata.minMasteringLuminance = hdr10->MinMasteringLuminance;
-	owner.videoHdrMetadata.maxContentLightLevel = hdr10->MaxContentLightLevel;
-	owner.videoHdrMetadata.maxFrameAverageLightLevel = hdr10->MaxFrameAverageLightLevel;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
+	owner.analysisRuntime.videoHdrMetadata.supported = true;
+	owner.analysisRuntime.videoHdrMetadata.available = true;
+	owner.analysisRuntime.videoHdrMetadata.redPrimaryX = hdr10->RedPrimary[0];
+	owner.analysisRuntime.videoHdrMetadata.redPrimaryY = hdr10->RedPrimary[1];
+	owner.analysisRuntime.videoHdrMetadata.greenPrimaryX = hdr10->GreenPrimary[0];
+	owner.analysisRuntime.videoHdrMetadata.greenPrimaryY = hdr10->GreenPrimary[1];
+	owner.analysisRuntime.videoHdrMetadata.bluePrimaryX = hdr10->BluePrimary[0];
+	owner.analysisRuntime.videoHdrMetadata.bluePrimaryY = hdr10->BluePrimary[1];
+	owner.analysisRuntime.videoHdrMetadata.whitePointX = hdr10->WhitePoint[0];
+	owner.analysisRuntime.videoHdrMetadata.whitePointY = hdr10->WhitePoint[1];
+	owner.analysisRuntime.videoHdrMetadata.maxMasteringLuminance = hdr10->MaxMasteringLuminance;
+	owner.analysisRuntime.videoHdrMetadata.minMasteringLuminance = hdr10->MinMasteringLuminance;
+	owner.analysisRuntime.videoHdrMetadata.maxContentLightLevel = hdr10->MaxContentLightLevel;
+	owner.analysisRuntime.videoHdrMetadata.maxFrameAverageLightLevel = hdr10->MaxFrameAverageLightLevel;
 }
 
 void ofxVlc4::VideoComponent::bindVlcRenderTarget() {
-	if (!owner.videoTexture.isAllocated() || owner.vlcFramebufferId == 0) {
+	if (!owner.videoResourceRuntime.videoTexture.isAllocated() || owner.videoResourceRuntime.vlcFramebufferId == 0) {
 		return;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, owner.vlcFramebufferId);
-	if (owner.vlcFramebufferAttachmentDirty.load()) {
+	glBindFramebuffer(GL_FRAMEBUFFER, owner.videoResourceRuntime.vlcFramebufferId);
+	if (owner.videoFrameRuntime.vlcFramebufferAttachmentDirty.load()) {
 		glFramebufferTexture2D(
 			GL_FRAMEBUFFER,
 			GL_COLOR_ATTACHMENT0,
-			owner.videoTexture.getTextureData().textureTarget,
-			owner.videoTexture.getTextureData().textureID,
+			owner.videoResourceRuntime.videoTexture.getTextureData().textureTarget,
+			owner.videoResourceRuntime.videoTexture.getTextureData().textureID,
 			0);
-		owner.vlcFramebufferAttachmentDirty.store(false);
+		owner.videoFrameRuntime.vlcFramebufferAttachmentDirty.store(false);
 	}
-	const unsigned currentRenderWidth = owner.renderWidth.load();
-	const unsigned currentRenderHeight = owner.renderHeight.load();
+	const unsigned currentRenderWidth = owner.videoGeometryRuntime.renderWidth.load();
+	const unsigned currentRenderHeight = owner.videoGeometryRuntime.renderHeight.load();
 	if (currentRenderWidth > 0 &&
 		currentRenderHeight > 0 &&
-		(currentRenderWidth != owner.lastBoundViewportWidth || currentRenderHeight != owner.lastBoundViewportHeight)) {
+		(currentRenderWidth != owner.videoGeometryRuntime.lastBoundViewportWidth || currentRenderHeight != owner.videoGeometryRuntime.lastBoundViewportHeight)) {
 		ofViewport(0, 0, static_cast<float>(currentRenderWidth), static_cast<float>(currentRenderHeight), false);
-		owner.lastBoundViewportWidth = currentRenderWidth;
-		owner.lastBoundViewportHeight = currentRenderHeight;
+		owner.videoGeometryRuntime.lastBoundViewportWidth = currentRenderWidth;
+		owner.videoGeometryRuntime.lastBoundViewportHeight = currentRenderHeight;
 	}
-	owner.vlcFboBound = true;
+	owner.videoFrameRuntime.vlcFboBound = true;
 }
 
 void ofxVlc4::VideoComponent::unbindVlcRenderTarget() {
-	if (!owner.vlcFboBound) {
+	if (!owner.videoFrameRuntime.vlcFboBound) {
 		return;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	owner.vlcFboBound = false;
+	owner.videoFrameRuntime.vlcFboBound = false;
 }
 
 void ofxVlc4::VideoComponent::videoSwap() {
-	if (owner.shuttingDown.load()) {
+	if (owner.lifecycleRuntime.shuttingDown.load()) {
 		return;
 	}
 
-	owner.hasReceivedVideoFrame.store(true);
+	owner.videoFrameRuntime.hasReceivedVideoFrame.store(true);
 
-	if (owner.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata) {
+	if (owner.videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata) {
 		return;
 	}
 
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
-	const bool needsPublish = !owner.exposedTextureDirty.exchange(true);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
+	const bool needsPublish = !owner.videoFrameRuntime.exposedTextureDirty.exchange(true);
 	if (!needsPublish) {
 		return;
 	}
@@ -1329,33 +1329,33 @@ void ofxVlc4::VideoComponent::videoSwap() {
 }
 
 bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
 
-	if (owner.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata) {
+	if (owner.videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata) {
 #ifdef TARGET_WIN32
-		if (!owner.d3d11DeviceContext) {
+		if (!owner.videoResourceRuntime.d3d11DeviceContext) {
 			return false;
 		}
 
 		if (current) {
-			if (!owner.d3d11RenderTargetView) {
+			if (!owner.videoResourceRuntime.d3d11RenderTargetView) {
 				return false;
 			}
 
-			ID3D11RenderTargetView * renderTarget = owner.d3d11RenderTargetView;
-			owner.d3d11DeviceContext->OMSetRenderTargets(1, &renderTarget, nullptr);
+			ID3D11RenderTargetView * renderTarget = owner.videoResourceRuntime.d3d11RenderTargetView;
+			owner.videoResourceRuntime.d3d11DeviceContext->OMSetRenderTargets(1, &renderTarget, nullptr);
 
 			D3D11_VIEWPORT viewport {};
 			viewport.TopLeftX = 0.0f;
 			viewport.TopLeftY = 0.0f;
-			viewport.Width = static_cast<float>(std::max(1u, owner.renderWidth.load()));
-			viewport.Height = static_cast<float>(std::max(1u, owner.renderHeight.load()));
+			viewport.Width = static_cast<float>(std::max(1u, owner.videoGeometryRuntime.renderWidth.load()));
+			viewport.Height = static_cast<float>(std::max(1u, owner.videoGeometryRuntime.renderHeight.load()));
 			viewport.MinDepth = 0.0f;
 			viewport.MaxDepth = 1.0f;
-			owner.d3d11DeviceContext->RSSetViewports(1, &viewport);
+			owner.videoResourceRuntime.d3d11DeviceContext->RSSetViewports(1, &viewport);
 		} else {
 			ID3D11RenderTargetView * renderTarget = nullptr;
-			owner.d3d11DeviceContext->OMSetRenderTargets(1, &renderTarget, nullptr);
+			owner.videoResourceRuntime.d3d11DeviceContext->OMSetRenderTargets(1, &renderTarget, nullptr);
 		}
 		return true;
 #else
@@ -1363,12 +1363,12 @@ bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
 #endif
 	}
 
-	if (!owner.vlcWindow || !owner.vlcWindow->getGLFWWindow()) {
+	if (!owner.videoResourceRuntime.vlcWindow || !owner.videoResourceRuntime.vlcWindow->getGLFWWindow()) {
 		return false;
 	}
 
 	if (current) {
-		owner.vlcWindow->makeCurrent();
+		owner.videoResourceRuntime.vlcWindow->makeCurrent();
 		applyPendingVideoResize();
 		bindVlcRenderTarget();
 	} else {
@@ -1394,42 +1394,42 @@ bool ofxVlc4::VideoComponent::drawCurrentFrame(const VideoStateInfo & state, flo
 	const auto [visibleSourceWidth, visibleSourceHeight] = visibleVideoSourceSize(state);
 	const float sourceWidth = static_cast<float>(visibleSourceWidth);
 	const float sourceHeight = static_cast<float>(visibleSourceHeight);
-	if (!state.frameReceived || !owner.videoTexture.isAllocated() || sourceWidth <= 0.0f || sourceHeight <= 0.0f) {
+	if (!state.frameReceived || !owner.videoResourceRuntime.videoTexture.isAllocated() || sourceWidth <= 0.0f || sourceHeight <= 0.0f) {
 		return false;
 	}
 
 	if (usesShaderVideoAdjustments()) {
-		if (owner.exposedTextureDirty.exchange(false)) {
+		if (owner.videoFrameRuntime.exposedTextureDirty.exchange(false)) {
 			refreshExposedTextureLocked(state);
 		}
-		owner.exposedTextureFbo.getTexture().drawSubsection(x, y, width, height, 0, 0, sourceWidth, sourceHeight);
+		owner.videoResourceRuntime.exposedTextureFbo.getTexture().drawSubsection(x, y, width, height, 0, 0, sourceWidth, sourceHeight);
 		return true;
 	}
 
-	owner.videoTexture.drawSubsection(x, y, width, height, 0, 0, sourceWidth, sourceHeight);
+	owner.videoResourceRuntime.videoTexture.drawSubsection(x, y, width, height, 0, 0, sourceWidth, sourceHeight);
 	return true;
 }
 
 void ofxVlc4::VideoComponent::refreshExposedTextureLocked(const VideoStateInfo & state) {
 	const auto [sourceWidth, sourceHeight] = visibleVideoSourceSize(state);
-	const int glPixelFormat = owner.allocatedGlPixelFormat;
+	const int glPixelFormat = owner.videoGeometryRuntime.allocatedGlPixelFormat;
 	if (sourceWidth > 0 && sourceHeight > 0 && !state.frameReceived) {
 		ensureExposedTextureFboCapacity(sourceWidth, sourceHeight, glPixelFormat);
-		clearAllocatedFbo(owner.exposedTextureFbo);
+		clearAllocatedFbo(owner.videoResourceRuntime.exposedTextureFbo);
 		return;
 	}
 
-	if (!owner.videoTexture.isAllocated() || sourceWidth == 0 || sourceHeight == 0) {
+	if (!owner.videoResourceRuntime.videoTexture.isAllocated() || sourceWidth == 0 || sourceHeight == 0) {
 		return;
 	}
 
 	waitForPublishedFrameFenceLocked();
 	ensureExposedTextureFboCapacity(sourceWidth, sourceHeight, glPixelFormat);
 	const bool fullFboOverwrite =
-		owner.exposedTextureFbo.isAllocated() &&
-		static_cast<unsigned>(owner.exposedTextureFbo.getWidth()) == sourceWidth &&
-		static_cast<unsigned>(owner.exposedTextureFbo.getHeight()) == sourceHeight;
-	owner.exposedTextureFbo.begin();
+		owner.videoResourceRuntime.exposedTextureFbo.isAllocated() &&
+		static_cast<unsigned>(owner.videoResourceRuntime.exposedTextureFbo.getWidth()) == sourceWidth &&
+		static_cast<unsigned>(owner.videoResourceRuntime.exposedTextureFbo.getHeight()) == sourceHeight;
+	owner.videoResourceRuntime.exposedTextureFbo.begin();
 	if (!fullFboOverwrite) {
 		ofClear(0, 0, 0, 255);
 	}
@@ -1438,17 +1438,17 @@ void ofxVlc4::VideoComponent::refreshExposedTextureLocked(const VideoStateInfo &
 	ofSetColor(255, 255, 255, 255);
 	if (usesShaderVideoAdjustments()) {
 		ensureVideoAdjustShaderLoaded();
-		if (owner.videoAdjustShaderReady) {
-			owner.videoAdjustShader.begin();
-			owner.videoAdjustShader.setUniformTexture("tex0", owner.videoTexture, 0);
-			owner.videoAdjustShader.setUniform1f("brightness", owner.videoAdjustBrightness);
-			owner.videoAdjustShader.setUniform1f("contrast", owner.videoAdjustContrast);
-			owner.videoAdjustShader.setUniform1f("saturation", owner.videoAdjustSaturation);
-			owner.videoAdjustShader.setUniform1f("gammaValue", owner.videoAdjustGamma);
-			owner.videoAdjustShader.setUniform1f("hueDegrees", owner.videoAdjustHue);
+		if (owner.videoResourceRuntime.videoAdjustShaderReady) {
+			owner.videoResourceRuntime.videoAdjustShader.begin();
+			owner.videoResourceRuntime.videoAdjustShader.setUniformTexture("tex0", owner.videoResourceRuntime.videoTexture, 0);
+			owner.videoResourceRuntime.videoAdjustShader.setUniform1f("brightness", owner.effectsRuntime.videoAdjustBrightness);
+			owner.videoResourceRuntime.videoAdjustShader.setUniform1f("contrast", owner.effectsRuntime.videoAdjustContrast);
+			owner.videoResourceRuntime.videoAdjustShader.setUniform1f("saturation", owner.effectsRuntime.videoAdjustSaturation);
+			owner.videoResourceRuntime.videoAdjustShader.setUniform1f("gammaValue", owner.effectsRuntime.videoAdjustGamma);
+			owner.videoResourceRuntime.videoAdjustShader.setUniform1f("hueDegrees", owner.effectsRuntime.videoAdjustHue);
 		}
 	}
-	owner.videoTexture.drawSubsection(
+	owner.videoResourceRuntime.videoTexture.drawSubsection(
 		0.0f,
 		0.0f,
 		static_cast<float>(sourceWidth),
@@ -1457,16 +1457,16 @@ void ofxVlc4::VideoComponent::refreshExposedTextureLocked(const VideoStateInfo &
 		0.0f,
 		static_cast<float>(sourceWidth),
 		static_cast<float>(sourceHeight));
-	if (usesShaderVideoAdjustments() && owner.videoAdjustShaderReady) {
-		owner.videoAdjustShader.end();
+	if (usesShaderVideoAdjustments() && owner.videoResourceRuntime.videoAdjustShaderReady) {
+		owner.videoResourceRuntime.videoAdjustShader.end();
 	}
 	ofPopStyle();
-	owner.exposedTextureFbo.end();
+	owner.videoResourceRuntime.exposedTextureFbo.end();
 }
 
 void ofxVlc4::VideoComponent::refreshExposedTexture() {
 	const VideoStateInfo state = getVideoStateInfo();
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
 	refreshExposedTextureLocked(state);
 }
 
@@ -1475,7 +1475,7 @@ void ofxVlc4::VideoComponent::draw(float x, float y, float width, float height) 
 		return;
 	}
 	const VideoStateInfo state = getVideoStateInfo();
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
 	drawCurrentFrame(state, x, y, width, height);
 }
 
@@ -1484,7 +1484,7 @@ void ofxVlc4::VideoComponent::draw(float x, float y) {
 		return;
 	}
 	const VideoStateInfo state = getVideoStateInfo();
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
 	const float displayHeight = static_cast<float>(state.sourceHeight);
 	const float displayWidth =
 		(displayHeight > 0.0f) ? (displayHeight * std::max(state.displayAspectRatio, 0.0001f)) : static_cast<float>(state.sourceWidth);
@@ -1492,37 +1492,37 @@ void ofxVlc4::VideoComponent::draw(float x, float y) {
 }
 
 ofxVlc4::VideoHdrMetadataInfo ofxVlc4::VideoComponent::getVideoHdrMetadata() const {
-	std::lock_guard<std::mutex> lock(owner.videoMutex);
-	return owner.videoHdrMetadata;
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.videoMutex);
+	return owner.analysisRuntime.videoHdrMetadata;
 }
 
 float ofxVlc4::VideoComponent::getVideoScale() const {
-	return owner.videoScale;
+	return owner.videoPresentationRuntime.videoScale;
 }
 
 void ofxVlc4::VideoComponent::setVideoScale(float scale) {
 	const float clampedScale = ofClamp(scale, 0.25f, 4.0f);
-	if (std::abs(owner.videoScale - clampedScale) < 0.0001f) {
+	if (std::abs(owner.videoPresentationRuntime.videoScale - clampedScale) < 0.0001f) {
 		return;
 	}
 
-	owner.videoScale = clampedScale;
-	owner.videoDisplayFitMode = VideoDisplayFitMode::Scale;
+	owner.videoPresentationRuntime.videoScale = clampedScale;
+	owner.videoPresentationRuntime.videoDisplayFitMode = VideoDisplayFitMode::Scale;
 	applyVideoScaleAndFit();
 	owner.setStatus("Video scale set.");
-	owner.logNotice("Video scale: " + ofToString(owner.videoScale, 2) + "x.");
+	owner.logNotice("Video scale: " + ofToString(owner.videoPresentationRuntime.videoScale, 2) + "x.");
 }
 
 ofxVlc4::VideoProjectionMode ofxVlc4::VideoComponent::getVideoProjectionMode() const {
-	return owner.videoProjectionMode;
+	return owner.videoPresentationRuntime.videoProjectionMode;
 }
 
 void ofxVlc4::VideoComponent::setVideoProjectionMode(VideoProjectionMode mode) {
-	if (owner.videoProjectionMode == mode) {
+	if (owner.videoPresentationRuntime.videoProjectionMode == mode) {
 		return;
 	}
 
-	owner.videoProjectionMode = mode;
+	owner.videoPresentationRuntime.videoProjectionMode = mode;
 	applyVideoProjectionMode();
 	std::string modeLabel = "Auto";
 	switch (mode) {
@@ -1544,15 +1544,15 @@ void ofxVlc4::VideoComponent::setVideoProjectionMode(VideoProjectionMode mode) {
 }
 
 ofxVlc4::VideoStereoMode ofxVlc4::VideoComponent::getVideoStereoMode() const {
-	return owner.videoStereoMode;
+	return owner.videoPresentationRuntime.videoStereoMode;
 }
 
 void ofxVlc4::VideoComponent::setVideoStereoMode(VideoStereoMode mode) {
-	if (owner.videoStereoMode == mode) {
+	if (owner.videoPresentationRuntime.videoStereoMode == mode) {
 		return;
 	}
 
-	owner.videoStereoMode = mode;
+	owner.videoPresentationRuntime.videoStereoMode = mode;
 	applyVideoStereoMode();
 	std::string modeLabel = "Auto";
 	switch (mode) {
@@ -1577,284 +1577,284 @@ void ofxVlc4::VideoComponent::setVideoStereoMode(VideoStereoMode mode) {
 }
 
 float ofxVlc4::VideoComponent::getVideoYaw() const {
-	return owner.videoViewYaw;
+	return owner.videoPresentationRuntime.videoViewYaw;
 }
 
 float ofxVlc4::VideoComponent::getVideoPitch() const {
-	return owner.videoViewPitch;
+	return owner.videoPresentationRuntime.videoViewPitch;
 }
 
 float ofxVlc4::VideoComponent::getVideoRoll() const {
-	return owner.videoViewRoll;
+	return owner.videoPresentationRuntime.videoViewRoll;
 }
 
 float ofxVlc4::VideoComponent::getVideoFov() const {
-	return owner.videoViewFov;
+	return owner.videoPresentationRuntime.videoViewFov;
 }
 
 void ofxVlc4::VideoComponent::setVideoViewpoint(float yaw, float pitch, float roll, float fov, bool absolute) {
-	owner.videoViewYaw = ofClamp(yaw, -180.0f, 180.0f);
-	owner.videoViewPitch = ofClamp(pitch, -90.0f, 90.0f);
-	owner.videoViewRoll = ofClamp(roll, -180.0f, 180.0f);
-	owner.videoViewFov = ofClamp(fov, 1.0f, 179.0f);
+	owner.videoPresentationRuntime.videoViewYaw = ofClamp(yaw, -180.0f, 180.0f);
+	owner.videoPresentationRuntime.videoViewPitch = ofClamp(pitch, -90.0f, 90.0f);
+	owner.videoPresentationRuntime.videoViewRoll = ofClamp(roll, -180.0f, 180.0f);
+	owner.videoPresentationRuntime.videoViewFov = ofClamp(fov, 1.0f, 179.0f);
 	applyVideoViewpoint(absolute);
 }
 
 void ofxVlc4::VideoComponent::resetVideoViewpoint() {
-	owner.videoViewYaw = 0.0f;
-	owner.videoViewPitch = 0.0f;
-	owner.videoViewRoll = 0.0f;
-	owner.videoViewFov = 80.0f;
+	owner.videoPresentationRuntime.videoViewYaw = 0.0f;
+	owner.videoPresentationRuntime.videoViewPitch = 0.0f;
+	owner.videoPresentationRuntime.videoViewRoll = 0.0f;
+	owner.videoPresentationRuntime.videoViewFov = 80.0f;
 	applyVideoViewpoint();
 	owner.setStatus("3D view reset.");
 	owner.logNotice("3D view reset.");
 }
 
 bool ofxVlc4::VideoComponent::isMarqueeEnabled() const {
-	return owner.marqueeEnabled;
+	return owner.overlayRuntime.marqueeEnabled;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeEnabled(bool enabled) {
-	if (owner.marqueeEnabled == enabled) {
+	if (owner.overlayRuntime.marqueeEnabled == enabled) {
 		return;
 	}
 
-	owner.marqueeEnabled = enabled;
+	owner.overlayRuntime.marqueeEnabled = enabled;
 	applyVideoMarquee();
-	owner.setStatus(std::string("Marquee ") + (owner.marqueeEnabled ? "enabled." : "disabled."));
+	owner.setStatus(std::string("Marquee ") + (owner.overlayRuntime.marqueeEnabled ? "enabled." : "disabled."));
 }
 
 std::string ofxVlc4::VideoComponent::getMarqueeText() const {
-	return owner.marqueeText;
+	return owner.overlayRuntime.marqueeText;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeText(const std::string & text) {
-	if (owner.marqueeText == text) {
+	if (owner.overlayRuntime.marqueeText == text) {
 		return;
 	}
 
-	owner.marqueeText = text;
+	owner.overlayRuntime.marqueeText = text;
 	applyVideoMarquee();
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getMarqueePosition() const {
-	return owner.marqueePosition;
+	return owner.overlayRuntime.marqueePosition;
 }
 
 void ofxVlc4::VideoComponent::setMarqueePosition(OverlayPosition position) {
-	if (owner.marqueePosition == position) {
+	if (owner.overlayRuntime.marqueePosition == position) {
 		return;
 	}
 
-	owner.marqueePosition = position;
+	owner.overlayRuntime.marqueePosition = position;
 	applyVideoMarquee();
 }
 
 int ofxVlc4::VideoComponent::getMarqueeOpacity() const {
-	return owner.marqueeOpacity;
+	return owner.overlayRuntime.marqueeOpacity;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeOpacity(int opacity) {
 	const int clampedOpacity = ofClamp(opacity, 0, 255);
-	if (owner.marqueeOpacity == clampedOpacity) {
+	if (owner.overlayRuntime.marqueeOpacity == clampedOpacity) {
 		return;
 	}
 
-	owner.marqueeOpacity = clampedOpacity;
+	owner.overlayRuntime.marqueeOpacity = clampedOpacity;
 	applyVideoMarquee();
 }
 
 int ofxVlc4::VideoComponent::getMarqueeSize() const {
-	return owner.marqueeSize;
+	return owner.overlayRuntime.marqueeSize;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeSize(int size) {
 	const int clampedSize = ofClamp(size, 6, 96);
-	if (owner.marqueeSize == clampedSize) {
+	if (owner.overlayRuntime.marqueeSize == clampedSize) {
 		return;
 	}
 
-	owner.marqueeSize = clampedSize;
+	owner.overlayRuntime.marqueeSize = clampedSize;
 	applyVideoMarquee();
 }
 
 int ofxVlc4::VideoComponent::getMarqueeColor() const {
-	return owner.marqueeColor;
+	return owner.overlayRuntime.marqueeColor;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeColor(int color) {
 	const int clampedColor = clampPackedRgbColor(color);
-	if (owner.marqueeColor == clampedColor) {
+	if (owner.overlayRuntime.marqueeColor == clampedColor) {
 		return;
 	}
 
-	owner.marqueeColor = clampedColor;
+	owner.overlayRuntime.marqueeColor = clampedColor;
 	applyVideoMarquee();
 }
 
 int ofxVlc4::VideoComponent::getMarqueeRefresh() const {
-	return owner.marqueeRefresh;
+	return owner.overlayRuntime.marqueeRefresh;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeRefresh(int refreshMs) {
 	const int clampedRefreshMs = ofClamp(refreshMs, 0, 10000);
-	if (owner.marqueeRefresh == clampedRefreshMs) {
+	if (owner.overlayRuntime.marqueeRefresh == clampedRefreshMs) {
 		return;
 	}
 
-	owner.marqueeRefresh = clampedRefreshMs;
+	owner.overlayRuntime.marqueeRefresh = clampedRefreshMs;
 	applyVideoMarquee();
 }
 
 int ofxVlc4::VideoComponent::getMarqueeTimeout() const {
-	return owner.marqueeTimeout;
+	return owner.overlayRuntime.marqueeTimeout;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeTimeout(int timeoutMs) {
 	const int clampedTimeoutMs = ofClamp(timeoutMs, 0, 10000);
-	if (owner.marqueeTimeout == clampedTimeoutMs) {
+	if (owner.overlayRuntime.marqueeTimeout == clampedTimeoutMs) {
 		return;
 	}
 
-	owner.marqueeTimeout = clampedTimeoutMs;
+	owner.overlayRuntime.marqueeTimeout = clampedTimeoutMs;
 	applyVideoMarquee();
 }
 
 int ofxVlc4::VideoComponent::getMarqueeX() const {
-	return owner.marqueeX;
+	return owner.overlayRuntime.marqueeX;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeX(int x) {
 	const int clampedX = ofClamp(x, -4096, 4096);
-	if (owner.marqueeX == clampedX) {
+	if (owner.overlayRuntime.marqueeX == clampedX) {
 		return;
 	}
 
-	owner.marqueeX = clampedX;
+	owner.overlayRuntime.marqueeX = clampedX;
 	applyVideoMarquee();
 }
 
 int ofxVlc4::VideoComponent::getMarqueeY() const {
-	return owner.marqueeY;
+	return owner.overlayRuntime.marqueeY;
 }
 
 void ofxVlc4::VideoComponent::setMarqueeY(int y) {
 	const int clampedY = ofClamp(y, -4096, 4096);
-	if (owner.marqueeY == clampedY) {
+	if (owner.overlayRuntime.marqueeY == clampedY) {
 		return;
 	}
 
-	owner.marqueeY = clampedY;
+	owner.overlayRuntime.marqueeY = clampedY;
 	applyVideoMarquee();
 }
 
 bool ofxVlc4::VideoComponent::isLogoEnabled() const {
-	return owner.logoEnabled;
+	return owner.overlayRuntime.logoEnabled;
 }
 
 void ofxVlc4::VideoComponent::setLogoEnabled(bool enabled) {
-	if (owner.logoEnabled == enabled) {
+	if (owner.overlayRuntime.logoEnabled == enabled) {
 		return;
 	}
 
-	owner.logoEnabled = enabled;
+	owner.overlayRuntime.logoEnabled = enabled;
 	applyVideoLogo();
-	owner.setStatus(std::string("Logo ") + (owner.logoEnabled ? "enabled." : "disabled."));
+	owner.setStatus(std::string("Logo ") + (owner.overlayRuntime.logoEnabled ? "enabled." : "disabled."));
 }
 
 std::string ofxVlc4::VideoComponent::getLogoPath() const {
-	return owner.logoPath;
+	return owner.overlayRuntime.logoPath;
 }
 
 void ofxVlc4::VideoComponent::setLogoPath(const std::string & path) {
-	if (owner.logoPath == path) {
+	if (owner.overlayRuntime.logoPath == path) {
 		return;
 	}
 
-	owner.logoPath = path;
+	owner.overlayRuntime.logoPath = path;
 	applyVideoLogo();
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getLogoPosition() const {
-	return owner.logoPosition;
+	return owner.overlayRuntime.logoPosition;
 }
 
 void ofxVlc4::VideoComponent::setLogoPosition(OverlayPosition position) {
-	if (owner.logoPosition == position) {
+	if (owner.overlayRuntime.logoPosition == position) {
 		return;
 	}
 
-	owner.logoPosition = position;
+	owner.overlayRuntime.logoPosition = position;
 	applyVideoLogo();
 }
 
 int ofxVlc4::VideoComponent::getLogoOpacity() const {
-	return owner.logoOpacity;
+	return owner.overlayRuntime.logoOpacity;
 }
 
 void ofxVlc4::VideoComponent::setLogoOpacity(int opacity) {
 	const int clampedOpacity = ofClamp(opacity, 0, 255);
-	if (owner.logoOpacity == clampedOpacity) {
+	if (owner.overlayRuntime.logoOpacity == clampedOpacity) {
 		return;
 	}
 
-	owner.logoOpacity = clampedOpacity;
+	owner.overlayRuntime.logoOpacity = clampedOpacity;
 	applyVideoLogo();
 }
 
 int ofxVlc4::VideoComponent::getLogoX() const {
-	return owner.logoX;
+	return owner.overlayRuntime.logoX;
 }
 
 void ofxVlc4::VideoComponent::setLogoX(int x) {
 	const int clampedX = ofClamp(x, -4096, 4096);
-	if (owner.logoX == clampedX) {
+	if (owner.overlayRuntime.logoX == clampedX) {
 		return;
 	}
 
-	owner.logoX = clampedX;
+	owner.overlayRuntime.logoX = clampedX;
 	applyVideoLogo();
 }
 
 int ofxVlc4::VideoComponent::getLogoY() const {
-	return owner.logoY;
+	return owner.overlayRuntime.logoY;
 }
 
 void ofxVlc4::VideoComponent::setLogoY(int y) {
 	const int clampedY = ofClamp(y, -4096, 4096);
-	if (owner.logoY == clampedY) {
+	if (owner.overlayRuntime.logoY == clampedY) {
 		return;
 	}
 
-	owner.logoY = clampedY;
+	owner.overlayRuntime.logoY = clampedY;
 	applyVideoLogo();
 }
 
 int ofxVlc4::VideoComponent::getLogoDelay() const {
-	return owner.logoDelay;
+	return owner.overlayRuntime.logoDelay;
 }
 
 void ofxVlc4::VideoComponent::setLogoDelay(int delayMs) {
 	const int clampedDelayMs = ofClamp(delayMs, 0, 10000);
-	if (owner.logoDelay == clampedDelayMs) {
+	if (owner.overlayRuntime.logoDelay == clampedDelayMs) {
 		return;
 	}
 
-	owner.logoDelay = clampedDelayMs;
+	owner.overlayRuntime.logoDelay = clampedDelayMs;
 	applyVideoLogo();
 }
 
 int ofxVlc4::VideoComponent::getLogoRepeat() const {
-	return owner.logoRepeat;
+	return owner.overlayRuntime.logoRepeat;
 }
 
 void ofxVlc4::VideoComponent::setLogoRepeat(int repeat) {
 	const int clampedRepeat = ofClamp(repeat, -1, 100);
-	if (owner.logoRepeat == clampedRepeat) {
+	if (owner.overlayRuntime.logoRepeat == clampedRepeat) {
 		return;
 	}
 
-	owner.logoRepeat = clampedRepeat;
+	owner.overlayRuntime.logoRepeat = clampedRepeat;
 	applyVideoLogo();
 }
 
@@ -1862,16 +1862,16 @@ int ofxVlc4::VideoComponent::getTeletextPage() const {
 	if (libvlc_media_player_t * player = owner.sessionPlayer()) {
 		return libvlc_video_get_teletext(player);
 	}
-	return owner.teletextPage;
+	return owner.videoPresentationRuntime.teletextPage;
 }
 
 void ofxVlc4::VideoComponent::setTeletextPage(int page) {
 	const int clampedPage = ofClamp(page, 0, 999);
-	if (owner.teletextPage == clampedPage) {
+	if (owner.videoPresentationRuntime.teletextPage == clampedPage) {
 		return;
 	}
 
-	owner.teletextPage = clampedPage;
+	owner.videoPresentationRuntime.teletextPage = clampedPage;
 	applyTeletextSettings();
 	media().refreshSubtitleStateInfo();
 }
@@ -1880,15 +1880,15 @@ bool ofxVlc4::VideoComponent::isTeletextTransparencyEnabled() const {
 	if (libvlc_media_player_t * player = owner.sessionPlayer()) {
 		return libvlc_video_get_teletext_transparency(player);
 	}
-	return owner.teletextTransparencyEnabled;
+	return owner.videoPresentationRuntime.teletextTransparencyEnabled;
 }
 
 void ofxVlc4::VideoComponent::setTeletextTransparencyEnabled(bool enabled) {
-	if (owner.teletextTransparencyEnabled == enabled) {
+	if (owner.videoPresentationRuntime.teletextTransparencyEnabled == enabled) {
 		return;
 	}
 
-	owner.teletextTransparencyEnabled = enabled;
+	owner.videoPresentationRuntime.teletextTransparencyEnabled = enabled;
 	applyTeletextSettings();
 	media().refreshSubtitleStateInfo();
 }
@@ -1903,14 +1903,14 @@ void ofxVlc4::VideoComponent::sendTeletextKey(TeletextKey key) {
 }
 
 bool ofxVlc4::VideoComponent::isKeyInputEnabled() const {
-	return owner.keyInputEnabled;
+	return owner.playerConfigRuntime.keyInputEnabled;
 }
 
 void ofxVlc4::VideoComponent::setKeyInputEnabled(bool enabled) {
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	setInputHandlingEnabled(
 		player,
-		owner.keyInputEnabled,
+		owner.playerConfigRuntime.keyInputEnabled,
 		enabled,
 		"Video key input ",
 		libvlc_video_set_key_input,
@@ -1918,14 +1918,14 @@ void ofxVlc4::VideoComponent::setKeyInputEnabled(bool enabled) {
 }
 
 bool ofxVlc4::VideoComponent::isMouseInputEnabled() const {
-	return owner.mouseInputEnabled;
+	return owner.playerConfigRuntime.mouseInputEnabled;
 }
 
 void ofxVlc4::VideoComponent::setMouseInputEnabled(bool enabled) {
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	setInputHandlingEnabled(
 		player,
-		owner.mouseInputEnabled,
+		owner.playerConfigRuntime.mouseInputEnabled,
 		enabled,
 		"Video mouse input ",
 		libvlc_video_set_mouse_input,
@@ -1933,60 +1933,60 @@ void ofxVlc4::VideoComponent::setMouseInputEnabled(bool enabled) {
 }
 
 bool ofxVlc4::VideoComponent::isVlcFullscreenEnabled() const {
-	return owner.vlcFullscreenEnabled;
+	return owner.videoPresentationRuntime.vlcFullscreenEnabled;
 }
 
 void ofxVlc4::VideoComponent::setVlcFullscreenEnabled(bool enabled) {
-	if (owner.vlcFullscreenEnabled == enabled) {
+	if (owner.videoPresentationRuntime.vlcFullscreenEnabled == enabled) {
 		return;
 	}
 
-	owner.vlcFullscreenEnabled = enabled;
+	owner.videoPresentationRuntime.vlcFullscreenEnabled = enabled;
 	applyVlcFullscreen();
-	owner.logNotice(std::string("libVLC fullscreen ") + (owner.vlcFullscreenEnabled ? "enabled." : "disabled."));
+	owner.logNotice(std::string("libVLC fullscreen ") + (owner.videoPresentationRuntime.vlcFullscreenEnabled ? "enabled." : "disabled."));
 }
 
 void ofxVlc4::VideoComponent::toggleVlcFullscreen() {
-	setVlcFullscreenEnabled(!owner.vlcFullscreenEnabled);
+	setVlcFullscreenEnabled(!owner.videoPresentationRuntime.vlcFullscreenEnabled);
 }
 
 bool ofxVlc4::VideoComponent::isVideoTitleDisplayEnabled() const {
-	return owner.videoTitleDisplayEnabled;
+	return owner.videoPresentationRuntime.videoTitleDisplayEnabled;
 }
 
 void ofxVlc4::VideoComponent::setVideoTitleDisplayEnabled(bool enabled) {
-	if (owner.videoTitleDisplayEnabled == enabled) {
+	if (owner.videoPresentationRuntime.videoTitleDisplayEnabled == enabled) {
 		return;
 	}
 
-	owner.videoTitleDisplayEnabled = enabled;
+	owner.videoPresentationRuntime.videoTitleDisplayEnabled = enabled;
 	applyVideoTitleDisplay();
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getVideoTitleDisplayPosition() const {
-	return owner.videoTitleDisplayPosition;
+	return owner.videoPresentationRuntime.videoTitleDisplayPosition;
 }
 
 void ofxVlc4::VideoComponent::setVideoTitleDisplayPosition(OverlayPosition position) {
-	if (owner.videoTitleDisplayPosition == position) {
+	if (owner.videoPresentationRuntime.videoTitleDisplayPosition == position) {
 		return;
 	}
 
-	owner.videoTitleDisplayPosition = position;
+	owner.videoPresentationRuntime.videoTitleDisplayPosition = position;
 	applyVideoTitleDisplay();
 }
 
 unsigned ofxVlc4::VideoComponent::getVideoTitleDisplayTimeoutMs() const {
-	return owner.videoTitleDisplayTimeoutMs;
+	return owner.videoPresentationRuntime.videoTitleDisplayTimeoutMs;
 }
 
 void ofxVlc4::VideoComponent::setVideoTitleDisplayTimeoutMs(unsigned timeoutMs) {
 	const unsigned clampedTimeoutMs = std::min(timeoutMs, 60000u);
-	if (owner.videoTitleDisplayTimeoutMs == clampedTimeoutMs) {
+	if (owner.videoPresentationRuntime.videoTitleDisplayTimeoutMs == clampedTimeoutMs) {
 		return;
 	}
 
-	owner.videoTitleDisplayTimeoutMs = clampedTimeoutMs;
+	owner.videoPresentationRuntime.videoTitleDisplayTimeoutMs = clampedTimeoutMs;
 	applyVideoTitleDisplay();
 }
 
@@ -2008,192 +2008,192 @@ bool ofxVlc4::VideoComponent::getCursorPosition(int & x, int & y) const {
 }
 
 bool ofxVlc4::VideoComponent::isVideoAdjustmentsEnabled() const {
-	return owner.videoAdjustmentsEnabled;
+	return owner.effectsRuntime.videoAdjustmentsEnabled;
 }
 
 void ofxVlc4::VideoComponent::setVideoAdjustmentsEnabled(bool enabled) {
-	if (owner.videoAdjustmentsEnabled == enabled) {
+	if (owner.effectsRuntime.videoAdjustmentsEnabled == enabled) {
 		return;
 	}
 
-	owner.videoAdjustmentsEnabled = enabled;
+	owner.effectsRuntime.videoAdjustmentsEnabled = enabled;
 	applyOrQueueVideoAdjustments();
 	owner.setStatus(std::string("Video adjustments ") + (enabled ? "enabled." : "disabled."));
 }
 
 ofxVlc4::VideoAdjustmentEngine ofxVlc4::VideoComponent::getVideoAdjustmentEngine() const {
-	return owner.videoAdjustmentEngine;
+	return owner.effectsRuntime.videoAdjustmentEngine;
 }
 
 ofxVlc4::VideoAdjustmentEngine ofxVlc4::VideoComponent::getActiveVideoAdjustmentEngine() const {
-	return owner.activeVideoAdjustmentEngine;
+	return owner.effectsRuntime.activeVideoAdjustmentEngine;
 }
 
 void ofxVlc4::VideoComponent::setVideoAdjustmentEngine(ofxVlc4::VideoAdjustmentEngine engine) {
 	const ofxVlc4::VideoAdjustmentEngine normalizedEngine = engine;
-	if (owner.videoAdjustmentEngine == normalizedEngine) {
+	if (owner.effectsRuntime.videoAdjustmentEngine == normalizedEngine) {
 		return;
 	}
 
-	owner.videoAdjustmentEngine = normalizedEngine;
+	owner.effectsRuntime.videoAdjustmentEngine = normalizedEngine;
 	applyOrQueueVideoAdjustments();
-	owner.setStatus(std::string("Video adjustment engine: ") + videoAdjustmentEngineLabel(owner.activeVideoAdjustmentEngine) + ".");
+	owner.setStatus(std::string("Video adjustment engine: ") + videoAdjustmentEngineLabel(owner.effectsRuntime.activeVideoAdjustmentEngine) + ".");
 }
 
 float ofxVlc4::VideoComponent::getVideoContrast() const {
-	return owner.videoAdjustContrast;
+	return owner.effectsRuntime.videoAdjustContrast;
 }
 
 void ofxVlc4::VideoComponent::setVideoContrast(float contrast) {
 	const float clampedContrast = ofClamp(contrast, 0.0f, 4.0f);
-	if (std::abs(owner.videoAdjustContrast - clampedContrast) < 0.0001f) {
+	if (std::abs(owner.effectsRuntime.videoAdjustContrast - clampedContrast) < 0.0001f) {
 		return;
 	}
 
-	owner.videoAdjustContrast = clampedContrast;
-	owner.videoAdjustmentsEnabled = true;
+	owner.effectsRuntime.videoAdjustContrast = clampedContrast;
+	owner.effectsRuntime.videoAdjustmentsEnabled = true;
 	applyOrQueueVideoAdjustments();
 }
 
 float ofxVlc4::VideoComponent::getVideoBrightness() const {
-	return owner.videoAdjustBrightness;
+	return owner.effectsRuntime.videoAdjustBrightness;
 }
 
 void ofxVlc4::VideoComponent::setVideoBrightness(float brightness) {
 	const float clampedBrightness = ofClamp(brightness, 0.0f, 4.0f);
-	if (std::abs(owner.videoAdjustBrightness - clampedBrightness) < 0.0001f) {
+	if (std::abs(owner.effectsRuntime.videoAdjustBrightness - clampedBrightness) < 0.0001f) {
 		return;
 	}
 
-	owner.videoAdjustBrightness = clampedBrightness;
-	owner.videoAdjustmentsEnabled = true;
+	owner.effectsRuntime.videoAdjustBrightness = clampedBrightness;
+	owner.effectsRuntime.videoAdjustmentsEnabled = true;
 	applyOrQueueVideoAdjustments();
 }
 
 float ofxVlc4::VideoComponent::getVideoHue() const {
-	return owner.videoAdjustHue;
+	return owner.effectsRuntime.videoAdjustHue;
 }
 
 void ofxVlc4::VideoComponent::setVideoHue(float hue) {
 	const float wrappedHue = std::fmod(hue, 360.0f);
 	const float normalizedHue = wrappedHue < 0.0f ? (wrappedHue + 360.0f) : wrappedHue;
-	if (std::abs(owner.videoAdjustHue - normalizedHue) < 0.0001f) {
+	if (std::abs(owner.effectsRuntime.videoAdjustHue - normalizedHue) < 0.0001f) {
 		return;
 	}
 
-	owner.videoAdjustHue = normalizedHue;
-	owner.videoAdjustmentsEnabled = true;
+	owner.effectsRuntime.videoAdjustHue = normalizedHue;
+	owner.effectsRuntime.videoAdjustmentsEnabled = true;
 	applyOrQueueVideoAdjustments();
 }
 
 float ofxVlc4::VideoComponent::getVideoSaturation() const {
-	return owner.videoAdjustSaturation;
+	return owner.effectsRuntime.videoAdjustSaturation;
 }
 
 void ofxVlc4::VideoComponent::setVideoSaturation(float saturation) {
 	const float clampedSaturation = ofClamp(saturation, 0.0f, 4.0f);
-	if (std::abs(owner.videoAdjustSaturation - clampedSaturation) < 0.0001f) {
+	if (std::abs(owner.effectsRuntime.videoAdjustSaturation - clampedSaturation) < 0.0001f) {
 		return;
 	}
 
-	owner.videoAdjustSaturation = clampedSaturation;
-	owner.videoAdjustmentsEnabled = true;
+	owner.effectsRuntime.videoAdjustSaturation = clampedSaturation;
+	owner.effectsRuntime.videoAdjustmentsEnabled = true;
 	applyOrQueueVideoAdjustments();
 }
 
 float ofxVlc4::VideoComponent::getVideoGamma() const {
-	return owner.videoAdjustGamma;
+	return owner.effectsRuntime.videoAdjustGamma;
 }
 
 void ofxVlc4::VideoComponent::setVideoGamma(float gamma) {
 	const float clampedGamma = ofClamp(gamma, 0.01f, 10.0f);
-	if (std::abs(owner.videoAdjustGamma - clampedGamma) < 0.0001f) {
+	if (std::abs(owner.effectsRuntime.videoAdjustGamma - clampedGamma) < 0.0001f) {
 		return;
 	}
 
-	owner.videoAdjustGamma = clampedGamma;
-	owner.videoAdjustmentsEnabled = true;
+	owner.effectsRuntime.videoAdjustGamma = clampedGamma;
+	owner.effectsRuntime.videoAdjustmentsEnabled = true;
 	applyOrQueueVideoAdjustments();
 }
 
 ofxVlc4::VideoDeinterlaceMode ofxVlc4::VideoComponent::getVideoDeinterlaceMode() const {
-	return owner.videoDeinterlaceMode;
+	return owner.videoPresentationRuntime.videoDeinterlaceMode;
 }
 
 void ofxVlc4::VideoComponent::setVideoDeinterlaceMode(VideoDeinterlaceMode mode) {
-	if (owner.videoDeinterlaceMode == mode) {
+	if (owner.videoPresentationRuntime.videoDeinterlaceMode == mode) {
 		return;
 	}
 
-	owner.videoDeinterlaceMode = mode;
+	owner.videoPresentationRuntime.videoDeinterlaceMode = mode;
 	applyVideoDeinterlace();
 	owner.setStatus("Video deinterlace set.");
 	owner.logNotice(std::string("Video deinterlace: ") + videoDeinterlaceModeLabel(mode) + ".");
 }
 
 ofxVlc4::VideoAspectRatioMode ofxVlc4::VideoComponent::getVideoAspectRatioMode() const {
-	return owner.videoAspectRatioMode;
+	return owner.videoPresentationRuntime.videoAspectRatioMode;
 }
 
 void ofxVlc4::VideoComponent::setVideoAspectRatioMode(VideoAspectRatioMode mode) {
-	if (owner.videoAspectRatioMode == mode) {
+	if (owner.videoPresentationRuntime.videoAspectRatioMode == mode) {
 		return;
 	}
 
-	owner.videoAspectRatioMode = mode;
+	owner.videoPresentationRuntime.videoAspectRatioMode = mode;
 	applyVideoAspectRatio();
 	owner.setStatus("Video aspect ratio set.");
 	owner.logNotice(std::string("Video aspect ratio: ") + videoAspectRatioLabel(mode) + ".");
 }
 
 ofxVlc4::VideoCropMode ofxVlc4::VideoComponent::getVideoCropMode() const {
-	return owner.videoCropMode;
+	return owner.videoPresentationRuntime.videoCropMode;
 }
 
 void ofxVlc4::VideoComponent::setVideoCropMode(VideoCropMode mode) {
-	if (owner.videoCropMode == mode) {
+	if (owner.videoPresentationRuntime.videoCropMode == mode) {
 		return;
 	}
 
-	owner.videoCropMode = mode;
+	owner.videoPresentationRuntime.videoCropMode = mode;
 	applyVideoCrop();
 	owner.setStatus("Video crop set.");
 	owner.logNotice(std::string("Video crop: ") + videoCropLabel(mode) + ".");
 }
 
 ofxVlc4::VideoDisplayFitMode ofxVlc4::VideoComponent::getVideoDisplayFitMode() const {
-	return owner.videoDisplayFitMode;
+	return owner.videoPresentationRuntime.videoDisplayFitMode;
 }
 
 void ofxVlc4::VideoComponent::setVideoDisplayFitMode(VideoDisplayFitMode mode) {
-	if (owner.videoDisplayFitMode == mode) {
+	if (owner.videoPresentationRuntime.videoDisplayFitMode == mode) {
 		return;
 	}
 
-	owner.videoDisplayFitMode = mode;
+	owner.videoPresentationRuntime.videoDisplayFitMode = mode;
 	applyVideoScaleAndFit();
 	owner.setStatus("Video fit set.");
 	owner.logNotice("Video fit set.");
 }
 
 ofxVlc4::VideoOutputBackend ofxVlc4::VideoComponent::getVideoOutputBackend() const {
-	return owner.videoOutputBackend;
+	return owner.videoPresentationRuntime.videoOutputBackend;
 }
 
 ofxVlc4::VideoOutputBackend ofxVlc4::VideoComponent::getActiveVideoOutputBackend() const {
-	return owner.activeVideoOutputBackend;
+	return owner.videoPresentationRuntime.activeVideoOutputBackend;
 }
 
 ofxVlc4::PreferredDecoderDevice ofxVlc4::VideoComponent::getPreferredDecoderDevice() const {
-	return owner.preferredDecoderDevice;
+	return owner.videoPresentationRuntime.preferredDecoderDevice;
 }
 
 void ofxVlc4::VideoComponent::setVideoOutputBackend(VideoOutputBackend backend) {
-	if (owner.videoOutputBackend == backend) {
+	if (owner.videoPresentationRuntime.videoOutputBackend == backend) {
 		return;
 	}
 
-	owner.videoOutputBackend = backend;
+	owner.videoPresentationRuntime.videoOutputBackend = backend;
 	clearVideoHdrMetadata();
 
 	if (owner.sessionPlayer()) {
@@ -2207,11 +2207,11 @@ void ofxVlc4::VideoComponent::setVideoOutputBackend(VideoOutputBackend backend) 
 }
 
 void ofxVlc4::VideoComponent::setPreferredDecoderDevice(PreferredDecoderDevice device) {
-	if (owner.preferredDecoderDevice == device) {
+	if (owner.videoPresentationRuntime.preferredDecoderDevice == device) {
 		return;
 	}
 
-	owner.preferredDecoderDevice = device;
+	owner.videoPresentationRuntime.preferredDecoderDevice = device;
 	if (owner.sessionPlayer()) {
 		owner.logWarning(std::string("Preferred decoder hardware changes apply on the next player initialization: ") +
 			preferredDecoderDeviceLabel(device) + ".");
@@ -2220,12 +2220,12 @@ void ofxVlc4::VideoComponent::setPreferredDecoderDevice(PreferredDecoderDevice d
 }
 
 void ofxVlc4::VideoComponent::resetVideoAdjustments() {
-	owner.videoAdjustmentsEnabled = true;
-	owner.videoAdjustContrast = 1.0f;
-	owner.videoAdjustBrightness = 1.0f;
-	owner.videoAdjustHue = 0.0f;
-	owner.videoAdjustSaturation = 1.0f;
-	owner.videoAdjustGamma = 1.0f;
+	owner.effectsRuntime.videoAdjustmentsEnabled = true;
+	owner.effectsRuntime.videoAdjustContrast = 1.0f;
+	owner.effectsRuntime.videoAdjustBrightness = 1.0f;
+	owner.effectsRuntime.videoAdjustHue = 0.0f;
+	owner.effectsRuntime.videoAdjustSaturation = 1.0f;
+	owner.effectsRuntime.videoAdjustGamma = 1.0f;
 	applyOrQueueVideoAdjustments();
 	owner.setStatus("Video adjustments reset.");
 	owner.logNotice("Video adjustments reset.");
@@ -2256,23 +2256,23 @@ std::vector<ofxVlc4::VideoFilterInfo> ofxVlc4::VideoComponent::getVideoFilters()
 }
 
 std::string ofxVlc4::VideoComponent::getVideoFilterChain() const {
-	return owner.videoFilterChain;
+	return owner.playerConfigRuntime.videoFilterChain;
 }
 
 void ofxVlc4::VideoComponent::setVideoFilterChain(const std::string & filterChain) {
-	owner.videoFilterChain = trimWhitespace(filterChain);
+	owner.playerConfigRuntime.videoFilterChain = trimWhitespace(filterChain);
 	if (!owner.canApplyNativeVideoFilters()) {
-		if (owner.videoFilterChain.empty()) {
+		if (owner.playerConfigRuntime.videoFilterChain.empty()) {
 			owner.setStatus("Video filter chain cleared. NativeWindow backend is required to apply video filters.");
 			owner.logNotice("Video filter chain cleared.");
 		} else {
 			owner.setStatus("Video filter chain stored. Switch to NativeWindow backend and reload/play media to apply.");
-			owner.logNotice("Video filter chain stored: " + owner.videoFilterChain + ".");
+			owner.logNotice("Video filter chain stored: " + owner.playerConfigRuntime.videoFilterChain + ".");
 		}
 		return;
 	}
 
-	if (owner.videoFilterChain.empty()) {
+	if (owner.playerConfigRuntime.videoFilterChain.empty()) {
 		if (media().reapplyCurrentMediaForFilterChainChange("Video")) {
 			owner.logNotice("Video filter chain cleared.");
 			return;
@@ -2283,12 +2283,12 @@ void ofxVlc4::VideoComponent::setVideoFilterChain(const std::string & filterChai
 	}
 
 	if (media().reapplyCurrentMediaForFilterChainChange("Video")) {
-		owner.logNotice("Video filter chain: " + owner.videoFilterChain + ".");
+		owner.logNotice("Video filter chain: " + owner.playerConfigRuntime.videoFilterChain + ".");
 		return;
 	}
 
 	owner.setStatus("Video filter chain set. Reload media to apply.");
-	owner.logNotice("Video filter chain: " + owner.videoFilterChain + ".");
+	owner.logNotice("Video filter chain: " + owner.playerConfigRuntime.videoFilterChain + ".");
 }
 
 unsigned ofxVlc4::VideoComponent::getVideoOutputCount() const {
@@ -2296,7 +2296,7 @@ unsigned ofxVlc4::VideoComponent::getVideoOutputCount() const {
 	if (!player) {
 		return 0u;
 	}
-	return owner.playbackController->getCachedVideoOutputCount();
+	return owner.subsystemRuntime.playbackController->getCachedVideoOutputCount();
 }
 
 bool ofxVlc4::VideoComponent::hasVideoOutput() const {
@@ -2404,20 +2404,20 @@ void ofxVlc4::VideoComponent::refreshPixelAspectRatio() {
 	unsigned sarNum = 1;
 	unsigned sarDen = 1;
 	if (queryVideoTrackGeometry(trackWidth, trackHeight, sarNum, sarDen)) {
-		owner.pixelAspectNumerator.store(sarNum);
-		owner.pixelAspectDenominator.store(sarDen);
+		owner.videoGeometryRuntime.pixelAspectNumerator.store(sarNum);
+		owner.videoGeometryRuntime.pixelAspectDenominator.store(sarDen);
 		return;
 	}
 
-	owner.pixelAspectNumerator.store(1);
-	owner.pixelAspectDenominator.store(1);
+	owner.videoGeometryRuntime.pixelAspectNumerator.store(1);
+	owner.videoGeometryRuntime.pixelAspectDenominator.store(1);
 }
 
 void ofxVlc4::VideoComponent::refreshDisplayAspectRatio() {
-	const unsigned currentVideoWidth = owner.videoWidth.load();
-	const unsigned currentVideoHeight = owner.videoHeight.load();
+	const unsigned currentVideoWidth = owner.videoGeometryRuntime.videoWidth.load();
+	const unsigned currentVideoHeight = owner.videoGeometryRuntime.videoHeight.load();
 	if (currentVideoWidth == 0 || currentVideoHeight == 0) {
-		owner.displayAspectRatio.store(1.0f);
+		owner.videoGeometryRuntime.displayAspectRatio.store(1.0f);
 		return;
 	}
 
@@ -2434,67 +2434,67 @@ void ofxVlc4::VideoComponent::refreshDisplayAspectRatio() {
 		}
 	}
 
-	const unsigned sarNum = owner.pixelAspectNumerator.load();
-	const unsigned sarDen = owner.pixelAspectDenominator.load();
+	const unsigned sarNum = owner.videoGeometryRuntime.pixelAspectNumerator.load();
+	const unsigned sarDen = owner.videoGeometryRuntime.pixelAspectDenominator.load();
 	if (sarNum > 0 && sarDen > 0) {
 		aspect *= static_cast<float>(sarNum) / static_cast<float>(sarDen);
 	}
 
-	owner.displayAspectRatio.store(std::max(aspect, 0.0001f));
+	owner.videoGeometryRuntime.displayAspectRatio.store(std::max(aspect, 0.0001f));
 }
 
 ofTexture & ofxVlc4::VideoComponent::getTexture() {
-	if (owner.exposedTextureDirty.exchange(false)) {
+	if (owner.videoFrameRuntime.exposedTextureDirty.exchange(false)) {
 		refreshExposedTexture();
 	}
 
-	return owner.exposedTextureFbo.getTexture();
+	return owner.videoResourceRuntime.exposedTextureFbo.getTexture();
 }
 
 ofTexture & ofxVlc4::VideoComponent::getRenderTexture() {
-	return owner.videoTexture;
+	return owner.videoResourceRuntime.videoTexture;
 }
 
 ofxVlc4::VideoStateInfo ofxVlc4::VideoComponent::getVideoStateInfo() const {
 	VideoStateInfo state;
-	state.startupPrepared = owner.startupPlaybackStatePrepared.load();
-	state.loaded = owner.isVideoLoaded.load();
-	state.frameReceived = owner.hasReceivedVideoFrame.load();
-	state.trackCount = std::max(0, owner.cachedVideoTrackCount.load());
+	state.startupPrepared = owner.videoFrameRuntime.startupPlaybackStatePrepared.load();
+	state.loaded = owner.videoFrameRuntime.isVideoLoaded.load();
+	state.frameReceived = owner.videoFrameRuntime.hasReceivedVideoFrame.load();
+	state.trackCount = std::max(0, owner.stateCacheRuntime.cachedVideoTrackCount.load());
 	state.tracksAvailable = state.trackCount > 0;
-	state.sourceWidth = owner.videoWidth.load();
-	state.sourceHeight = owner.videoHeight.load();
-	state.renderWidth = owner.renderWidth.load();
-	state.renderHeight = owner.renderHeight.load();
+	state.sourceWidth = owner.videoGeometryRuntime.videoWidth.load();
+	state.sourceHeight = owner.videoGeometryRuntime.videoHeight.load();
+	state.renderWidth = owner.videoGeometryRuntime.renderWidth.load();
+	state.renderHeight = owner.videoGeometryRuntime.renderHeight.load();
 	state.geometryKnown = state.sourceWidth > 0 &&
 		state.sourceHeight > 0 &&
 		state.renderWidth > 0 &&
 		state.renderHeight > 0;
-	state.pixelAspectNumerator = owner.pixelAspectNumerator.load();
-	state.pixelAspectDenominator = owner.pixelAspectDenominator.load();
-	state.displayAspectRatio = owner.displayAspectRatio.load();
+	state.pixelAspectNumerator = owner.videoGeometryRuntime.pixelAspectNumerator.load();
+	state.pixelAspectDenominator = owner.videoGeometryRuntime.pixelAspectDenominator.load();
+	state.displayAspectRatio = owner.videoGeometryRuntime.displayAspectRatio.load();
 	state.videoOutputCount = getVideoOutputCount();
 	state.hasVideoOutput = state.videoOutputCount > 0u;
-	state.videoAdjustmentsEnabled = owner.videoAdjustmentsEnabled;
-	state.videoAdjustmentEngine = owner.videoAdjustmentEngine;
-	state.activeVideoAdjustmentEngine = owner.activeVideoAdjustmentEngine;
-	state.vlcFullscreenEnabled = owner.vlcFullscreenEnabled;
-	state.teletextTransparencyEnabled = owner.teletextTransparencyEnabled;
-	state.teletextPage = owner.teletextPage;
-	state.scale = owner.videoScale;
-	state.yaw = owner.videoViewYaw;
-	state.pitch = owner.videoViewPitch;
-	state.roll = owner.videoViewRoll;
-	state.fov = owner.videoViewFov;
-	state.deinterlaceMode = owner.videoDeinterlaceMode;
-	state.aspectRatioMode = owner.videoAspectRatioMode;
-	state.cropMode = owner.videoCropMode;
-	state.displayFitMode = owner.videoDisplayFitMode;
-	state.outputBackend = owner.videoOutputBackend;
-	state.activeOutputBackend = owner.activeVideoOutputBackend;
-	state.preferredDecoderDevice = owner.preferredDecoderDevice;
-	state.projectionMode = owner.videoProjectionMode;
-	state.stereoMode = owner.videoStereoMode;
+	state.videoAdjustmentsEnabled = owner.effectsRuntime.videoAdjustmentsEnabled;
+	state.videoAdjustmentEngine = owner.effectsRuntime.videoAdjustmentEngine;
+	state.activeVideoAdjustmentEngine = owner.effectsRuntime.activeVideoAdjustmentEngine;
+	state.vlcFullscreenEnabled = owner.videoPresentationRuntime.vlcFullscreenEnabled;
+	state.teletextTransparencyEnabled = owner.videoPresentationRuntime.teletextTransparencyEnabled;
+	state.teletextPage = owner.videoPresentationRuntime.teletextPage;
+	state.scale = owner.videoPresentationRuntime.videoScale;
+	state.yaw = owner.videoPresentationRuntime.videoViewYaw;
+	state.pitch = owner.videoPresentationRuntime.videoViewPitch;
+	state.roll = owner.videoPresentationRuntime.videoViewRoll;
+	state.fov = owner.videoPresentationRuntime.videoViewFov;
+	state.deinterlaceMode = owner.videoPresentationRuntime.videoDeinterlaceMode;
+	state.aspectRatioMode = owner.videoPresentationRuntime.videoAspectRatioMode;
+	state.cropMode = owner.videoPresentationRuntime.videoCropMode;
+	state.displayFitMode = owner.videoPresentationRuntime.videoDisplayFitMode;
+	state.outputBackend = owner.videoPresentationRuntime.videoOutputBackend;
+	state.activeOutputBackend = owner.videoPresentationRuntime.activeVideoOutputBackend;
+	state.preferredDecoderDevice = owner.videoPresentationRuntime.preferredDecoderDevice;
+	state.projectionMode = owner.videoPresentationRuntime.videoProjectionMode;
+	state.stereoMode = owner.videoPresentationRuntime.videoStereoMode;
 	state.hdrMetadata = getVideoHdrMetadata();
 	return state;
 }

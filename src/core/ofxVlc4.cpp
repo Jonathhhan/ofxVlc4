@@ -259,337 +259,100 @@ void logMultilineNotice(const std::string & text) {
 }
 
 void ofxVlc4::syncCoreSessionStateFromLegacy() {
-	if (!coreSession) {
+	if (!subsystemRuntime.coreSession) {
 		return;
 	}
 
-	coreSession->setInstance(libvlc);
-	coreSession->setMedia(media);
-	coreSession->setPlayer(mediaPlayer);
-	coreSession->setPlayerEvents(mediaPlayerEventManager);
-	coreSession->setMediaEvents(mediaEventManager);
-	coreSession->setMediaDiscoverer(mediaDiscoverer);
-	coreSession->setMediaDiscovererList(mediaDiscovererMediaList);
-	coreSession->setMediaDiscovererListEvents(mediaDiscovererMediaListEventManager);
-	coreSession->setRendererDiscoverer(rendererDiscoverer);
-	coreSession->setRendererDiscovererEvents(rendererDiscovererEventManager);
-	coreSession->setLoggingEnabled(libVlcLoggingEnabled);
-	coreSession->setLogFileEnabled(libVlcLogFileEnabled);
-	coreSession->setLogFilePath(libVlcLogFilePath);
-	coreSession->setLogFileHandle(libVlcLogFileHandle);
+	subsystemRuntime.coreSession->setInstance(legacyCoreMirrorRuntime.libvlc);
+	subsystemRuntime.coreSession->setMedia(legacyCoreMirrorRuntime.media);
+	subsystemRuntime.coreSession->setPlayer(legacyCoreMirrorRuntime.mediaPlayer);
+	subsystemRuntime.coreSession->setPlayerEvents(legacyCoreMirrorRuntime.mediaPlayerEventManager);
+	subsystemRuntime.coreSession->setMediaEvents(legacyCoreMirrorRuntime.mediaEventManager);
+	subsystemRuntime.coreSession->setMediaDiscoverer(legacyCoreMirrorRuntime.mediaDiscoverer);
+	subsystemRuntime.coreSession->setMediaDiscovererList(legacyCoreMirrorRuntime.mediaDiscovererMediaList);
+	subsystemRuntime.coreSession->setMediaDiscovererListEvents(legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager);
+	subsystemRuntime.coreSession->setRendererDiscoverer(legacyCoreMirrorRuntime.rendererDiscoverer);
+	subsystemRuntime.coreSession->setRendererDiscovererEvents(legacyCoreMirrorRuntime.rendererDiscovererEventManager);
+	subsystemRuntime.coreSession->setLoggingEnabled(diagnosticsRuntime.libVlcLoggingEnabled);
+	subsystemRuntime.coreSession->setLogFileEnabled(diagnosticsRuntime.libVlcLogFileEnabled);
+	subsystemRuntime.coreSession->setLogFilePath(diagnosticsRuntime.libVlcLogFilePath);
+	subsystemRuntime.coreSession->setLogFileHandle(diagnosticsRuntime.libVlcLogFileHandle);
 }
 
 void ofxVlc4::syncLegacyStateFromCoreSession() {
-	if (!coreSession) {
+	if (!subsystemRuntime.coreSession) {
 		return;
 	}
 
-	libvlc = coreSession->instance();
-	media = coreSession->media();
-	mediaPlayer = coreSession->player();
-	mediaPlayerEventManager = coreSession->playerEvents();
-	mediaEventManager = coreSession->mediaEvents();
-	mediaDiscoverer = coreSession->mediaDiscoverer();
-	mediaDiscovererMediaList = coreSession->mediaDiscovererList();
-	mediaDiscovererMediaListEventManager = coreSession->mediaDiscovererListEvents();
-	rendererDiscoverer = coreSession->rendererDiscoverer();
-	rendererDiscovererEventManager = coreSession->rendererDiscovererEvents();
-	libVlcLoggingEnabled = coreSession->loggingEnabled();
-	libVlcLogFileEnabled = coreSession->logFileEnabled();
-	libVlcLogFilePath = coreSession->logFilePath();
-	libVlcLogFileHandle = coreSession->logFileHandle();
+	legacyCoreMirrorRuntime.libvlc = subsystemRuntime.coreSession->instance();
+	legacyCoreMirrorRuntime.media = subsystemRuntime.coreSession->media();
+	legacyCoreMirrorRuntime.mediaPlayer = subsystemRuntime.coreSession->player();
+	legacyCoreMirrorRuntime.mediaPlayerEventManager = subsystemRuntime.coreSession->playerEvents();
+	legacyCoreMirrorRuntime.mediaEventManager = subsystemRuntime.coreSession->mediaEvents();
+	legacyCoreMirrorRuntime.mediaDiscoverer = subsystemRuntime.coreSession->mediaDiscoverer();
+	legacyCoreMirrorRuntime.mediaDiscovererMediaList = subsystemRuntime.coreSession->mediaDiscovererList();
+	legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager = subsystemRuntime.coreSession->mediaDiscovererListEvents();
+	legacyCoreMirrorRuntime.rendererDiscoverer = subsystemRuntime.coreSession->rendererDiscoverer();
+	legacyCoreMirrorRuntime.rendererDiscovererEventManager = subsystemRuntime.coreSession->rendererDiscovererEvents();
+	diagnosticsRuntime.libVlcLoggingEnabled = subsystemRuntime.coreSession->loggingEnabled();
+	diagnosticsRuntime.libVlcLogFileEnabled = subsystemRuntime.coreSession->logFileEnabled();
+	diagnosticsRuntime.libVlcLogFilePath = subsystemRuntime.coreSession->logFilePath();
+	diagnosticsRuntime.libVlcLogFileHandle = subsystemRuntime.coreSession->logFileHandle();
 }
 
 libvlc_instance_t * ofxVlc4::sessionInstance() const {
-	return coreSession ? coreSession->instance() : libvlc;
+	return subsystemRuntime.coreSession ? subsystemRuntime.coreSession->instance() : legacyCoreMirrorRuntime.libvlc;
 }
 
 libvlc_media_t * ofxVlc4::sessionMedia() const {
-	return coreSession ? coreSession->media() : media;
+	return subsystemRuntime.coreSession ? subsystemRuntime.coreSession->media() : legacyCoreMirrorRuntime.media;
 }
 
 libvlc_media_player_t * ofxVlc4::sessionPlayer() const {
-	return coreSession ? coreSession->player() : mediaPlayer;
+	return subsystemRuntime.coreSession ? subsystemRuntime.coreSession->player() : legacyCoreMirrorRuntime.mediaPlayer;
 }
 
 
 ofxVlc4::ofxVlc4()
-	: coreSession(subsystemRuntime.coreSession)
-	, eventRouter(subsystemRuntime.eventRouter)
-	, playbackController(subsystemRuntime.playbackController)
-	, mediaLibraryController(subsystemRuntime.mediaLibraryController)
-	, audioComponent(subsystemRuntime.audioComponent)
-	, videoComponent(subsystemRuntime.videoComponent)
-	, mediaComponent(subsystemRuntime.mediaComponent)
-	, recorder(recordingObjectRuntime.recorder)
-	, isVideoLoaded(videoFrameRuntime.isVideoLoaded)
-	, startupPlaybackStatePrepared(videoFrameRuntime.startupPlaybackStatePrepared)
-	, hasReceivedVideoFrame(videoFrameRuntime.hasReceivedVideoFrame)
-	, exposedTextureDirty(videoFrameRuntime.exposedTextureDirty)
-	, vlcFramebufferAttachmentDirty(videoFrameRuntime.vlcFramebufferAttachmentDirty)
-	, ringBuffer(audioBufferRuntime.ringBuffer)
-	, vlcFboBound(videoFrameRuntime.vlcFboBound)
-	, libvlc(legacyCoreMirrorRuntime.libvlc)
-	, media(legacyCoreMirrorRuntime.media)
-	, mediaPlayer(legacyCoreMirrorRuntime.mediaPlayer)
-	, mediaPlayerEventManager(legacyCoreMirrorRuntime.mediaPlayerEventManager)
-	, mediaEventManager(legacyCoreMirrorRuntime.mediaEventManager)
-	, mediaDiscoverer(legacyCoreMirrorRuntime.mediaDiscoverer)
-	, mediaDiscovererMediaList(legacyCoreMirrorRuntime.mediaDiscovererMediaList)
-	, mediaDiscovererMediaListEventManager(legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager)
-	, rendererDiscoverer(legacyCoreMirrorRuntime.rendererDiscoverer)
-	, rendererDiscovererEventManager(legacyCoreMirrorRuntime.rendererDiscovererEventManager)
-	, videoMutex(synchronizationRuntime.videoMutex)
-	, audioMutex(synchronizationRuntime.audioMutex)
-	, mediaDiscovererMutex(synchronizationRuntime.mediaDiscovererMutex)
-	, rendererMutex(synchronizationRuntime.rendererMutex)
-	, dialogMutex(synchronizationRuntime.dialogMutex)
-	, libVlcLogMutex(synchronizationRuntime.libVlcLogMutex)
-	, watchTimeMutex(synchronizationRuntime.watchTimeMutex)
-	, audioStateMutex(synchronizationRuntime.audioStateMutex)
-	, subtitleStateMutex(synchronizationRuntime.subtitleStateMutex)
-	, navigationStateMutex(synchronizationRuntime.navigationStateMutex)
-	, playbackStateMutex(synchronizationRuntime.playbackStateMutex)
-	, bookmarkMutex(bookmarkState.mutex)
-	, playlistMutex(mediaLibrary.playlistMutex)
-	, metadataCacheMutex(mediaLibrary.metadataCacheMutex)
-	, thumbnailMutex(mediaRuntime.thumbnailMutex)
-	, playlist(mediaLibrary.playlist)
-	, bookmarksByPath(bookmarkState.entries)
-	, metadataCache(mediaLibrary.metadataCache)
-	, currentIndex(mediaLibrary.currentIndex)
-	, currentMediaParseStatus(mediaRuntime.currentMediaParseStatus)
-	, lastCompletedMediaParseStatus(mediaRuntime.lastCompletedMediaParseStatus)
-	, mediaParseRequested(mediaRuntime.mediaParseRequested)
-	, mediaParseActive(mediaRuntime.mediaParseActive)
-	, mediaParseOptions(mediaRuntime.mediaParseOptions)
-	, thumbnailRequest(mediaRuntime.thumbnailRequest)
-	, lastGeneratedThumbnail(mediaRuntime.lastGeneratedThumbnail)
-	, discoveredMediaItems(mediaDiscoveryRuntime.discoveredItems)
-	, mediaDiscovererName(mediaDiscoveryRuntime.discovererName)
-	, mediaDiscovererLongName(mediaDiscoveryRuntime.discovererLongName)
-	, mediaDiscovererCategory(mediaDiscoveryRuntime.category)
-	, mediaDiscovererEndReached(mediaDiscoveryRuntime.endReached)
-	, rendererDiscovererName(rendererDiscoveryRuntime.discovererName)
-	, selectedRendererId(rendererDiscoveryRuntime.selectedRendererId)
-	, rendererStateInfo(rendererDiscoveryRuntime.stateInfo)
-	, snapshotPending(mediaRuntime.snapshotPending)
-	, snapshotAvailable(mediaRuntime.snapshotAvailable)
-	, pendingSnapshotPath(mediaRuntime.pendingSnapshotPath)
-	, lastSnapshotPath(mediaRuntime.lastSnapshotPath)
-	, lastSnapshotBytes(mediaRuntime.lastSnapshotBytes)
-	, lastSnapshotTimestamp(mediaRuntime.lastSnapshotTimestamp)
-	, lastSnapshotEventMessage(mediaRuntime.lastSnapshotEventMessage)
-	, lastSnapshotFailureReason(mediaRuntime.lastSnapshotFailureReason)
-	, lastStatusMessage(diagnosticsRuntime.lastStatusMessage)
-	, lastErrorMessage(diagnosticsRuntime.lastErrorMessage)
-	, activeDialogs(diagnosticsRuntime.activeDialogs)
-	, lastDialogError(diagnosticsRuntime.lastDialogError)
-	, libVlcLoggingEnabled(diagnosticsRuntime.libVlcLoggingEnabled)
-	, libVlcLogFileEnabled(diagnosticsRuntime.libVlcLogFileEnabled)
-	, libVlcLogEntries(diagnosticsRuntime.libVlcLogEntries)
-	, libVlcLogFilePath(diagnosticsRuntime.libVlcLogFilePath)
-	, libVlcLogFileHandle(diagnosticsRuntime.libVlcLogFileHandle)
-	, nativeRecordingEnabled(nativeRecordingRuntime.enabled)
-	, nativeRecordingActive(nativeRecordingRuntime.active)
-	, nativeRecordDirectory(nativeRecordingRuntime.directory)
-	, lastNativeRecordedFilePath(nativeRecordingRuntime.lastOutputPath)
-	, lastNativeRecordedFileBytes(nativeRecordingRuntime.lastOutputBytes)
-	, lastNativeRecordedFileTimestamp(nativeRecordingRuntime.lastOutputTimestamp)
-	, lastNativeRecordingEventMessage(nativeRecordingRuntime.lastEventMessage)
-	, lastNativeRecordingFailureReason(nativeRecordingRuntime.lastFailureReason)
-	, watchTimeEnabled(watchTimeRuntime.enabled)
-	, watchTimeRegistered(watchTimeRuntime.registered)
-	, watchTimePointAvailable(watchTimeRuntime.pointAvailable)
-	, watchTimePaused(watchTimeRuntime.paused)
-	, watchTimeSeeking(watchTimeRuntime.seeking)
-	, watchTimeMinPeriodUs(watchTimeRuntime.minPeriodUs)
-	, watchTimePauseSystemDateUs(watchTimeRuntime.pauseSystemDateUs)
-	, watchTimeUpdateSequence(watchTimeRuntime.updateSequence)
-	, cachedVideoTrackCount(stateCacheRuntime.cachedVideoTrackCount)
-	, cachedVideoTrackFps(stateCacheRuntime.cachedVideoTrackFps)
-	, audioStateInfo(stateCacheRuntime.audio)
-	, subtitleStateInfo(stateCacheRuntime.subtitle)
-	, navigationStateInfo(stateCacheRuntime.navigation)
-	, equalizerEnabled(effectsRuntime.equalizerEnabled)
-	, equalizerPreamp(effectsRuntime.equalizerPreamp)
-	, videoAdjustmentsEnabled(effectsRuntime.videoAdjustmentsEnabled)
-	, videoAdjustmentEngine(effectsRuntime.videoAdjustmentEngine)
-	, activeVideoAdjustmentEngine(effectsRuntime.activeVideoAdjustmentEngine)
-	, videoAdjustContrast(effectsRuntime.videoAdjustContrast)
-	, videoAdjustBrightness(effectsRuntime.videoAdjustBrightness)
-	, videoAdjustHue(effectsRuntime.videoAdjustHue)
-	, videoAdjustSaturation(effectsRuntime.videoAdjustSaturation)
-	, videoAdjustGamma(effectsRuntime.videoAdjustGamma)
-	, equalizerBandAmps(effectsRuntime.equalizerBandAmps)
-	, currentEqualizerPresetIndex(effectsRuntime.currentEqualizerPresetIndex)
-	, marqueeEnabled(overlayRuntime.marqueeEnabled)
-	, marqueeText(overlayRuntime.marqueeText)
-	, marqueePosition(overlayRuntime.marqueePosition)
-	, marqueeOpacity(overlayRuntime.marqueeOpacity)
-	, marqueeSize(overlayRuntime.marqueeSize)
-	, marqueeColor(overlayRuntime.marqueeColor)
-	, marqueeRefresh(overlayRuntime.marqueeRefresh)
-	, marqueeTimeout(overlayRuntime.marqueeTimeout)
-	, marqueeX(overlayRuntime.marqueeX)
-	, marqueeY(overlayRuntime.marqueeY)
-	, logoEnabled(overlayRuntime.logoEnabled)
-	, logoPath(overlayRuntime.logoPath)
-	, logoPosition(overlayRuntime.logoPosition)
-	, logoOpacity(overlayRuntime.logoOpacity)
-	, logoX(overlayRuntime.logoX)
-	, logoY(overlayRuntime.logoY)
-	, logoDelay(overlayRuntime.logoDelay)
-	, logoRepeat(overlayRuntime.logoRepeat)
-	, vlcFullscreenEnabled(videoPresentationRuntime.vlcFullscreenEnabled)
-	, videoTitleDisplayEnabled(videoPresentationRuntime.videoTitleDisplayEnabled)
-	, videoTitleDisplayPosition(videoPresentationRuntime.videoTitleDisplayPosition)
-	, videoTitleDisplayTimeoutMs(videoPresentationRuntime.videoTitleDisplayTimeoutMs)
-	, teletextPage(videoPresentationRuntime.teletextPage)
-	, teletextTransparencyEnabled(videoPresentationRuntime.teletextTransparencyEnabled)
-	, videoDeinterlaceMode(videoPresentationRuntime.videoDeinterlaceMode)
-	, videoAspectRatioMode(videoPresentationRuntime.videoAspectRatioMode)
-	, videoCropMode(videoPresentationRuntime.videoCropMode)
-	, videoDisplayFitMode(videoPresentationRuntime.videoDisplayFitMode)
-	, videoOutputBackend(videoPresentationRuntime.videoOutputBackend)
-	, activeVideoOutputBackend(videoPresentationRuntime.activeVideoOutputBackend)
-	, preferredDecoderDevice(videoPresentationRuntime.preferredDecoderDevice)
-	, videoScale(videoPresentationRuntime.videoScale)
-	, videoProjectionMode(videoPresentationRuntime.videoProjectionMode)
-	, videoStereoMode(videoPresentationRuntime.videoStereoMode)
-	, videoViewYaw(videoPresentationRuntime.videoViewYaw)
-	, videoViewPitch(videoPresentationRuntime.videoViewPitch)
-	, videoViewRoll(videoPresentationRuntime.videoViewRoll)
-	, videoViewFov(videoPresentationRuntime.videoViewFov)
-	, audioCaptureEnabled(playerConfigRuntime.audioCaptureEnabled)
-	, audioMixMode(playerConfigRuntime.audioMixMode)
-	, audioStereoMode(playerConfigRuntime.audioStereoMode)
-	, audioCaptureSampleFormat(playerConfigRuntime.audioCaptureSampleFormat)
-	, activeAudioCaptureSampleFormat(playerConfigRuntime.activeAudioCaptureSampleFormat)
-	, audioCaptureSampleRate(playerConfigRuntime.audioCaptureSampleRate)
-	, audioCaptureChannelCount(playerConfigRuntime.audioCaptureChannelCount)
-	, audioCaptureBufferSeconds(playerConfigRuntime.audioCaptureBufferSeconds)
-	, audioFilterChain(playerConfigRuntime.audioFilterChain)
-	, videoFilterChain(playerConfigRuntime.videoFilterChain)
-	, audioOutputModuleName(playerConfigRuntime.audioOutputModuleName)
-	, audioOutputDeviceId(playerConfigRuntime.audioOutputDeviceId)
-	, playbackRate(playerConfigRuntime.playbackRate)
-	, audioDelayUs(playerConfigRuntime.audioDelayUs)
-	, subtitleDelayUs(playerConfigRuntime.subtitleDelayUs)
-	, subtitleTextScale(playerConfigRuntime.subtitleTextScale)
-	, subtitleTextRenderer(playerConfigRuntime.subtitleTextRenderer)
-	, subtitleFontFamily(playerConfigRuntime.subtitleFontFamily)
-	, subtitleTextColor(playerConfigRuntime.subtitleTextColor)
-	, subtitleTextOpacity(playerConfigRuntime.subtitleTextOpacity)
-	, subtitleBold(playerConfigRuntime.subtitleBold)
-	, mediaPlayerRole(playerConfigRuntime.mediaPlayerRole)
-	, keyInputEnabled(playerConfigRuntime.keyInputEnabled)
-	, mouseInputEnabled(playerConfigRuntime.mouseInputEnabled)
-	, extraInitArgs(playerConfigRuntime.extraInitArgs)
-	, audioVisualizerSettings(playerConfigRuntime.audioVisualizerSettings)
-	, channels(audioRuntime.channels)
-	, sampleRate(audioRuntime.sampleRate)
-	, isAudioReady(audioRuntime.ready)
-	, currentVolume(audioRuntime.currentVolume)
-	, audioOutputVolume(audioRuntime.outputVolume)
-	, audioOutputMuted(audioRuntime.outputMuted)
-	, audioCallbackCount(audioRuntime.callbackCount)
-	, audioCallbackFrameCount(audioRuntime.callbackFrameCount)
-	, audioCallbackSampleCount(audioRuntime.callbackSampleCount)
-	, audioCallbackTotalMicros(audioRuntime.callbackTotalMicros)
-	, audioCallbackMaxMicros(audioRuntime.callbackMaxMicros)
-	, audioConversionTotalMicros(audioRuntime.conversionTotalMicros)
-	, audioConversionMaxMicros(audioRuntime.conversionMaxMicros)
-	, audioRingWriteTotalMicros(audioRuntime.ringWriteTotalMicros)
-	, audioRingWriteMaxMicros(audioRuntime.ringWriteMaxMicros)
-	, audioRecorderTotalMicros(audioRuntime.recorderTotalMicros)
-	, audioRecorderMaxMicros(audioRuntime.recorderMaxMicros)
-	, audioFirstCallbackSteadyMicros(audioRuntime.firstCallbackSteadyMicros)
-	, audioLastCallbackSteadyMicros(audioRuntime.lastCallbackSteadyMicros)
-	, renderWidth(videoGeometryRuntime.renderWidth)
-	, renderHeight(videoGeometryRuntime.renderHeight)
-	, videoWidth(videoGeometryRuntime.videoWidth)
-	, videoHeight(videoGeometryRuntime.videoHeight)
-	, pixelAspectNumerator(videoGeometryRuntime.pixelAspectNumerator)
-	, pixelAspectDenominator(videoGeometryRuntime.pixelAspectDenominator)
-	, displayAspectRatio(videoGeometryRuntime.displayAspectRatio)
-	, allocatedVideoWidth(videoGeometryRuntime.allocatedVideoWidth)
-	, allocatedVideoHeight(videoGeometryRuntime.allocatedVideoHeight)
-	, lastBoundViewportWidth(videoGeometryRuntime.lastBoundViewportWidth)
-	, lastBoundViewportHeight(videoGeometryRuntime.lastBoundViewportHeight)
-	, pendingRenderWidth(videoGeometryRuntime.pendingRenderWidth)
-	, pendingRenderHeight(videoGeometryRuntime.pendingRenderHeight)
-	, pendingResize(videoGeometryRuntime.pendingResize)
-	, pendingGlPixelFormat(videoGeometryRuntime.pendingGlPixelFormat)
-	, allocatedGlPixelFormat(videoGeometryRuntime.allocatedGlPixelFormat)
-	, mainWindow(videoResourceRuntime.mainWindow)
-	, vlcWindow(videoResourceRuntime.vlcWindow)
-	, playbackMode(playbackPolicyRuntime.playbackMode)
-	, shuffleEnabled(playbackPolicyRuntime.shuffleEnabled)
-	, pendingEqualizerApplyOnPlay(playbackPolicyRuntime.pendingEqualizerApplyOnPlay)
-	, pendingVideoAdjustApplyOnPlay(playbackPolicyRuntime.pendingVideoAdjustApplyOnPlay)
-	, pendingAbLoopStartTimeMs(playbackPolicyRuntime.pendingAbLoopStartTimeMs)
-	, pendingAbLoopStartPosition(playbackPolicyRuntime.pendingAbLoopStartPosition)
-	, videoTexture(videoResourceRuntime.videoTexture)
-	, exposedTextureFbo(videoResourceRuntime.exposedTextureFbo)
-	, videoAdjustShader(videoResourceRuntime.videoAdjustShader)
-	, videoAdjustShaderReady(videoResourceRuntime.videoAdjustShaderReady)
-	, vlcFramebufferId(videoResourceRuntime.vlcFramebufferId)
-	, closeRequested(lifecycleRuntime.closeRequested)
-	, shuttingDown(lifecycleRuntime.shuttingDown)
-#ifdef TARGET_WIN32
-	, d3d11Device(videoResourceRuntime.d3d11Device)
-	, d3d11DeviceContext(videoResourceRuntime.d3d11DeviceContext)
-	, d3d11Multithread(videoResourceRuntime.d3d11Multithread)
-	, d3d11RenderTexture(videoResourceRuntime.d3d11RenderTexture)
-	, d3d11RenderTargetView(videoResourceRuntime.d3d11RenderTargetView)
-	, d3d11RenderDxgiFormat(videoResourceRuntime.d3d11RenderDxgiFormat)
-#endif
-	, discoveredRenderers(rendererDiscoveryRuntime.discoveredRenderers)
-	, videoHdrMetadata(analysisRuntime.videoHdrMetadata)
-	, watchTimeLastEventType(watchTimeRuntime.lastEventType)
-	, watchTimeCallback(watchTimeRuntime.callback)
-	, lastWatchTimePoint(watchTimeRuntime.lastPoint)
-	, smoothedSpectrumLevels(analysisRuntime.smoothedSpectrumLevels)
 	{
 	ofGLFWWindowSettings settings;
-	mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
-	if (mainWindow) {
-		settings = mainWindow->getSettings();
+	videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
+	if (videoResourceRuntime.mainWindow) {
+		settings = videoResourceRuntime.mainWindow->getSettings();
 	}
 	settings.setSize(1, 1);
 	settings.setPosition(glm::vec2(-32000, -32000));
 	settings.visible = false;
 	settings.decorated = false;
 	settings.resizable = false;
-	settings.shareContextWith = mainWindow;
-	if (!mainWindow) {
+	settings.shareContextWith = videoResourceRuntime.mainWindow;
+	if (!videoResourceRuntime.mainWindow) {
 		ofLogWarning(kLogChannel) << "No main window available at construction; VLC render context will not share resources with the main context.";
 	}
-	vlcWindow = std::make_shared<ofAppGLFWWindow>();
-	vlcWindow->setup(settings);
+	videoResourceRuntime.vlcWindow = std::make_shared<ofAppGLFWWindow>();
+	videoResourceRuntime.vlcWindow->setup(settings);
 	// Vsync is intentionally disabled: VLC renders exclusively to an FBO and
 	// never swaps the window's default framebuffer, so enabling vsync here
 	// would only add unnecessary throttling on some drivers without providing
 	// any benefit.
-	vlcWindow->setVerticalSync(false);
-	vlcWindow->setWindowTitle("ofxVlc4 Native Video");
+	videoResourceRuntime.vlcWindow->setVerticalSync(false);
+	videoResourceRuntime.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
 
-	videoTexture.allocate(1, 1, GL_RGBA);
-	videoTexture.getTextureData().bFlipTexture = true;
-	exposedTextureFbo.allocate(1, 1, GL_RGBA);
-	clearAllocatedFbo(exposedTextureFbo);
-	allocatedVideoWidth = 1;
-	allocatedVideoHeight = 1;
-	audioComponent = std::make_unique<AudioComponent>(*this);
-	videoComponent = std::make_unique<VideoComponent>(*this);
-	mediaComponent = std::make_unique<MediaComponent>(*this);
-	playbackController = std::make_unique<PlaybackController>(*this);
-	mediaLibraryController = std::make_unique<MediaLibrary>(*this);
-	coreSession = std::make_unique<VlcCoreSession>();
-	eventRouter = std::make_unique<VlcEventRouter>(*this);
+	videoResourceRuntime.videoTexture.allocate(1, 1, GL_RGBA);
+	videoResourceRuntime.videoTexture.getTextureData().bFlipTexture = true;
+	videoResourceRuntime.exposedTextureFbo.allocate(1, 1, GL_RGBA);
+	clearAllocatedFbo(videoResourceRuntime.exposedTextureFbo);
+	videoGeometryRuntime.allocatedVideoWidth = 1;
+	videoGeometryRuntime.allocatedVideoHeight = 1;
+	subsystemRuntime.audioComponent = std::make_unique<AudioComponent>(*this);
+	subsystemRuntime.videoComponent = std::make_unique<VideoComponent>(*this);
+	subsystemRuntime.mediaComponent = std::make_unique<MediaComponent>(*this);
+	subsystemRuntime.playbackController = std::make_unique<PlaybackController>(*this);
+	subsystemRuntime.mediaLibraryController = std::make_unique<MediaLibrary>(*this);
+	subsystemRuntime.coreSession = std::make_unique<VlcCoreSession>();
+	subsystemRuntime.eventRouter = std::make_unique<VlcEventRouter>(*this);
 	syncLegacyStateFromCoreSession();
-	equalizerBandAmps.assign(libvlc_audio_equalizer_get_band_count(), 0.0f);
+	effectsRuntime.equalizerBandAmps.assign(libvlc_audio_equalizer_get_band_count(), 0.0f);
 }
 
 ofxVlc4::~ofxVlc4() {
@@ -776,14 +539,14 @@ const char * ofxVlc4::recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile profil
 
 ofxVlc4MuxOptions ofxVlc4::recordingMuxOptionsForProfile(
 	ofxVlc4RecordingMuxProfile profile,
-	int sampleRate,
+	int audioRuntime.sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
 	uint64_t muxTimeoutMs) {
 	ofxVlc4MuxOptions options;
 	options.containerMux = recordingMuxContainerForProfile(profile);
 	options.audioCodec = recordingMuxAudioCodecForProfile(profile);
-	options.audioSampleRate = std::max(8000, sampleRate);
+	options.audioSampleRate = std::max(8000, audioRuntime.sampleRate);
 	options.audioChannels = std::max(1, channelCount);
 	options.deleteSourceFilesOnSuccess = deleteSourceFilesOnSuccess;
 	options.muxTimeoutMs = muxTimeoutMs;
@@ -801,7 +564,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	std::string outputBasePath,
 	const ofTexture & texture,
 	const ofxVlc4RecordingPreset & preset,
-	int sampleRate,
+	int audioRuntime.sampleRate,
 	int channelCount,
 	uint64_t muxTimeoutMs) {
 	ofxVlc4RecordingSessionConfig config = textureRecordingSessionConfig(
@@ -809,7 +572,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 		texture,
 		preset.audioSource,
 		preset.muxProfile,
-		sampleRate,
+		audioRuntime.sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
 		muxTimeoutMs);
@@ -828,7 +591,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	const ofTexture & texture,
 	ofxVlc4RecordingAudioSource audioSource,
 	ofxVlc4RecordingMuxProfile muxProfile,
-	int sampleRate,
+	int audioRuntime.sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
 	uint64_t muxTimeoutMs) {
@@ -840,7 +603,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 	config.muxOnStop = true;
 	config.muxOptions = recordingMuxOptionsForProfile(
 		muxProfile,
-		sampleRate,
+		audioRuntime.sampleRate,
 		channelCount,
 		deleteSourceFilesOnSuccess,
 		muxTimeoutMs);
@@ -850,14 +613,14 @@ ofxVlc4RecordingSessionConfig ofxVlc4::textureRecordingSessionConfig(
 ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	std::string outputBasePath,
 	const ofxVlc4RecordingPreset & preset,
-	int sampleRate,
+	int audioRuntime.sampleRate,
 	int channelCount,
 	uint64_t muxTimeoutMs) {
 	ofxVlc4RecordingSessionConfig config = windowRecordingSessionConfig(
 		std::move(outputBasePath),
 		preset.audioSource,
 		preset.muxProfile,
-		sampleRate,
+		audioRuntime.sampleRate,
 		channelCount,
 		preset.deleteMuxSourceFilesOnSuccess,
 		muxTimeoutMs);
@@ -875,7 +638,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	std::string outputBasePath,
 	ofxVlc4RecordingAudioSource audioSource,
 	ofxVlc4RecordingMuxProfile muxProfile,
-	int sampleRate,
+	int audioRuntime.sampleRate,
 	int channelCount,
 	bool deleteSourceFilesOnSuccess,
 	uint64_t muxTimeoutMs) {
@@ -886,7 +649,7 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 	config.muxOnStop = true;
 	config.muxOptions = recordingMuxOptionsForProfile(
 		muxProfile,
-		sampleRate,
+		audioRuntime.sampleRate,
 		channelCount,
 		deleteSourceFilesOnSuccess,
 		muxTimeoutMs);
@@ -897,11 +660,11 @@ void ofxVlc4::update() {
 	finalizeRecordingMuxThread();
 	processDeferredRecordingMuxCleanup();
 	updateMidiTransport(ofGetElapsedTimef());
-	if (windowCaptureRuntime.active && !recorder.isVideoCaptureActive()) {
+	if (windowCaptureRuntime.active && !recordingObjectRuntime.recorder.isVideoCaptureActive()) {
 		windowCaptureRuntime.active = false;
 		unregisterWindowCaptureListener();
 	}
-	if (recorder.needsCaptureUpdate()) {
+	if (recordingObjectRuntime.recorder.needsCaptureUpdate()) {
 		updateRecorder();
 	}
 	updatePendingRecordingMux();
@@ -1006,10 +769,10 @@ void ofxVlc4::captureCurrentWindowBackbuffer() {
 }
 
 void ofxVlc4::onWindowCaptureDraw(ofEventArgs &) {
-	if (!windowCaptureRuntime.active || shuttingDown.load()) {
+	if (!windowCaptureRuntime.active || lifecycleRuntime.shuttingDown.load()) {
 		return;
 	}
-	if (!recorder.isVideoCaptureActive()) {
+	if (!recordingObjectRuntime.recorder.isVideoCaptureActive()) {
 		windowCaptureRuntime.active = false;
 		unregisterWindowCaptureListener();
 		return;
@@ -1178,16 +941,16 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	// Re-init starts from a clean VLC state so partial previous setup cannot leak across sessions.
 	syncCoreSessionStateFromLegacy();
 	releaseVlcResources();
-	mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
-	closeRequested.store(false);
-	shuttingDown.store(false);
-	playbackController->resetTransportState();
-	audioComponent->clearPendingEqualizerApplyOnPlay();
-	videoComponent->clearPendingVideoAdjustApplyOnPlay();
+	videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
+	lifecycleRuntime.closeRequested.store(false);
+	lifecycleRuntime.shuttingDown.store(false);
+	subsystemRuntime.playbackController->resetTransportState();
+	subsystemRuntime.audioComponent->clearPendingEqualizerApplyOnPlay();
+	subsystemRuntime.videoComponent->clearPendingVideoAdjustApplyOnPlay();
 	resetCurrentMediaParseState();
-	clearWindowCaptureState(mainWindow);
-	if (recorder.hasCleanupState()) {
-		clearRecorderCaptureState(mainWindow);
+	clearWindowCaptureState(videoResourceRuntime.mainWindow);
+	if (recordingObjectRuntime.recorder.hasCleanupState()) {
+		clearRecorderCaptureState(videoResourceRuntime.mainWindow);
 	}
 	clearLastMessages();
 	clearLastDialogError();
@@ -1197,22 +960,22 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 #endif
 
 	std::vector<std::string> initArgs;
-	initArgs.reserve(static_cast<size_t>(std::max(0, vlc_argc)) + extraInitArgs.size() + 8);
+	initArgs.reserve(static_cast<size_t>(std::max(0, vlc_argc)) + playerConfigRuntime.extraInitArgs.size() + 8);
 
 #ifdef TARGET_WIN32
-	switch (preferredDecoderDevice) {
+	switch (videoPresentationRuntime.preferredDecoderDevice) {
 	case PreferredDecoderDevice::D3D11:
 		initArgs.emplace_back("--dec-dev=d3d11_filters");
 		break;
 	case PreferredDecoderDevice::DXVA2:
 		initArgs.emplace_back("--dec-dev=d3d9_filters");
-		if (videoOutputBackend == VideoOutputBackend::Texture) {
+		if (videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::Texture) {
 			initArgs.emplace_back("--glinterop=glinterop_dxva2");
 		}
 		break;
 	case PreferredDecoderDevice::Nvdec:
 		initArgs.emplace_back("--dec-dev=nvdec");
-		if (videoOutputBackend == VideoOutputBackend::Texture) {
+		if (videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::Texture) {
 			initArgs.emplace_back("--glinterop=glinterop_nvdec");
 		}
 		break;
@@ -1225,15 +988,15 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 #endif
 
-	const char * textRendererName = subtitleTextRendererOptionName(subtitleTextRenderer);
+	const char * textRendererName = subtitleTextRendererOptionName(playerConfigRuntime.subtitleTextRenderer);
 	if (textRendererName[0] != '\0') {
 		initArgs.emplace_back(std::string("--text-renderer=") + textRendererName);
 	}
-	appendPrefixedInitArg(initArgs, "--freetype-font=", subtitleFontFamily);
-	initArgs.emplace_back(std::string("--freetype-color=") + ofToString(ofClamp(subtitleTextColor, 0, 16777215)));
-	initArgs.emplace_back(std::string("--freetype-opacity=") + ofToString(ofClamp(subtitleTextOpacity, 0, 255)));
-	initArgs.emplace_back(subtitleBold ? "--freetype-bold" : "--no-freetype-bold");
-	appendAudioVisualizerInitArgs(initArgs, audioVisualizerSettings);
+	appendPrefixedInitArg(initArgs, "--freetype-font=", playerConfigRuntime.subtitleFontFamily);
+	initArgs.emplace_back(std::string("--freetype-color=") + ofToString(ofClamp(playerConfigRuntime.subtitleTextColor, 0, 16777215)));
+	initArgs.emplace_back(std::string("--freetype-opacity=") + ofToString(ofClamp(playerConfigRuntime.subtitleTextOpacity, 0, 255)));
+	initArgs.emplace_back(playerConfigRuntime.subtitleBold ? "--freetype-bold" : "--no-freetype-bold");
+	appendAudioVisualizerInitArgs(initArgs, playerConfigRuntime.audioVisualizerSettings);
 
 	for (int i = 0; i < vlc_argc; ++i) {
 		if (vlc_argv != nullptr && vlc_argv[i] != nullptr) {
@@ -1241,7 +1004,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		}
 	}
 
-	for (const std::string & argument : extraInitArgs) {
+	for (const std::string & argument : playerConfigRuntime.extraInitArgs) {
 		if (!argument.empty()) {
 			initArgs.push_back(argument);
 		}
@@ -1253,25 +1016,25 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		initArgPointers.push_back(argument.c_str());
 	}
 
-	libvlc = libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data());
-	if (!libvlc) {
+	legacyCoreMirrorRuntime.libvlc = libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data());
+	if (!legacyCoreMirrorRuntime.libvlc) {
 		const char * error = libvlc_errmsg();
 		setError(error ? error : "libvlc_new failed");
 		return;
 	}
-	coreSession->setInstance(libvlc);
+	subsystemRuntime.coreSession->setInstance(legacyCoreMirrorRuntime.libvlc);
 	syncLegacyStateFromCoreSession();
 
-	mediaComponent->applyLibVlcLogging();
+	subsystemRuntime.mediaComponent->applyLibVlcLogging();
 
-	mediaPlayer = libvlc_media_player_new(libvlc);
-	if (!mediaPlayer) {
+	legacyCoreMirrorRuntime.mediaPlayer = libvlc_media_player_new(legacyCoreMirrorRuntime.libvlc);
+	if (!legacyCoreMirrorRuntime.mediaPlayer) {
 		const char * error = libvlc_errmsg();
 		setError(error ? error : "libvlc_media_player_new failed");
 		releaseVlcResources();
 		return;
 	}
-	coreSession->setPlayer(mediaPlayer);
+	subsystemRuntime.coreSession->setPlayer(legacyCoreMirrorRuntime.mediaPlayer);
 	syncLegacyStateFromCoreSession();
 
 	resetAudioStateInfo();
@@ -1285,24 +1048,24 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		return;
 	}
 
-	if (audioCaptureEnabled) {
-		libvlc_audio_set_callbacks(mediaPlayer, audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
-		libvlc_audio_set_volume_callback(mediaPlayer, audioSetVolume);
+	if (playerConfigRuntime.audioCaptureEnabled) {
+		libvlc_audio_set_callbacks(legacyCoreMirrorRuntime.mediaPlayer, audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
+		libvlc_audio_set_volume_callback(legacyCoreMirrorRuntime.mediaPlayer, audioSetVolume);
 		libvlc_audio_set_format(
-			mediaPlayer,
-			audioComponent->getStartupAudioCaptureSampleFormatCode(),
-			audioComponent->getStartupAudioCaptureSampleRate(),
-			audioComponent->getStartupAudioCaptureChannelCount());
+			legacyCoreMirrorRuntime.mediaPlayer,
+			subsystemRuntime.audioComponent->getStartupAudioCaptureSampleFormatCode(),
+			subsystemRuntime.audioComponent->getStartupAudioCaptureSampleRate(),
+			subsystemRuntime.audioComponent->getStartupAudioCaptureChannelCount());
 	} else {
-		isAudioReady.store(false);
+		audioRuntime.ready.store(false);
 		resetAudioBuffer();
 	}
 
-	mediaPlayerEventManager = libvlc_media_player_event_manager(mediaPlayer);
-	coreSession->setPlayerEvents(mediaPlayerEventManager);
+	legacyCoreMirrorRuntime.mediaPlayerEventManager = libvlc_media_player_event_manager(legacyCoreMirrorRuntime.mediaPlayer);
+	subsystemRuntime.coreSession->setPlayerEvents(legacyCoreMirrorRuntime.mediaPlayerEventManager);
 	syncLegacyStateFromCoreSession();
-	if (mediaPlayerEventManager && coreSession && eventRouter) {
-		coreSession->attachPlayerEvents(eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
+	if (legacyCoreMirrorRuntime.mediaPlayerEventManager && subsystemRuntime.coreSession && subsystemRuntime.eventRouter) {
+		subsystemRuntime.coreSession->attachPlayerEvents(subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
 	}
 
 	const libvlc_dialog_cbs dialogCallbacks = {
@@ -1312,11 +1075,11 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		VlcEventRouter::dialogCancelStatic,
 		VlcEventRouter::dialogUpdateProgressStatic
 	};
-	libvlc_dialog_set_callbacks(libvlc, &dialogCallbacks, eventRouter.get());
-	libvlc_dialog_set_error_callback(libvlc, VlcEventRouter::dialogErrorStatic, eventRouter.get());
+	libvlc_dialog_set_callbacks(legacyCoreMirrorRuntime.libvlc, &dialogCallbacks, subsystemRuntime.eventRouter.get());
+	libvlc_dialog_set_error_callback(legacyCoreMirrorRuntime.libvlc, VlcEventRouter::dialogErrorStatic, subsystemRuntime.eventRouter.get());
 
-	if (!rendererDiscovererName.empty()) {
-		startRendererDiscovery(rendererDiscovererName);
+	if (!rendererDiscoveryRuntime.discovererName.empty()) {
+		startRendererDiscovery(rendererDiscoveryRuntime.discovererName);
 	}
 
 	applyWatchTimeObserver();
@@ -1326,14 +1089,14 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 }
 
 std::vector<std::string> ofxVlc4::getExtraInitArgs() const {
-	return extraInitArgs;
+	return playerConfigRuntime.extraInitArgs;
 }
 
 void ofxVlc4::setExtraInitArgs(const std::vector<std::string> & args) {
-	extraInitArgs.clear();
+	playerConfigRuntime.extraInitArgs.clear();
 	for (const std::string & arg : args) {
 		if (!arg.empty()) {
-			extraInitArgs.push_back(arg);
+			playerConfigRuntime.extraInitArgs.push_back(arg);
 		}
 	}
 	setStatus("Extra init args updated for the next init.");
@@ -1343,106 +1106,106 @@ void ofxVlc4::addExtraInitArg(const std::string & arg) {
 	if (arg.empty()) {
 		return;
 	}
-	extraInitArgs.push_back(arg);
+	playerConfigRuntime.extraInitArgs.push_back(arg);
 	setStatus("Extra init args updated for the next init.");
 }
 
 void ofxVlc4::clearExtraInitArgs() {
-	if (extraInitArgs.empty()) {
+	if (playerConfigRuntime.extraInitArgs.empty()) {
 		return;
 	}
-	extraInitArgs.clear();
+	playerConfigRuntime.extraInitArgs.clear();
 	setStatus("Extra init args cleared for the next init.");
 }
 
 ofxVlc4AudioVisualizerSettings ofxVlc4::getAudioVisualizerSettings() const {
-	return audioVisualizerSettings;
+	return playerConfigRuntime.audioVisualizerSettings;
 }
 
 void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & settings) {
-	audioVisualizerSettings.module = settings.module;
-	audioVisualizerSettings.visualEffect = settings.visualEffect;
-	audioVisualizerSettings.width = std::max(64, settings.width);
-	audioVisualizerSettings.height = std::max(64, settings.height);
-	audioVisualizerSettings.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
-	audioVisualizerSettings.projectMPresetPath = settings.projectMPresetPath;
-	audioVisualizerSettings.projectMTextureSize = std::max(0, settings.projectMTextureSize);
-	audioVisualizerSettings.projectMMeshX = std::max(0, settings.projectMMeshX);
-	audioVisualizerSettings.projectMMeshY = std::max(0, settings.projectMMeshY);
+	playerConfigRuntime.audioVisualizerSettings.module = settings.module;
+	playerConfigRuntime.audioVisualizerSettings.visualEffect = settings.visualEffect;
+	playerConfigRuntime.audioVisualizerSettings.width = std::max(64, settings.width);
+	playerConfigRuntime.audioVisualizerSettings.height = std::max(64, settings.height);
+	playerConfigRuntime.audioVisualizerSettings.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
+	playerConfigRuntime.audioVisualizerSettings.projectMPresetPath = settings.projectMPresetPath;
+	playerConfigRuntime.audioVisualizerSettings.projectMTextureSize = std::max(0, settings.projectMTextureSize);
+	playerConfigRuntime.audioVisualizerSettings.projectMMeshX = std::max(0, settings.projectMMeshX);
+	playerConfigRuntime.audioVisualizerSettings.projectMMeshY = std::max(0, settings.projectMMeshY);
 	setStatus("Audio visualizer settings updated for the next init.");
 }
 
 ofxVlc4SubtitleTextRenderer ofxVlc4::getSubtitleTextRenderer() const {
-	return subtitleTextRenderer;
+	return playerConfigRuntime.subtitleTextRenderer;
 }
 
 void ofxVlc4::setSubtitleTextRenderer(ofxVlc4SubtitleTextRenderer renderer) {
-	if (subtitleTextRenderer == renderer) {
+	if (playerConfigRuntime.subtitleTextRenderer == renderer) {
 		return;
 	}
-	subtitleTextRenderer = renderer;
+	playerConfigRuntime.subtitleTextRenderer = renderer;
 	setStatus("Subtitle text renderer updated for the next init.");
 }
 
 std::string ofxVlc4::getSubtitleFontFamily() const {
-	return subtitleFontFamily;
+	return playerConfigRuntime.subtitleFontFamily;
 }
 
 void ofxVlc4::setSubtitleFontFamily(const std::string & family) {
-	if (subtitleFontFamily == family) {
+	if (playerConfigRuntime.subtitleFontFamily == family) {
 		return;
 	}
-	subtitleFontFamily = family;
+	playerConfigRuntime.subtitleFontFamily = family;
 	setStatus("Subtitle font updated for the next init.");
 }
 
 int ofxVlc4::getSubtitleTextColor() const {
-	return subtitleTextColor;
+	return playerConfigRuntime.subtitleTextColor;
 }
 
 void ofxVlc4::setSubtitleTextColor(int color) {
 	const int clampedColor = ofClamp(color, 0, 16777215);
-	if (subtitleTextColor == clampedColor) {
+	if (playerConfigRuntime.subtitleTextColor == clampedColor) {
 		return;
 	}
-	subtitleTextColor = clampedColor;
+	playerConfigRuntime.subtitleTextColor = clampedColor;
 	setStatus("Subtitle text color updated for the next init.");
 }
 
 int ofxVlc4::getSubtitleTextOpacity() const {
-	return subtitleTextOpacity;
+	return playerConfigRuntime.subtitleTextOpacity;
 }
 
 void ofxVlc4::setSubtitleTextOpacity(int opacity) {
 	const int clampedOpacity = ofClamp(opacity, 0, 255);
-	if (subtitleTextOpacity == clampedOpacity) {
+	if (playerConfigRuntime.subtitleTextOpacity == clampedOpacity) {
 		return;
 	}
-	subtitleTextOpacity = clampedOpacity;
+	playerConfigRuntime.subtitleTextOpacity = clampedOpacity;
 	setStatus("Subtitle text opacity updated for the next init.");
 }
 
 bool ofxVlc4::isSubtitleBold() const {
-	return subtitleBold;
+	return playerConfigRuntime.subtitleBold;
 }
 
 void ofxVlc4::setSubtitleBold(bool enabled) {
-	if (subtitleBold == enabled) {
+	if (playerConfigRuntime.subtitleBold == enabled) {
 		return;
 	}
-	subtitleBold = enabled;
+	playerConfigRuntime.subtitleBold = enabled;
 	setStatus("Subtitle bold styling updated for the next init.");
 }
 
 void ofxVlc4::setError(const std::string & message) {
-	lastErrorMessage = message;
-	lastStatusMessage.clear();
+	diagnosticsRuntime.lastErrorMessage = message;
+	diagnosticsRuntime.lastStatusMessage.clear();
 	logError(message);
 }
 
 void ofxVlc4::setStatus(const std::string & message) {
-	lastStatusMessage = message;
-	lastErrorMessage.clear();
+	diagnosticsRuntime.lastStatusMessage = message;
+	diagnosticsRuntime.lastErrorMessage.clear();
 }
 
 std::string ofxVlc4::vlcHelpModeToOptionString(ofxVlc4VlcHelpMode mode) {
@@ -1835,13 +1598,13 @@ void ofxVlc4::updatePendingRecordingMux() {
 	if (activeTask && activeTask->inProgress.load()) {
 		return;
 	}
-	if (recorder.hasActiveCaptureSession()) {
+	if (recordingObjectRuntime.recorder.hasActiveCaptureSession()) {
 		setRecordingSessionState(ofxVlc4RecordingSessionState::Finalizing);
 		return;
 	}
 
-	const std::string finishedVideoPath = recorder.getLastFinishedVideoPath();
-	const std::string finishedAudioPath = recorder.getLastFinishedAudioPath();
+	const std::string finishedVideoPath = recordingObjectRuntime.recorder.getLastFinishedVideoPath();
+	const std::string finishedAudioPath = recordingObjectRuntime.recorder.getLastFinishedAudioPath();
 	ofxVlc4MuxOptions options;
 	std::string previousVideoPath;
 	std::string previousAudioPath;
@@ -1941,7 +1704,7 @@ void ofxVlc4::clearRecorderCaptureState(const std::shared_ptr<ofAppGLFWWindow> &
 	if (cleanupWindow) {
 		cleanupWindow->makeCurrent();
 	}
-	recorder.clearCaptureState();
+	recordingObjectRuntime.recorder.clearCaptureState();
 }
 
 void ofxVlc4::clearWindowCaptureState(const std::shared_ptr<ofAppGLFWWindow> & cleanupWindow) {
@@ -1968,25 +1731,25 @@ void ofxVlc4::releaseVlcResources() {
 	dismissAllDialogs();
 	stopMediaDiscoveryInternal();
 	stopRendererDiscoveryInternal();
-	std::shared_ptr<ofAppGLFWWindow> cleanupWindow = vlcWindow ? vlcWindow : mainWindow;
-	const bool recorderNeedsCleanup = recorder.hasCleanupState();
+	std::shared_ptr<ofAppGLFWWindow> cleanupWindow = videoResourceRuntime.vlcWindow ? videoResourceRuntime.vlcWindow : videoResourceRuntime.mainWindow;
+	const bool recorderNeedsCleanup = recordingObjectRuntime.recorder.hasCleanupState();
 	const bool needsGlCleanup =
-		vlcFramebufferId != 0 ||
-		videoTexture.isAllocated() ||
-		exposedTextureFbo.isAllocated() ||
+		videoResourceRuntime.vlcFramebufferId != 0 ||
+		videoResourceRuntime.videoTexture.isAllocated() ||
+		videoResourceRuntime.exposedTextureFbo.isAllocated() ||
 		windowCaptureRuntime.captureFbo.isAllocated() ||
 		recorderNeedsCleanup;
 
-	if (mediaPlayer) {
-		if (watchTimeRegistered) {
-			libvlc_media_player_unwatch_time(mediaPlayer);
-			watchTimeRegistered = false;
+	if (legacyCoreMirrorRuntime.mediaPlayer) {
+		if (watchTimeRuntime.registered) {
+			libvlc_media_player_unwatch_time(legacyCoreMirrorRuntime.mediaPlayer);
+			watchTimeRuntime.registered = false;
 		}
-		libvlc_video_set_adjust_int(mediaPlayer, libvlc_adjust_Enable, 0);
-		libvlc_media_player_release(mediaPlayer);
-		mediaPlayer = nullptr;
-		coreSession->setPlayer(nullptr);
-		coreSession->setPlayerEvents(nullptr);
+		libvlc_video_set_adjust_int(legacyCoreMirrorRuntime.mediaPlayer, libvlc_adjust_Enable, 0);
+		libvlc_media_player_release(legacyCoreMirrorRuntime.mediaPlayer);
+		legacyCoreMirrorRuntime.mediaPlayer = nullptr;
+		subsystemRuntime.coreSession->setPlayer(nullptr);
+		subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 	}
 
 	clearCurrentMedia(false);
@@ -2002,30 +1765,30 @@ void ofxVlc4::releaseVlcResources() {
 	clearWindowCaptureState(nullptr);
 
 	if (needsGlCleanup) {
-		videoComponent->clearPublishedFrameFence();
-		if (vlcWindow && vlcFramebufferId != 0) {
-			glDeleteFramebuffers(1, &vlcFramebufferId);
-			vlcFramebufferId = 0;
+		subsystemRuntime.videoComponent->clearPublishedFrameFence();
+		if (videoResourceRuntime.vlcWindow && videoResourceRuntime.vlcFramebufferId != 0) {
+			glDeleteFramebuffers(1, &videoResourceRuntime.vlcFramebufferId);
+			videoResourceRuntime.vlcFramebufferId = 0;
 		}
-		videoTexture.clear();
-		clearAllocatedFbo(exposedTextureFbo);
+		videoResourceRuntime.videoTexture.clear();
+		clearAllocatedFbo(videoResourceRuntime.exposedTextureFbo);
 	}
 	if (cleanupWindow && needsGlCleanup) {
 		glfwMakeContextCurrent(nullptr);
 	}
 	releaseD3D11Resources();
 	clearVideoHdrMetadata();
-	allocatedVideoWidth = 1;
-	allocatedVideoHeight = 1;
+	videoGeometryRuntime.allocatedVideoWidth = 1;
+	videoGeometryRuntime.allocatedVideoHeight = 1;
 
-	if (libvlc) {
-		libvlc_log_unset(libvlc);
-		mediaComponent->closeLibVlcLogFile();
-		libvlc_dialog_set_error_callback(libvlc, nullptr, nullptr);
-		libvlc_dialog_set_callbacks(libvlc, nullptr, nullptr);
-		libvlc_release(libvlc);
-		libvlc = nullptr;
-		coreSession->setInstance(nullptr);
+	if (legacyCoreMirrorRuntime.libvlc) {
+		libvlc_log_unset(legacyCoreMirrorRuntime.libvlc);
+		subsystemRuntime.mediaComponent->closeLibVlcLogFile();
+		libvlc_dialog_set_error_callback(legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
+		libvlc_dialog_set_callbacks(legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
+		libvlc_release(legacyCoreMirrorRuntime.libvlc);
+		legacyCoreMirrorRuntime.libvlc = nullptr;
+		subsystemRuntime.coreSession->setInstance(nullptr);
 	}
 	processDeferredRecordingMuxCleanup(true);
 
@@ -2037,27 +1800,27 @@ void ofxVlc4::releaseVlcResources() {
 	resetSubtitleStateInfo();
 	resetNavigationStateInfo();
 
-	activeVideoOutputBackend = videoOutputBackend;
-	activeVideoAdjustmentEngine = videoAdjustmentEngine;
+	videoPresentationRuntime.activeVideoOutputBackend = videoPresentationRuntime.videoOutputBackend;
+	effectsRuntime.activeVideoAdjustmentEngine = effectsRuntime.videoAdjustmentEngine;
 	syncLegacyStateFromCoreSession();
 }
 
 void ofxVlc4::close() {
 	bool expected = false;
-	if (!closeRequested.compare_exchange_strong(expected, true)) {
+	if (!lifecycleRuntime.closeRequested.compare_exchange_strong(expected, true)) {
 		return;
 	}
 
-	playbackController->prepareForClose();
+	subsystemRuntime.playbackController->prepareForClose();
 
 	// Only flip the hard shutdown guard once playback had a chance to unwind cleanly.
-	shuttingDown.store(true);
+	lifecycleRuntime.shuttingDown.store(true);
 	releaseVlcResources();
-	isAudioReady.store(false);
-	isVideoLoaded.store(false);
-	startupPlaybackStatePrepared.store(false);
-	hasReceivedVideoFrame.store(false);
-	vlcFboBound = false;
+	audioRuntime.ready.store(false);
+	videoFrameRuntime.isVideoLoaded.store(false);
+	videoFrameRuntime.startupPlaybackStatePrepared.store(false);
+	videoFrameRuntime.hasReceivedVideoFrame.store(false);
+	videoFrameRuntime.vlcFboBound = false;
 	setStatus("Player closed.");
 }
 

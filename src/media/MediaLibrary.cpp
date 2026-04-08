@@ -392,31 +392,31 @@ MediaLibrary::MediaLibrary(ofxVlc4 & owner)
 }
 
 bool MediaLibrary::isPlaylistIndexLocked(int index) const {
-	return index >= 0 && index < static_cast<int>(owner.playlist.size());
+	return index >= 0 && index < static_cast<int>(owner.mediaLibrary.playlist.size());
 }
 
 std::string MediaLibrary::getPathAtIndexLocked(int index) const {
-	return isPlaylistIndexLocked(index) ? owner.playlist[static_cast<size_t>(index)] : "";
+	return isPlaylistIndexLocked(index) ? owner.mediaLibrary.playlist[static_cast<size_t>(index)] : "";
 }
 
 std::string MediaLibrary::getCurrentPathLocked() const {
-	return getPathAtIndexLocked(owner.currentIndex);
+	return getPathAtIndexLocked(owner.mediaLibrary.currentIndex);
 }
 
 int MediaLibrary::getCurrentIndexLocked() const {
-	return owner.currentIndex;
+	return owner.mediaLibrary.currentIndex;
 }
 
 size_t MediaLibrary::getPlaylistSizeLocked() const {
-	return owner.playlist.size();
+	return owner.mediaLibrary.playlist.size();
 }
 
 bool MediaLibrary::hasPlaylistLocked() const {
-	return !owner.playlist.empty();
+	return !owner.mediaLibrary.playlist.empty();
 }
 
 void MediaLibrary::setCurrentIndexLocked(int index) {
-	owner.currentIndex = index;
+	owner.mediaLibrary.currentIndex = index;
 }
 
 void MediaLibrary::clearCurrentIndexLocked() {
@@ -424,31 +424,31 @@ void MediaLibrary::clearCurrentIndexLocked() {
 }
 
 void MediaLibrary::appendPlaylistPathLocked(const std::string & path) {
-	owner.playlist.push_back(path);
+	owner.mediaLibrary.playlist.push_back(path);
 }
 
 void MediaLibrary::insertPlaylistPathLocked(int index, const std::string & path) {
-	owner.playlist.insert(owner.playlist.begin() + index, path);
+	owner.mediaLibrary.playlist.insert(owner.mediaLibrary.playlist.begin() + index, path);
 }
 
 void MediaLibrary::insertPlaylistItemsLocked(int index, std::vector<std::string> items) {
-	owner.playlist.insert(
-		owner.playlist.begin() + index,
+	owner.mediaLibrary.playlist.insert(
+		owner.mediaLibrary.playlist.begin() + index,
 		std::make_move_iterator(items.begin()),
 		std::make_move_iterator(items.end()));
 }
 
 void MediaLibrary::clearPlaylistLocked() {
-	owner.playlist.clear();
+	owner.mediaLibrary.playlist.clear();
 	clearCurrentIndexLocked();
 }
 
 void MediaLibrary::erasePlaylistIndexLocked(int index) {
-	owner.playlist.erase(owner.playlist.begin() + index);
+	owner.mediaLibrary.playlist.erase(owner.mediaLibrary.playlist.begin() + index);
 }
 
 void MediaLibrary::replacePlaylistLocked(std::vector<std::string> items) {
-	owner.playlist = std::move(items);
+	owner.mediaLibrary.playlist = std::move(items);
 }
 
 void MediaLibrary::addToPlaylistInternal(const std::string & path, bool preloadMetadata) {
@@ -458,12 +458,12 @@ void MediaLibrary::addToPlaylistInternal(const std::string & path, bool preloadM
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(owner.metadataCacheMutex);
-		owner.metadataCache.erase(path);
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.metadataCacheMutex);
+		owner.mediaLibrary.metadataCache.erase(path);
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(owner.playlistMutex);
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 		appendPlaylistPathLocked(path);
 		if (getCurrentIndexLocked() < 0 && hasPlaylistLocked()) {
 			setCurrentIndexLocked(0);
@@ -547,17 +547,17 @@ int MediaLibrary::addPathToPlaylist(const std::string & path, std::initializer_l
 
 void MediaLibrary::clearPlaylistState() {
 	{
-		std::lock_guard<std::mutex> lock(owner.playlistMutex);
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 		clearPlaylistLocked();
 	}
 	clearMetadataCache();
 }
 
 void MediaLibrary::resetCurrentMediaParseState() {
-	owner.currentMediaParseStatus.store(static_cast<int>(ofxVlc4::MediaParseStatus::None));
-	owner.lastCompletedMediaParseStatus.store(static_cast<int>(ofxVlc4::MediaParseStatus::None));
-	owner.mediaParseRequested.store(false);
-	owner.mediaParseActive.store(false);
+	owner.mediaRuntime.currentMediaParseStatus.store(static_cast<int>(ofxVlc4::MediaParseStatus::None));
+	owner.mediaRuntime.lastCompletedMediaParseStatus.store(static_cast<int>(ofxVlc4::MediaParseStatus::None));
+	owner.mediaRuntime.mediaParseRequested.store(false);
+	owner.mediaRuntime.mediaParseActive.store(false);
 }
 
 libvlc_media_t * MediaLibrary::retainCurrentOrLoadedMedia() const {
@@ -634,15 +634,15 @@ std::vector<ofxVlc4::PlaylistItemInfo> MediaLibrary::getPlaylistItems() const {
 	std::vector<std::string> paths;
 	int currentIndex = -1;
 	{
-		std::lock_guard<std::mutex> lock(owner.playlistMutex);
-		paths = owner.playlist;
-		currentIndex = owner.currentIndex;
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
+		paths = owner.mediaLibrary.playlist;
+		currentIndex = owner.mediaLibrary.currentIndex;
 	}
 
 	std::vector<ofxVlc4::PlaylistItemInfo> items;
 	items.reserve(paths.size());
 
-	std::lock_guard<std::mutex> metadataLock(owner.metadataCacheMutex);
+	std::lock_guard<std::mutex> metadataLock(owner.mediaLibrary.metadataCacheMutex);
 	for (size_t i = 0; i < paths.size(); ++i) {
 		const std::string & path = paths[i];
 		ofxVlc4::PlaylistItemInfo item;
@@ -651,7 +651,7 @@ std::vector<ofxVlc4::PlaylistItemInfo> MediaLibrary::getPlaylistItems() const {
 		item.label = ofxVlc4Utils::mediaLabelForPath(path);
 		item.current = item.index == currentIndex;
 		item.uri = isUri(path);
-		item.metadataCached = owner.metadataCache.find(path) != owner.metadataCache.end();
+		item.metadataCached = owner.mediaLibrary.metadataCache.find(path) != owner.mediaLibrary.metadataCache.end();
 		items.push_back(std::move(item));
 	}
 
@@ -664,8 +664,8 @@ ofxVlc4::PlaylistStateInfo MediaLibrary::getPlaylistStateInfo() const {
 	state.size = state.items.size();
 	state.empty = state.items.empty();
 	{
-		std::lock_guard<std::mutex> lock(owner.playlistMutex);
-		state.currentIndex = owner.currentIndex;
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
+		state.currentIndex = owner.mediaLibrary.currentIndex;
 	}
 	state.hasCurrent = state.currentIndex >= 0 && state.currentIndex < static_cast<int>(state.size);
 	return state;
@@ -680,13 +680,13 @@ ofxVlc4::PlaylistItemInfo MediaLibrary::getCurrentPlaylistItemInfo() const {
 }
 
 void MediaLibrary::clearGeneratedThumbnailInfo() {
-	std::lock_guard<std::mutex> lock(owner.thumbnailMutex);
-	owner.lastGeneratedThumbnail = ofxVlc4::ThumbnailInfo {};
+	std::lock_guard<std::mutex> lock(owner.mediaRuntime.thumbnailMutex);
+	owner.mediaRuntime.lastGeneratedThumbnail = ofxVlc4::ThumbnailInfo {};
 }
 
 void MediaLibrary::clearMetadataCache() {
-	std::lock_guard<std::mutex> lock(owner.metadataCacheMutex);
-	owner.metadataCache.clear();
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.metadataCacheMutex);
+	owner.mediaLibrary.metadataCache.clear();
 }
 
 void MediaLibrary::cacheArtworkPathForMediaPath(const std::string & mediaPath, const std::string & artworkPath) {
@@ -695,8 +695,8 @@ void MediaLibrary::cacheArtworkPathForMediaPath(const std::string & mediaPath, c
 		return;
 	}
 
-	std::lock_guard<std::mutex> lock(owner.metadataCacheMutex);
-	auto & metadata = owner.metadataCache[currentPath];
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.metadataCacheMutex);
+	auto & metadata = owner.mediaLibrary.metadataCache[currentPath];
 	auto existing = std::find_if(
 		metadata.begin(),
 		metadata.end(),
@@ -709,7 +709,7 @@ void MediaLibrary::cacheArtworkPathForMediaPath(const std::string & mediaPath, c
 }
 
 std::string MediaLibrary::getPathAtIndex(int index) const {
-	std::lock_guard<std::mutex> lock(owner.playlistMutex);
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 	return getPathAtIndexLocked(index);
 }
 
@@ -728,7 +728,7 @@ std::string MediaLibrary::getFileNameAtIndex(int index) const {
 }
 
 std::string MediaLibrary::getCurrentPath() const {
-	std::lock_guard<std::mutex> lock(owner.playlistMutex);
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 	return getCurrentPathLocked();
 }
 
@@ -737,24 +737,24 @@ std::string MediaLibrary::getCurrentFileName() const {
 }
 
 int MediaLibrary::getCurrentIndex() const {
-	std::lock_guard<std::mutex> lock(owner.playlistMutex);
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 	return getCurrentIndexLocked();
 }
 
 size_t MediaLibrary::getPlaylistSize() const {
-	std::lock_guard<std::mutex> lock(owner.playlistMutex);
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 	return getPlaylistSizeLocked();
 }
 
 bool MediaLibrary::hasPlaylist() const {
-	std::lock_guard<std::mutex> lock(owner.playlistMutex);
+	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 	return hasPlaylistLocked();
 }
 
 MediaLibrary::RemovePlaylistItemResult MediaLibrary::removePlaylistItem(int index) {
 	RemovePlaylistItemResult result;
 	{
-		std::lock_guard<std::mutex> lock(owner.playlistMutex);
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 		if (!isPlaylistIndexLocked(index)) {
 			return result;
 		}
@@ -786,7 +786,7 @@ MediaLibrary::RemovePlaylistItemResult MediaLibrary::removePlaylistItem(int inde
 
 void MediaLibrary::movePlaylistItem(int fromIndex, int toIndex) {
 	{
-		std::lock_guard<std::mutex> lock(owner.playlistMutex);
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 		if (!isPlaylistIndexLocked(fromIndex)) {
 			return;
 		}
@@ -829,7 +829,7 @@ void MediaLibrary::movePlaylistItems(const std::vector<int> & fromIndices, int t
 
 	std::vector<int> indices = fromIndices;
 	{
-		std::lock_guard<std::mutex> lock(owner.playlistMutex);
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
 		if (!hasPlaylistLocked()) {
 			return;
 		}
@@ -908,23 +908,23 @@ std::vector<std::pair<std::string, std::string>> MediaLibrary::getMetadataAtInde
 	if (index == getCurrentIndex() && currentMedia) {
 		currentMediaMetadata = buildMetadataForMedia(currentMedia);
 		if (!currentMediaMetadata.empty()) {
-			std::lock_guard<std::mutex> lock(owner.metadataCacheMutex);
-			const auto cached = owner.metadataCache.find(path);
-			if (cached != owner.metadataCache.end() &&
+			std::lock_guard<std::mutex> lock(owner.mediaLibrary.metadataCacheMutex);
+			const auto cached = owner.mediaLibrary.metadataCache.find(path);
+			if (cached != owner.mediaLibrary.metadataCache.end() &&
 				(cached->second.size() > currentMediaMetadata.size() ||
 					(hasDetailedTrackMetadata(cached->second) && !hasDetailedTrackMetadata(currentMediaMetadata)))) {
 				return cached->second;
 			}
-			owner.metadataCache[path] = currentMediaMetadata;
+			owner.mediaLibrary.metadataCache[path] = currentMediaMetadata;
 			return currentMediaMetadata;
 		}
 	}
 
 	std::vector<std::pair<std::string, std::string>> cachedMetadata;
 	{
-		std::lock_guard<std::mutex> lock(owner.metadataCacheMutex);
-		const auto cached = owner.metadataCache.find(path);
-		if (cached != owner.metadataCache.end()) {
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.metadataCacheMutex);
+		const auto cached = owner.mediaLibrary.metadataCache.find(path);
+		if (cached != owner.mediaLibrary.metadataCache.end()) {
 			cachedMetadata = cached->second;
 			if (hasDetailedTrackMetadata(cachedMetadata)) {
 				return cachedMetadata;
@@ -967,12 +967,12 @@ std::vector<std::pair<std::string, std::string>> MediaLibrary::getMetadataAtInde
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(owner.metadataCacheMutex);
-		const auto cached = owner.metadataCache.find(path);
-		if (cached == owner.metadataCache.end() ||
+		std::lock_guard<std::mutex> lock(owner.mediaLibrary.metadataCacheMutex);
+		const auto cached = owner.mediaLibrary.metadataCache.find(path);
+		if (cached == owner.mediaLibrary.metadataCache.end() ||
 			metadata.size() >= cached->second.size() ||
 			hasDetailedTrackMetadata(metadata)) {
-			owner.metadataCache[path] = metadata;
+			owner.mediaLibrary.metadataCache[path] = metadata;
 		}
 	}
 
@@ -985,10 +985,10 @@ std::vector<std::pair<std::string, std::string>> MediaLibrary::getCurrentMetadat
 
 ofxVlc4::MediaParseInfo MediaLibrary::getCurrentMediaParseInfo() const {
 	ofxVlc4::MediaParseInfo info;
-	info.status = static_cast<ofxVlc4::MediaParseStatus>(owner.currentMediaParseStatus.load());
-	info.lastCompletedStatus = static_cast<ofxVlc4::MediaParseStatus>(owner.lastCompletedMediaParseStatus.load());
-	info.requested = owner.mediaParseRequested.load();
-	info.active = owner.mediaParseActive.load();
+	info.status = static_cast<ofxVlc4::MediaParseStatus>(owner.mediaRuntime.currentMediaParseStatus.load());
+	info.lastCompletedStatus = static_cast<ofxVlc4::MediaParseStatus>(owner.mediaRuntime.lastCompletedMediaParseStatus.load());
+	info.requested = owner.mediaRuntime.mediaParseRequested.load();
+	info.active = owner.mediaRuntime.mediaParseActive.load();
 
 	if (!info.requested && !info.active && info.status == ofxVlc4::MediaParseStatus::None) {
 		libvlc_media_t * sourceMedia = retainCurrentOrLoadedMedia();
@@ -1007,17 +1007,17 @@ ofxVlc4::MediaParseStatus MediaLibrary::getCurrentMediaParseStatus() const {
 }
 
 ofxVlc4::MediaParseOptions MediaLibrary::getMediaParseOptions() const {
-	return owner.mediaParseOptions;
+	return owner.mediaRuntime.mediaParseOptions;
 }
 
 void MediaLibrary::setMediaParseOptions(const ofxVlc4::MediaParseOptions & options) {
-	owner.mediaParseOptions.parseLocal = options.parseLocal;
-	owner.mediaParseOptions.parseNetwork = options.parseNetwork;
-	owner.mediaParseOptions.forced = options.forced;
-	owner.mediaParseOptions.fetchLocal = options.fetchLocal;
-	owner.mediaParseOptions.fetchNetwork = options.fetchNetwork;
-	owner.mediaParseOptions.doInteract = options.doInteract;
-	owner.mediaParseOptions.timeoutMs = std::max(-1, options.timeoutMs);
+	owner.mediaRuntime.mediaParseOptions.parseLocal = options.parseLocal;
+	owner.mediaRuntime.mediaParseOptions.parseNetwork = options.parseNetwork;
+	owner.mediaRuntime.mediaParseOptions.forced = options.forced;
+	owner.mediaRuntime.mediaParseOptions.fetchLocal = options.fetchLocal;
+	owner.mediaRuntime.mediaParseOptions.fetchNetwork = options.fetchNetwork;
+	owner.mediaRuntime.mediaParseOptions.doInteract = options.doInteract;
+	owner.mediaRuntime.mediaParseOptions.timeoutMs = std::max(-1, options.timeoutMs);
 }
 
 bool MediaLibrary::requestCurrentMediaParse() {
@@ -1034,8 +1034,8 @@ bool MediaLibrary::requestCurrentMediaParse() {
 	const int result = libvlc_media_parse_request(
 		instance,
 		sourceMedia,
-		toLibvlcMediaParseFlags(owner.mediaParseOptions),
-		owner.mediaParseOptions.timeoutMs);
+		toLibvlcMediaParseFlags(owner.mediaRuntime.mediaParseOptions),
+		owner.mediaRuntime.mediaParseOptions.timeoutMs);
 
 	libvlc_media_release(sourceMedia);
 
@@ -1043,9 +1043,9 @@ bool MediaLibrary::requestCurrentMediaParse() {
 		return false;
 	}
 
-	owner.currentMediaParseStatus.store(static_cast<int>(ofxVlc4::MediaParseStatus::Pending));
-	owner.mediaParseRequested.store(true);
-	owner.mediaParseActive.store(true);
+	owner.mediaRuntime.currentMediaParseStatus.store(static_cast<int>(ofxVlc4::MediaParseStatus::Pending));
+	owner.mediaRuntime.mediaParseRequested.store(true);
+	owner.mediaRuntime.mediaParseActive.store(true);
 	owner.setStatus("Media parse requested.");
 	return true;
 }
@@ -1063,7 +1063,7 @@ void MediaLibrary::stopCurrentMediaParse() {
 
 	libvlc_media_parse_stop(instance, sourceMedia);
 	libvlc_media_release(sourceMedia);
-	owner.mediaParseRequested.store(false);
+	owner.mediaRuntime.mediaParseRequested.store(false);
 	owner.setStatus("Media parse stop requested.");
 }
 
@@ -1105,23 +1105,23 @@ void MediaLibrary::handleMediaParsedChanged(libvlc_media_parsed_status_t status)
 
 	const ofxVlc4::MediaParseStatus publicStatus =
 		static_cast<ofxVlc4::MediaParseStatus>(status);
-	owner.currentMediaParseStatus.store(static_cast<int>(publicStatus));
-	owner.mediaParseRequested.store(false);
-	owner.mediaParseActive.store(publicStatus == ofxVlc4::MediaParseStatus::Pending);
+	owner.mediaRuntime.currentMediaParseStatus.store(static_cast<int>(publicStatus));
+	owner.mediaRuntime.mediaParseRequested.store(false);
+	owner.mediaRuntime.mediaParseActive.store(publicStatus == ofxVlc4::MediaParseStatus::Pending);
 	if (publicStatus == ofxVlc4::MediaParseStatus::Skipped ||
 		publicStatus == ofxVlc4::MediaParseStatus::Failed ||
 		publicStatus == ofxVlc4::MediaParseStatus::Timeout ||
 		publicStatus == ofxVlc4::MediaParseStatus::Cancelled ||
 		publicStatus == ofxVlc4::MediaParseStatus::Done) {
-		owner.lastCompletedMediaParseStatus.store(static_cast<int>(publicStatus));
+		owner.mediaRuntime.lastCompletedMediaParseStatus.store(static_cast<int>(publicStatus));
 	}
 	owner.refreshPixelAspectRatio();
 	owner.refreshDisplayAspectRatio();
 }
 
 ofxVlc4::ThumbnailInfo MediaLibrary::getLastGeneratedThumbnail() const {
-	std::lock_guard<std::mutex> lock(owner.thumbnailMutex);
-	return owner.lastGeneratedThumbnail;
+	std::lock_guard<std::mutex> lock(owner.mediaRuntime.thumbnailMutex);
+	return owner.mediaRuntime.lastGeneratedThumbnail;
 }
 
 bool MediaLibrary::requestThumbnailByTime(
@@ -1166,9 +1166,9 @@ bool MediaLibrary::requestThumbnailByTime(
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(owner.thumbnailMutex);
-		owner.thumbnailRequest = request;
-		owner.lastGeneratedThumbnail.requestActive = true;
+		std::lock_guard<std::mutex> lock(owner.mediaRuntime.thumbnailMutex);
+		owner.mediaRuntime.thumbnailRequest = request;
+		owner.mediaRuntime.lastGeneratedThumbnail.requestActive = true;
 	}
 
 	owner.setStatus("Thumbnail request queued.");
@@ -1217,9 +1217,9 @@ bool MediaLibrary::requestThumbnailByPosition(
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(owner.thumbnailMutex);
-		owner.thumbnailRequest = request;
-		owner.lastGeneratedThumbnail.requestActive = true;
+		std::lock_guard<std::mutex> lock(owner.mediaRuntime.thumbnailMutex);
+		owner.mediaRuntime.thumbnailRequest = request;
+		owner.mediaRuntime.lastGeneratedThumbnail.requestActive = true;
 	}
 
 	owner.setStatus("Thumbnail request queued.");
@@ -1227,12 +1227,12 @@ bool MediaLibrary::requestThumbnailByPosition(
 }
 
 void MediaLibrary::cancelThumbnailRequest() {
-	std::lock_guard<std::mutex> lock(owner.thumbnailMutex);
-	if (owner.thumbnailRequest) {
-		libvlc_media_thumbnail_request_destroy(owner.thumbnailRequest);
-		owner.thumbnailRequest = nullptr;
+	std::lock_guard<std::mutex> lock(owner.mediaRuntime.thumbnailMutex);
+	if (owner.mediaRuntime.thumbnailRequest) {
+		libvlc_media_thumbnail_request_destroy(owner.mediaRuntime.thumbnailRequest);
+		owner.mediaRuntime.thumbnailRequest = nullptr;
 	}
-	owner.lastGeneratedThumbnail.requestActive = false;
+	owner.mediaRuntime.lastGeneratedThumbnail.requestActive = false;
 }
 
 void MediaLibrary::handleAttachedThumbnailsFound(libvlc_picture_list_t * thumbnails) {
@@ -1256,12 +1256,12 @@ void MediaLibrary::handleAttachedThumbnailsFound(libvlc_picture_list_t * thumbna
 }
 
 void MediaLibrary::handleThumbnailGenerated(libvlc_picture_t * picture) {
-	std::lock_guard<std::mutex> lock(owner.thumbnailMutex);
-	if (owner.thumbnailRequest) {
-		libvlc_media_thumbnail_request_destroy(owner.thumbnailRequest);
-		owner.thumbnailRequest = nullptr;
+	std::lock_guard<std::mutex> lock(owner.mediaRuntime.thumbnailMutex);
+	if (owner.mediaRuntime.thumbnailRequest) {
+		libvlc_media_thumbnail_request_destroy(owner.mediaRuntime.thumbnailRequest);
+		owner.mediaRuntime.thumbnailRequest = nullptr;
 	}
-	owner.lastGeneratedThumbnail.requestActive = false;
+	owner.mediaRuntime.lastGeneratedThumbnail.requestActive = false;
 	if (!picture) {
 		return;
 	}
@@ -1278,40 +1278,40 @@ void MediaLibrary::handleThumbnailGenerated(libvlc_picture_t * picture) {
 		return;
 	}
 
-	owner.lastGeneratedThumbnail.available = true;
-	owner.lastGeneratedThumbnail.path = thumbnailPath;
-	owner.lastGeneratedThumbnail.timeMs = libvlc_picture_get_time(picture);
-	owner.lastGeneratedThumbnail.width = libvlc_picture_get_width(picture);
-	owner.lastGeneratedThumbnail.height = libvlc_picture_get_height(picture);
+	owner.mediaRuntime.lastGeneratedThumbnail.available = true;
+	owner.mediaRuntime.lastGeneratedThumbnail.path = thumbnailPath;
+	owner.mediaRuntime.lastGeneratedThumbnail.timeMs = libvlc_picture_get_time(picture);
+	owner.mediaRuntime.lastGeneratedThumbnail.width = libvlc_picture_get_width(picture);
+	owner.mediaRuntime.lastGeneratedThumbnail.height = libvlc_picture_get_height(picture);
 }
 
 void MediaLibrary::updateSnapshotStateOnRequest(const std::string & requestedPath) {
 	const std::string trimmedPath = trimWhitespace(requestedPath);
-	std::lock_guard<std::mutex> lock(owner.playbackStateMutex);
-	owner.snapshotPending = !trimmedPath.empty();
-	owner.snapshotAvailable = !owner.lastSnapshotPath.empty();
-	owner.pendingSnapshotPath = trimmedPath;
-	owner.lastSnapshotEventMessage = trimmedPath.empty() ? "" : ("Requested: " + trimmedPath);
-	owner.lastSnapshotFailureReason.clear();
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.playbackStateMutex);
+	owner.mediaRuntime.snapshotPending = !trimmedPath.empty();
+	owner.mediaRuntime.snapshotAvailable = !owner.mediaRuntime.lastSnapshotPath.empty();
+	owner.mediaRuntime.pendingSnapshotPath = trimmedPath;
+	owner.mediaRuntime.lastSnapshotEventMessage = trimmedPath.empty() ? "" : ("Requested: " + trimmedPath);
+	owner.mediaRuntime.lastSnapshotFailureReason.clear();
 }
 
 void MediaLibrary::updateSnapshotStateFromEvent(const std::string & savedPath) {
 	std::string resolvedPath;
 	{
-		std::lock_guard<std::mutex> lock(owner.playbackStateMutex);
+		std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.playbackStateMutex);
 		resolvedPath = trimWhitespace(savedPath);
 		if (resolvedPath.empty()) {
-			resolvedPath = owner.pendingSnapshotPath;
+			resolvedPath = owner.mediaRuntime.pendingSnapshotPath;
 		}
-		owner.snapshotPending = false;
-		owner.pendingSnapshotPath.clear();
-		owner.snapshotAvailable = !resolvedPath.empty();
+		owner.mediaRuntime.snapshotPending = false;
+		owner.mediaRuntime.pendingSnapshotPath.clear();
+		owner.mediaRuntime.snapshotAvailable = !resolvedPath.empty();
 		if (!resolvedPath.empty()) {
-			owner.lastSnapshotPath = resolvedPath;
-			owner.lastSnapshotBytes = fileSizeIfAvailable(resolvedPath);
-			owner.lastSnapshotTimestamp = ofGetTimestampString("%Y-%m-%d %H:%M:%S");
-			owner.lastSnapshotEventMessage = "Saved: " + resolvedPath;
-			owner.lastSnapshotFailureReason.clear();
+			owner.mediaRuntime.lastSnapshotPath = resolvedPath;
+			owner.mediaRuntime.lastSnapshotBytes = fileSizeIfAvailable(resolvedPath);
+			owner.mediaRuntime.lastSnapshotTimestamp = ofGetTimestampString("%Y-%m-%d %H:%M:%S");
+			owner.mediaRuntime.lastSnapshotEventMessage = "Saved: " + resolvedPath;
+			owner.mediaRuntime.lastSnapshotFailureReason.clear();
 		}
 	}
 
@@ -1322,20 +1322,20 @@ void MediaLibrary::updateSnapshotStateFromEvent(const std::string & savedPath) {
 }
 
 void MediaLibrary::clearPendingSnapshotState() {
-	std::lock_guard<std::mutex> lock(owner.playbackStateMutex);
-	owner.snapshotPending = false;
-	owner.snapshotAvailable = !owner.lastSnapshotPath.empty();
-	owner.pendingSnapshotPath.clear();
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.playbackStateMutex);
+	owner.mediaRuntime.snapshotPending = false;
+	owner.mediaRuntime.snapshotAvailable = !owner.mediaRuntime.lastSnapshotPath.empty();
+	owner.mediaRuntime.pendingSnapshotPath.clear();
 }
 
 void MediaLibrary::updateSnapshotFailureState(const std::string & failureReason) {
 	const std::string trimmedReason = trimWhitespace(failureReason);
-	std::lock_guard<std::mutex> lock(owner.playbackStateMutex);
-	owner.snapshotPending = false;
-	owner.snapshotAvailable = !owner.lastSnapshotPath.empty();
-	owner.pendingSnapshotPath.clear();
-	owner.lastSnapshotFailureReason = trimmedReason;
-	owner.lastSnapshotEventMessage = trimmedReason.empty() ? "" : ("Failed: " + trimmedReason);
+	std::lock_guard<std::mutex> lock(owner.synchronizationRuntime.playbackStateMutex);
+	owner.mediaRuntime.snapshotPending = false;
+	owner.mediaRuntime.snapshotAvailable = !owner.mediaRuntime.lastSnapshotPath.empty();
+	owner.mediaRuntime.pendingSnapshotPath.clear();
+	owner.mediaRuntime.lastSnapshotFailureReason = trimmedReason;
+	owner.mediaRuntime.lastSnapshotEventMessage = trimmedReason.empty() ? "" : ("Failed: " + trimmedReason);
 }
 
 std::string MediaLibrary::getCurrentMediaMeta(ofxVlc4::MediaMetaField field) const {
@@ -1502,9 +1502,9 @@ std::vector<ofxVlc4::BookmarkInfo> MediaLibrary::getBookmarksForPath(const std::
 
 	std::vector<ofxVlc4::BookmarkInfo> bookmarks;
 	{
-		std::lock_guard<std::mutex> lock(owner.bookmarkMutex);
-		const auto it = owner.bookmarksByPath.find(trimmedPath);
-		if (it == owner.bookmarksByPath.end()) {
+		std::lock_guard<std::mutex> lock(owner.bookmarkState.mutex);
+		const auto it = owner.bookmarkState.entries.find(trimmedPath);
+		if (it == owner.bookmarkState.entries.end()) {
 			return {};
 		}
 		bookmarks = it->second;
@@ -1538,8 +1538,8 @@ bool MediaLibrary::addBookmarkAtTime(int timeMs, const std::string & label) {
 	bookmark.id = bookmarkStableId(currentPath, bookmark.timeMs);
 
 	{
-		std::lock_guard<std::mutex> lock(owner.bookmarkMutex);
-		auto & bookmarks = owner.bookmarksByPath[currentPath];
+		std::lock_guard<std::mutex> lock(owner.bookmarkState.mutex);
+		auto & bookmarks = owner.bookmarkState.entries[currentPath];
 		const auto duplicate = std::find_if(
 			bookmarks.begin(),
 			bookmarks.end(),
@@ -1571,9 +1571,9 @@ bool MediaLibrary::seekToBookmark(const std::string & bookmarkId) {
 
 	int bookmarkTimeMs = -1;
 	{
-		std::lock_guard<std::mutex> lock(owner.bookmarkMutex);
-		const auto it = owner.bookmarksByPath.find(currentPath);
-		if (it == owner.bookmarksByPath.end()) {
+		std::lock_guard<std::mutex> lock(owner.bookmarkState.mutex);
+		const auto it = owner.bookmarkState.entries.find(currentPath);
+		if (it == owner.bookmarkState.entries.end()) {
 			return false;
 		}
 
@@ -1598,9 +1598,9 @@ bool MediaLibrary::removeBookmark(const std::string & bookmarkId) {
 		return false;
 	}
 
-	std::lock_guard<std::mutex> lock(owner.bookmarkMutex);
-	const auto it = owner.bookmarksByPath.find(currentPath);
-	if (it == owner.bookmarksByPath.end()) {
+	std::lock_guard<std::mutex> lock(owner.bookmarkState.mutex);
+	const auto it = owner.bookmarkState.entries.find(currentPath);
+	if (it == owner.bookmarkState.entries.end()) {
 		return false;
 	}
 
@@ -1614,7 +1614,7 @@ bool MediaLibrary::removeBookmark(const std::string & bookmarkId) {
 
 	it->second.erase(newEnd, it->second.end());
 	if (it->second.empty()) {
-		owner.bookmarksByPath.erase(it);
+		owner.bookmarkState.entries.erase(it);
 	}
 
 	owner.setStatus("Bookmark removed.");
@@ -1627,8 +1627,8 @@ void MediaLibrary::clearBookmarksForPath(const std::string & path) {
 		return;
 	}
 
-	std::lock_guard<std::mutex> lock(owner.bookmarkMutex);
-	owner.bookmarksByPath.erase(trimmedPath);
+	std::lock_guard<std::mutex> lock(owner.bookmarkState.mutex);
+	owner.bookmarkState.entries.erase(trimmedPath);
 }
 
 void MediaLibrary::clearCurrentBookmarks() {
