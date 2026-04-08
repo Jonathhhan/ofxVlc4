@@ -579,9 +579,16 @@ ofxVlc4::ofxVlc4()
 	settings.decorated = false;
 	settings.resizable = false;
 	settings.shareContextWith = mainWindow;
+	if (!mainWindow) {
+		ofLogWarning(kLogChannel) << "No main window available at construction; VLC render context will not share resources with the main context.";
+	}
 	vlcWindow = std::make_shared<ofAppGLFWWindow>();
 	vlcWindow->setup(settings);
-	vlcWindow->setVerticalSync(true);
+	// Vsync is intentionally disabled: VLC renders exclusively to an FBO and
+	// never swaps the window's default framebuffer, so enabling vsync here
+	// would only add unnecessary throttling on some drivers without providing
+	// any benefit.
+	vlcWindow->setVerticalSync(false);
 	vlcWindow->setWindowTitle("ofxVlc4 Native Video");
 
 	videoTexture.allocate(1, 1, GL_RGBA);
