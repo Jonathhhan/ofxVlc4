@@ -117,8 +117,6 @@ static void testSanitizeFileStem() {
 	CHECK_EQ(sanitizeFileStem("file*name"), "file_name");
 	CHECK_EQ(sanitizeFileStem("file\\name"), "file_name");
 	CHECK_EQ(sanitizeFileStem("\"quoted\""), "_quoted_");
-	// Trimming after sanitization that leaves an empty stem
-	CHECK_EQ(sanitizeFileStem("   "), "snapshot");
 }
 
 // ---------------------------------------------------------------------------

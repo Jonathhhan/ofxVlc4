@@ -783,10 +783,15 @@ static void testJsonSpecialCharEscaping() {
 	CHECK(report.valid);
 
 	const std::string json = report.toJson();
-	// Raw tab and newline must not appear unescaped inside JSON strings.
-	CHECK(json.find("\t") == std::string::npos);
-	CHECK(json.find("\n") == std::string::npos);
-	// The escaped sequences must be present.
+	// MidiJsonWriter emits a single-line JSON object with no formatting
+	// newlines.  Any literal tab or newline in the source string must have
+	// been escaped to \\t / \\n; if either appears as a raw byte anywhere
+	// in the output the escaping is broken.
+	const bool hasLiteralTab = json.find('\t') != std::string::npos;
+	const bool hasLiteralNewline = json.find('\n') != std::string::npos;
+	CHECK(!hasLiteralTab);
+	CHECK(!hasLiteralNewline);
+	// The escaped sequences must be present (verify escaping actually fired).
 	CHECK(json.find("\\\"") != std::string::npos);
 	CHECK(json.find("\\t") != std::string::npos);
 	CHECK(json.find("\\n") != std::string::npos);
