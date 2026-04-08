@@ -225,6 +225,15 @@ void appendAudioVisualizerInitArgs(
 		appendPrefixedInitArg(initArgs, "--projectm-preset-path=", settings.projectMPresetPath);
 		initArgs.emplace_back("--projectm-menu-font=Arial");
 		initArgs.emplace_back("--projectm-title-font=Arial");
+		if (settings.projectMTextureSize > 0) {
+			initArgs.emplace_back(std::string("--projectm-texture-size=") + ofToString(settings.projectMTextureSize));
+		}
+		if (settings.projectMMeshX > 0) {
+			initArgs.emplace_back(std::string("--projectm-meshx=") + ofToString(settings.projectMMeshX));
+		}
+		if (settings.projectMMeshY > 0) {
+			initArgs.emplace_back(std::string("--projectm-meshy=") + ofToString(settings.projectMMeshY));
+		}
 		break;
 	case ofxVlc4AudioVisualizerModule::None:
 	default:
@@ -1366,6 +1375,9 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 	audioVisualizerSettings.height = std::max(64, settings.height);
 	audioVisualizerSettings.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
 	audioVisualizerSettings.projectMPresetPath = settings.projectMPresetPath;
+	audioVisualizerSettings.projectMTextureSize = std::max(0, settings.projectMTextureSize);
+	audioVisualizerSettings.projectMMeshX = std::max(0, settings.projectMMeshX);
+	audioVisualizerSettings.projectMMeshY = std::max(0, settings.projectMMeshY);
 	setStatus("Audio visualizer settings updated for the next init.");
 }
 
