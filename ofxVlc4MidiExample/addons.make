@@ -1,3 +1,3 @@
-ofxVlc4
 ofxImGui
 ofxMidi
+ofxVlc4
