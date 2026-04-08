@@ -74,7 +74,10 @@ enum class ofxVlc4RecordingVideoCodecPreset {
 	H264 = 0,
 	H265,
 	Mp4v,
-	Mjpg
+	Mjpg,
+	Hap,
+	HapAlpha,
+	HapQ
 };
 
 enum class ofxVlc4RecordingMuxProfile {
@@ -82,7 +85,8 @@ enum class ofxVlc4RecordingMuxProfile {
 	MkvOpus,
 	MkvFlac,
 	MkvLpcm,
-	OggVorbis
+	OggVorbis,
+	MovAac
 };
 
 struct ofxVlc4RecordingPreset {
@@ -1180,6 +1184,7 @@ public:
 	static std::string recordingMuxContainerForProfile(ofxVlc4RecordingMuxProfile profile);
 	static std::string recordingMuxAudioCodecForProfile(ofxVlc4RecordingMuxProfile profile);
 	static const char * recordingMuxProfileLabel(ofxVlc4RecordingMuxProfile profile);
+	static bool recordingVideoCodecUsesMovContainer(ofxVlc4RecordingVideoCodecPreset preset);
 	static ofxVlc4MuxOptions recordingMuxOptionsForProfile(
 		ofxVlc4RecordingMuxProfile profile,
 		int sampleRate,

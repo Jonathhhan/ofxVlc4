@@ -435,6 +435,12 @@ std::string ofxVlc4::recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPres
 		return "MP4V";
 	case ofxVlc4RecordingVideoCodecPreset::Mjpg:
 		return "MJPG";
+	case ofxVlc4RecordingVideoCodecPreset::Hap:
+		return "Hap1";
+	case ofxVlc4RecordingVideoCodecPreset::HapAlpha:
+		return "Hap5";
+	case ofxVlc4RecordingVideoCodecPreset::HapQ:
+		return "HapY";
 	}
 	return "H264";
 }
@@ -450,6 +456,15 @@ ofxVlc4RecordingVideoCodecPreset ofxVlc4::recordingVideoCodecPresetForCodec(cons
 	if (normalizedCodec == "MJPG") {
 		return ofxVlc4RecordingVideoCodecPreset::Mjpg;
 	}
+	if (normalizedCodec == "HAP1") {
+		return ofxVlc4RecordingVideoCodecPreset::Hap;
+	}
+	if (normalizedCodec == "HAP5") {
+		return ofxVlc4RecordingVideoCodecPreset::HapAlpha;
+	}
+	if (normalizedCodec == "HAPY") {
+		return ofxVlc4RecordingVideoCodecPreset::HapQ;
+	}
 	return ofxVlc4RecordingVideoCodecPreset::H264;
 }
 
@@ -463,6 +478,12 @@ const char * ofxVlc4::recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecP
 		return "MP4V";
 	case ofxVlc4RecordingVideoCodecPreset::Mjpg:
 		return "MJPG";
+	case ofxVlc4RecordingVideoCodecPreset::Hap:
+		return "HAP";
+	case ofxVlc4RecordingVideoCodecPreset::HapAlpha:
+		return "HAP Alpha";
+	case ofxVlc4RecordingVideoCodecPreset::HapQ:
+		return "HAP Q";
 	}
 	return "H264";
 }
@@ -470,6 +491,13 @@ const char * ofxVlc4::recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecP
 bool ofxVlc4::recordingMuxProfileSupportsVideoCodec(
 	ofxVlc4RecordingMuxProfile profile,
 	ofxVlc4RecordingVideoCodecPreset preset) {
+	const bool isHap =
+		preset == ofxVlc4RecordingVideoCodecPreset::Hap ||
+		preset == ofxVlc4RecordingVideoCodecPreset::HapAlpha ||
+		preset == ofxVlc4RecordingVideoCodecPreset::HapQ;
+	if (isHap) {
+		return profile == ofxVlc4RecordingMuxProfile::MovAac;
+	}
 	if (preset == ofxVlc4RecordingVideoCodecPreset::H265) {
 		return profile == ofxVlc4RecordingMuxProfile::MkvOpus ||
 			profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
@@ -485,6 +513,13 @@ std::string ofxVlc4::recordingMuxProfileCompatibilityMessage(
 		return {};
 	}
 
+	const bool isHap =
+		preset == ofxVlc4RecordingVideoCodecPreset::Hap ||
+		preset == ofxVlc4RecordingVideoCodecPreset::HapAlpha ||
+		preset == ofxVlc4RecordingVideoCodecPreset::HapQ;
+	if (isHap) {
+		return "HAP recording requires the MOV / AAC mux profile.";
+	}
 	if (preset == ofxVlc4RecordingVideoCodecPreset::H265) {
 		return "H265 / HEVC recording currently requires an MKV mux profile.";
 	}
@@ -503,6 +538,8 @@ std::string ofxVlc4::recordingMuxContainerForProfile(ofxVlc4RecordingMuxProfile 
 		return "mkv";
 	case ofxVlc4RecordingMuxProfile::OggVorbis:
 		return "ogg";
+	case ofxVlc4RecordingMuxProfile::MovAac:
+		return "mov";
 	}
 	return "mp4";
 }
