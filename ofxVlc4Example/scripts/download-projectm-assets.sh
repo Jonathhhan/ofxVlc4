@@ -126,6 +126,13 @@ fi
 if [[ "$DOWNLOAD_TEXTURES" -eq 1 ]]; then
 	write_step "Installing textures into ${EXAMPLE_ROOT}/bin/data/textures"
 	copy_repo_contents "$TEXTURES_CLONE_DIR" "${LOCAL_DATA_ROOT}/textures"
+	# VLC's internal projectM module looks for texture files in a 'textures/' subdirectory
+	# relative to the preset directory (i.e. bin/data/presets/textures/).  Install a copy
+	# there so both the standalone ofxProjectM component and the libvlc projectm audio
+	# visualizer can resolve texture references from Milkdrop presets.
+	write_step "Installing textures into ${EXAMPLE_ROOT}/bin/data/presets/textures (for VLC's internal projectM)"
+	ensure_dir "${LOCAL_DATA_ROOT}/presets"
+	copy_repo_contents "$TEXTURES_CLONE_DIR" "${LOCAL_DATA_ROOT}/presets/textures"
 fi
 
 write_step "Done"
@@ -134,4 +141,6 @@ if [[ "$DOWNLOAD_PRESETS" -eq 1 ]]; then
 fi
 if [[ "$DOWNLOAD_TEXTURES" -eq 1 ]]; then
 	printf 'Installed texture pack from %s\n' "$TEXTURES_REPO_URL"
+	printf '  -> bin/data/textures          (ofxProjectM standalone)\n'
+	printf '  -> bin/data/presets/textures  (libvlc projectM audio visualizer)\n'
 fi

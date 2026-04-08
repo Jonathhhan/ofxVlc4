@@ -150,8 +150,14 @@ std::vector<std::string> defaultProjectMTextureSearchPaths() {
 		}
 	};
 
+	// Primary locations used by the download-projectm-assets.sh script.
 	addIfDirectoryExists(ofToDataPath("textures/textures", true));
 	addIfDirectoryExists(ofToDataPath("textures", true));
+	// VLC's internal projectM module looks for textures inside the preset directory, so the
+	// download script also mirrors the pack to bin/data/presets/textures/.  Include that path
+	// here so the standalone ofxProjectM component benefits from the same texture set when
+	// VLC's location is used as the single install target.
+	addIfDirectoryExists(ofToDataPath("presets/textures", true));
 	return paths;
 }
 

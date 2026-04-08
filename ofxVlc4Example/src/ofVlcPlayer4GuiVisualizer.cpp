@@ -349,6 +349,24 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 			}
 			ImGui::InputText("Preset Path", projectMPresetPath, IM_ARRAYSIZE(projectMPresetPath));
 			pendingVlcVisualizerSettings.projectMPresetPath = ofTrim(std::string(projectMPresetPath));
+
+			int textureSize = pendingVlcVisualizerSettings.projectMTextureSize;
+			ImGui::InputInt("Texture Size", &textureSize);
+			ImGui::SameLine();
+			ImGui::TextDisabled("(0=default)");
+			pendingVlcVisualizerSettings.projectMTextureSize = std::max(0, textureSize);
+
+			int meshX = pendingVlcVisualizerSettings.projectMMeshX;
+			ImGui::InputInt("Mesh Width", &meshX);
+			ImGui::SameLine();
+			ImGui::TextDisabled("(0=default)");
+			pendingVlcVisualizerSettings.projectMMeshX = std::max(0, meshX);
+
+			int meshY = pendingVlcVisualizerSettings.projectMMeshY;
+			ImGui::InputInt("Mesh Height", &meshY);
+			ImGui::SameLine();
+			ImGui::TextDisabled("(0=default)");
+			pendingVlcVisualizerSettings.projectMMeshY = std::max(0, meshY);
 		}
 	}
 
