@@ -128,7 +128,7 @@ void MidiPlaybackSession::pause(double nowSeconds) {
 }
 
 void MidiPlaybackSession::stop() {
-	if (!loaded && messages.empty()) {
+	if (!loaded || messages.empty()) {
 		return;
 	}
 

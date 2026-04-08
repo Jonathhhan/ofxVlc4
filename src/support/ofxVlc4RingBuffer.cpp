@@ -30,8 +30,8 @@ void ofxVlc4RingBuffer::allocate(size_t size) {
 }
 
 void ofxVlc4RingBuffer::clear() {
-	_readStart.store(0, std::memory_order_relaxed);
-	_writeStart.store(0, std::memory_order_relaxed);
+	_readStart.store(0, std::memory_order_release);
+	_writeStart.store(0, std::memory_order_release);
 	_version.fetch_add(1, std::memory_order_release);
 	_overruns.store(0, std::memory_order_relaxed);
 	_underruns.store(0, std::memory_order_relaxed);

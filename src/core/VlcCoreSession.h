@@ -4,6 +4,8 @@
 
 #include <cstdio>
 #include <cstdint>
+#include <deque>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -89,7 +91,7 @@ public:
 	void setLogFileHandle(FILE * handle);
 	void closeLogFile();
 
-	const std::vector<VlcCoreLogEntry> & logEntries() const;
+	const std::deque<VlcCoreLogEntry> & logEntries() const;
 	void clearLogEntries();
 	void appendLog(const VlcCoreLogEntry & entry);
 
@@ -109,5 +111,5 @@ private:
 	bool libVlcLogFileEnabled = false;
 	std::string libVlcLogFilePath;
 	FILE * libVlcLogFileHandle = nullptr;
-	std::vector<VlcCoreLogEntry> libVlcLogEntries;
+	std::deque<VlcCoreLogEntry> libVlcLogEntries;
 };
