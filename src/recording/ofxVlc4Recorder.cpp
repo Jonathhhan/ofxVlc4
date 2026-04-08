@@ -261,8 +261,10 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		return fail("Failed to start libVLC mux playback.");
 	}
 
-	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(options.muxTimeoutMs);
-	while (std::chrono::steady_clock::now() < deadline) {
+	const auto stallTimeout = std::chrono::milliseconds(options.muxTimeoutMs);
+	auto lastProgressTime = std::chrono::steady_clock::now();
+	uintmax_t lastOutputSize = 0;
+	while (true) {
 		if (cancelRequested && cancelRequested->load(std::memory_order_acquire)) {
 			break;
 		}
@@ -275,6 +277,19 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		if (state == libvlc_Error) {
 			break;
 		}
+
+		std::error_code sizeError;
+		if (std::filesystem::exists(outputPath, sizeError)) {
+			const uintmax_t currentSize = std::filesystem::file_size(outputPath, sizeError);
+			if (!sizeError && currentSize > lastOutputSize) {
+				lastOutputSize = currentSize;
+				lastProgressTime = std::chrono::steady_clock::now();
+			}
+		}
+		if (std::chrono::steady_clock::now() - lastProgressTime > stallTimeout) {
+			break;
+		}
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	}
 
