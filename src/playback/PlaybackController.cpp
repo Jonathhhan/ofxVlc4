@@ -164,6 +164,7 @@ void PlaybackController::activatePlaylistIndexImmediate(int index, bool shouldPl
 	if (!player) return;
 	if (!getPlaylistSnapshot().contains(index)) return;
 
+	invalidateShuffleQueue();
 	setCurrentPlaylistIndex(index);
 	playbackTransport.activeDirectMediaSource.clear();
 	playbackTransport.activeDirectMediaOptions.clear();
@@ -610,16 +611,6 @@ int PlaybackController::popNextFromShuffleQueue() {
 	return -1;
 }
 
-	playbackTransport.pendingActivateIndex.store(-1);
-	playbackTransport.pendingActivateShouldPlay.store(false);
-	playbackTransport.pendingActivateReady.store(false);
-	playbackTransport.pendingDirectMediaSource.clear();
-	playbackTransport.pendingDirectMediaOptions.clear();
-	playbackTransport.pendingDirectMediaLabel.clear();
-	playbackTransport.pendingDirectMediaIsLocation = true;
-	playbackTransport.pendingDirectMediaParseAsNetwork = false;
-}
-
 void PlaybackController::handlePlaybackEnded() {
 	const PlaylistSnapshot playlist = getPlaylistSnapshot();
 	const int activeIndex = playlist.currentIndex;
@@ -651,10 +642,30 @@ void PlaybackController::handlePlaybackEnded() {
 	}
 
 	if (isShuffleEnabled()) {
-		int next = getNextShuffleIndex();
+		if (!shuffleQueueBuilt) {
+			buildShuffleQueue(activeIndex);
+		}
+		int next = popNextFromShuffleQueue();
 		if (next >= 0) {
 			playIndex(next);
+			return;
 		}
+		if (getPlaybackMode() == ofxVlc4::PlaybackMode::Loop) {
+			buildShuffleQueue(activeIndex);
+			next = popNextFromShuffleQueue();
+			if (next >= 0) {
+				playIndex(next);
+				return;
+			}
+		}
+		playbackTransport.playNextRequested.store(false);
+		playbackTransport.playbackWanted.store(false);
+		playbackTransport.pauseRequested.store(false);
+		playbackTransport.audioPausedSignal.store(false);
+		resetAudioBuffer();
+		playbackTransport.lastKnownPlaybackPosition.store(0.0f, std::memory_order_relaxed);
+		playbackTransport.stoppedStateLatched.store(true);
+		clearCurrentMedia();
 		return;
 	}
 
@@ -1162,6 +1173,9 @@ std::string PlaybackController::getPlaybackModeString() const {
 
 void PlaybackController::setShuffleEnabled(bool enabled) {
 	setShuffleEnabledValue(enabled);
+	if (!enabled) {
+		invalidateShuffleQueue();
+	}
 	owner.setStatus(std::string("Shuffle ") + (enabled ? "enabled." : "disabled."));
 	owner.logNotice(std::string("Shuffle ") + (enabled ? "enabled." : "disabled."));
 }
@@ -1206,52 +1220,58 @@ int PlaybackController::getNextShuffleIndex() const {
 }
 
 void PlaybackController::nextMediaListItem() {
-	int nextIndex = -1;
 	const PlaylistSnapshot playlist = getPlaylistSnapshot();
 	if (playlist.size == 0) {
 		return;
 	}
-	if (!isShuffleEnabled()) {
-		nextIndex = (playlist.currentIndex + 1 < static_cast<int>(playlist.size)) ? (playlist.currentIndex + 1) : 0;
-	}
 	const bool shouldPlay = playbackTransport.playbackWanted.load();
 
 	if (isShuffleEnabled()) {
-		int next = getNextShuffleIndex();
+		if (!shuffleQueueBuilt) {
+			buildShuffleQueue(playlist.currentIndex);
+		}
+		int next = popNextFromShuffleQueue();
+		if (next < 0 && getPlaybackMode() == ofxVlc4::PlaybackMode::Loop) {
+			buildShuffleQueue(playlist.currentIndex);
+			next = popNextFromShuffleQueue();
+		}
 		if (next >= 0) {
 			activatePlaylistIndex(next, shouldPlay);
 		}
+		owner.logNotice("Next playlist item selected.");
 		return;
 	}
 
-	if (nextIndex >= 0) {
-		activatePlaylistIndex(nextIndex, shouldPlay);
-	}
+	const int nextIndex = (playlist.currentIndex + 1 < static_cast<int>(playlist.size)) ? (playlist.currentIndex + 1) : 0;
+	activatePlaylistIndex(nextIndex, shouldPlay);
 	owner.logNotice("Next playlist item selected.");
 }
 
 void PlaybackController::previousMediaListItem() {
-	int previousIndex = -1;
 	const PlaylistSnapshot playlist = getPlaylistSnapshot();
 	if (playlist.size == 0) {
 		return;
 	}
-	if (!isShuffleEnabled()) {
-		previousIndex = (playlist.currentIndex > 0) ? (playlist.currentIndex - 1) : (static_cast<int>(playlist.size) - 1);
-	}
 	const bool shouldPlay = playbackTransport.playbackWanted.load();
 
 	if (isShuffleEnabled()) {
-		int previous = getNextShuffleIndex();
+		if (!shuffleQueueBuilt) {
+			buildShuffleQueue(playlist.currentIndex);
+		}
+		int previous = popNextFromShuffleQueue();
+		if (previous < 0 && getPlaybackMode() == ofxVlc4::PlaybackMode::Loop) {
+			buildShuffleQueue(playlist.currentIndex);
+			previous = popNextFromShuffleQueue();
+		}
 		if (previous >= 0) {
 			activatePlaylistIndex(previous, shouldPlay);
 		}
+		owner.logNotice("Previous playlist item selected.");
 		return;
 	}
 
-	if (previousIndex >= 0) {
-		activatePlaylistIndex(previousIndex, shouldPlay);
-	}
+	const int previousIndex = (playlist.currentIndex > 0) ? (playlist.currentIndex - 1) : (static_cast<int>(playlist.size) - 1);
+	activatePlaylistIndex(previousIndex, shouldPlay);
 	owner.logNotice("Previous playlist item selected.");
 }
 

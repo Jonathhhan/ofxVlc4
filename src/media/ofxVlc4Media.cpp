@@ -3033,6 +3033,7 @@ int ofxVlc4::MediaComponent::addPathToPlaylist(
 
 void ofxVlc4::MediaComponent::clearPlaylist() {
 	playback().stop();
+	playback().invalidateShuffleQueue();
 	mediaLibrary().clearPlaylistState();
 	clearCurrentMedia();
 	owner.setStatus("Playlist cleared.");
@@ -3045,6 +3046,7 @@ void ofxVlc4::MediaComponent::removeFromPlaylist(int index) {
 		return;
 	}
 
+	playback().invalidateShuffleQueue();
 	const bool shouldPlayReplacement = removal.wasCurrent && playback().isPlaybackWanted();
 	if (removal.wasCurrent) {
 		playback().stop();
@@ -3062,10 +3064,12 @@ void ofxVlc4::MediaComponent::removeFromPlaylist(int index) {
 
 void ofxVlc4::MediaComponent::movePlaylistItem(int fromIndex, int toIndex) {
 	mediaLibrary().movePlaylistItem(fromIndex, toIndex);
+	playback().invalidateShuffleQueue();
 }
 
 void ofxVlc4::MediaComponent::movePlaylistItems(const std::vector<int> & fromIndices, int toIndex) {
 	mediaLibrary().movePlaylistItems(fromIndices, toIndex);
+	playback().invalidateShuffleQueue();
 }
 
 void ofxVlc4::resetSubtitleStateInfo() {
