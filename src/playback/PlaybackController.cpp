@@ -3,6 +3,7 @@
 #include "audio/ofxVlc4Audio.h"
 #include "media/ofxVlc4Media.h"
 #include "ofxVlc4.h"
+#include "ofxVlc4Impl.h"
 #include "support/ofxVlc4Utils.h"
 #include "video/ofxVlc4Video.h"
 
@@ -37,13 +38,13 @@ PlaybackController::PlaybackController(ofxVlc4 & owner)
 }
 
 PlaybackController::PlaylistSnapshot PlaybackController::getPlaylistSnapshot() const {
-	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
-	return PlaylistSnapshot { owner.mediaLibrary.playlist.size(), owner.mediaLibrary.currentIndex };
+	std::lock_guard<std::mutex> lock(owner.m_impl->mediaLibrary.playlistMutex);
+	return PlaylistSnapshot { owner.m_impl->mediaLibrary.playlist.size(), owner.m_impl->mediaLibrary.currentIndex };
 }
 
 void PlaybackController::setCurrentPlaylistIndex(int index) {
-	std::lock_guard<std::mutex> lock(owner.mediaLibrary.playlistMutex);
-	owner.mediaLibrary.currentIndex = index;
+	std::lock_guard<std::mutex> lock(owner.m_impl->mediaLibrary.playlistMutex);
+	owner.m_impl->mediaLibrary.currentIndex = index;
 }
 
 void PlaybackController::clearCurrentPlaylistIndex() {
@@ -51,15 +52,15 @@ void PlaybackController::clearCurrentPlaylistIndex() {
 }
 
 ofxVlc4::AudioComponent & PlaybackController::audio() const {
-	return *owner.subsystemRuntime.audioComponent;
+	return *owner.m_impl->subsystemRuntime.audioComponent;
 }
 
 ofxVlc4::VideoComponent & PlaybackController::video() const {
-	return *owner.subsystemRuntime.videoComponent;
+	return *owner.m_impl->subsystemRuntime.videoComponent;
 }
 
 ofxVlc4::MediaComponent & PlaybackController::media() const {
-	return *owner.subsystemRuntime.mediaComponent;
+	return *owner.m_impl->subsystemRuntime.mediaComponent;
 }
 
 void PlaybackController::resetAudioBuffer() {
@@ -91,19 +92,19 @@ void PlaybackController::clearAudioPtsState() {
 }
 
 void PlaybackController::setPlaybackModeValue(ofxVlc4::PlaybackMode mode) {
-	owner.playbackPolicyRuntime.playbackMode = mode;
+	owner.m_impl->playbackPolicyRuntime.playbackMode = mode;
 }
 
 ofxVlc4::PlaybackMode PlaybackController::getPlaybackModeValue() const {
-	return owner.playbackPolicyRuntime.playbackMode;
+	return owner.m_impl->playbackPolicyRuntime.playbackMode;
 }
 
 void PlaybackController::setShuffleEnabledValue(bool enabled) {
-	owner.playbackPolicyRuntime.shuffleEnabled = enabled;
+	owner.m_impl->playbackPolicyRuntime.shuffleEnabled = enabled;
 }
 
 bool PlaybackController::isShuffleEnabledValue() const {
-	return owner.playbackPolicyRuntime.shuffleEnabled;
+	return owner.m_impl->playbackPolicyRuntime.shuffleEnabled;
 }
 
 void PlaybackController::playIndex(int index) {
@@ -486,7 +487,7 @@ void PlaybackController::pause() {
 }
 
 void PlaybackController::stop() {
-	const bool shuttingDown = owner.lifecycleRuntime.shuttingDown.load();
+	const bool shuttingDown = owner.m_impl->lifecycleRuntime.shuttingDown.load();
 	clearPendingActivationRequest();
 	playbackTransport.playNextRequested.store(false);
 	playbackTransport.playbackWanted.store(false);
@@ -745,7 +746,7 @@ void PlaybackController::processDeferredPlaybackActions() {
 		playbackTransport.manualStopRequestTimeMs.store(0);
 		playbackTransport.manualStopRetryIssued.store(false);
 		clearCurrentMedia();
-		if (!owner.lifecycleRuntime.shuttingDown.load()) {
+		if (!owner.m_impl->lifecycleRuntime.shuttingDown.load()) {
 			owner.stopActiveRecorderSessions();
 		}
 	}
@@ -892,7 +893,7 @@ void PlaybackController::onMediaPlayerStopping() {
 void PlaybackController::onMediaPlayerStopped() {
 	playbackTransport.audioPausedSignal.store(false);
 	clearAudioPtsState();
-	owner.nativeRecordingRuntime.active.store(false);
+	owner.m_impl->nativeRecordingRuntime.active.store(false);
 	playbackTransport.manualStopRequestTimeMs.store(0);
 	playbackTransport.manualStopRetryIssued.store(false);
 	playbackTransport.lastKnownPlaybackPosition.store(0.0f, std::memory_order_relaxed);

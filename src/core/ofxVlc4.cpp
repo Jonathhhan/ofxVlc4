@@ -1,4 +1,5 @@
 #include "ofxVlc4.h"
+#include "ofxVlc4Impl.h"
 #include "audio/ofxVlc4Audio.h"
 #include "media/MediaLibrary.h"
 #include "media/ofxVlc4Media.h"
@@ -259,100 +260,101 @@ void logMultilineNotice(const std::string & text) {
 }
 
 void ofxVlc4::syncCoreSessionStateFromLegacy() {
-	if (!subsystemRuntime.coreSession) {
+	if (!m_impl->subsystemRuntime.coreSession) {
 		return;
 	}
 
-	subsystemRuntime.coreSession->setInstance(legacyCoreMirrorRuntime.libvlc);
-	subsystemRuntime.coreSession->setMedia(legacyCoreMirrorRuntime.media);
-	subsystemRuntime.coreSession->setPlayer(legacyCoreMirrorRuntime.mediaPlayer);
-	subsystemRuntime.coreSession->setPlayerEvents(legacyCoreMirrorRuntime.mediaPlayerEventManager);
-	subsystemRuntime.coreSession->setMediaEvents(legacyCoreMirrorRuntime.mediaEventManager);
-	subsystemRuntime.coreSession->setMediaDiscoverer(legacyCoreMirrorRuntime.mediaDiscoverer);
-	subsystemRuntime.coreSession->setMediaDiscovererList(legacyCoreMirrorRuntime.mediaDiscovererMediaList);
-	subsystemRuntime.coreSession->setMediaDiscovererListEvents(legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager);
-	subsystemRuntime.coreSession->setRendererDiscoverer(legacyCoreMirrorRuntime.rendererDiscoverer);
-	subsystemRuntime.coreSession->setRendererDiscovererEvents(legacyCoreMirrorRuntime.rendererDiscovererEventManager);
-	subsystemRuntime.coreSession->setLoggingEnabled(diagnosticsRuntime.libVlcLoggingEnabled);
-	subsystemRuntime.coreSession->setLogFileEnabled(diagnosticsRuntime.libVlcLogFileEnabled);
-	subsystemRuntime.coreSession->setLogFilePath(diagnosticsRuntime.libVlcLogFilePath);
-	subsystemRuntime.coreSession->setLogFileHandle(diagnosticsRuntime.libVlcLogFileHandle);
+	m_impl->subsystemRuntime.coreSession->setInstance(m_impl->legacyCoreMirrorRuntime.libvlc);
+	m_impl->subsystemRuntime.coreSession->setMedia(m_impl->legacyCoreMirrorRuntime.media);
+	m_impl->subsystemRuntime.coreSession->setPlayer(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
+	m_impl->subsystemRuntime.coreSession->setPlayerEvents(m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager);
+	m_impl->subsystemRuntime.coreSession->setMediaEvents(m_impl->legacyCoreMirrorRuntime.mediaEventManager);
+	m_impl->subsystemRuntime.coreSession->setMediaDiscoverer(m_impl->legacyCoreMirrorRuntime.mediaDiscoverer);
+	m_impl->subsystemRuntime.coreSession->setMediaDiscovererList(m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList);
+	m_impl->subsystemRuntime.coreSession->setMediaDiscovererListEvents(m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager);
+	m_impl->subsystemRuntime.coreSession->setRendererDiscoverer(m_impl->legacyCoreMirrorRuntime.rendererDiscoverer);
+	m_impl->subsystemRuntime.coreSession->setRendererDiscovererEvents(m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager);
+	m_impl->subsystemRuntime.coreSession->setLoggingEnabled(m_impl->diagnosticsRuntime.libVlcLoggingEnabled);
+	m_impl->subsystemRuntime.coreSession->setLogFileEnabled(m_impl->diagnosticsRuntime.libVlcLogFileEnabled);
+	m_impl->subsystemRuntime.coreSession->setLogFilePath(m_impl->diagnosticsRuntime.libVlcLogFilePath);
+	m_impl->subsystemRuntime.coreSession->setLogFileHandle(m_impl->diagnosticsRuntime.libVlcLogFileHandle);
 }
 
 void ofxVlc4::syncLegacyStateFromCoreSession() {
-	if (!subsystemRuntime.coreSession) {
+	if (!m_impl->subsystemRuntime.coreSession) {
 		return;
 	}
 
-	legacyCoreMirrorRuntime.libvlc = subsystemRuntime.coreSession->instance();
-	legacyCoreMirrorRuntime.media = subsystemRuntime.coreSession->media();
-	legacyCoreMirrorRuntime.mediaPlayer = subsystemRuntime.coreSession->player();
-	legacyCoreMirrorRuntime.mediaPlayerEventManager = subsystemRuntime.coreSession->playerEvents();
-	legacyCoreMirrorRuntime.mediaEventManager = subsystemRuntime.coreSession->mediaEvents();
-	legacyCoreMirrorRuntime.mediaDiscoverer = subsystemRuntime.coreSession->mediaDiscoverer();
-	legacyCoreMirrorRuntime.mediaDiscovererMediaList = subsystemRuntime.coreSession->mediaDiscovererList();
-	legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager = subsystemRuntime.coreSession->mediaDiscovererListEvents();
-	legacyCoreMirrorRuntime.rendererDiscoverer = subsystemRuntime.coreSession->rendererDiscoverer();
-	legacyCoreMirrorRuntime.rendererDiscovererEventManager = subsystemRuntime.coreSession->rendererDiscovererEvents();
-	diagnosticsRuntime.libVlcLoggingEnabled = subsystemRuntime.coreSession->loggingEnabled();
-	diagnosticsRuntime.libVlcLogFileEnabled = subsystemRuntime.coreSession->logFileEnabled();
-	diagnosticsRuntime.libVlcLogFilePath = subsystemRuntime.coreSession->logFilePath();
-	diagnosticsRuntime.libVlcLogFileHandle = subsystemRuntime.coreSession->logFileHandle();
+	m_impl->legacyCoreMirrorRuntime.libvlc = m_impl->subsystemRuntime.coreSession->instance();
+	m_impl->legacyCoreMirrorRuntime.media = m_impl->subsystemRuntime.coreSession->media();
+	m_impl->legacyCoreMirrorRuntime.mediaPlayer = m_impl->subsystemRuntime.coreSession->player();
+	m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager = m_impl->subsystemRuntime.coreSession->playerEvents();
+	m_impl->legacyCoreMirrorRuntime.mediaEventManager = m_impl->subsystemRuntime.coreSession->mediaEvents();
+	m_impl->legacyCoreMirrorRuntime.mediaDiscoverer = m_impl->subsystemRuntime.coreSession->mediaDiscoverer();
+	m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList = m_impl->subsystemRuntime.coreSession->mediaDiscovererList();
+	m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager = m_impl->subsystemRuntime.coreSession->mediaDiscovererListEvents();
+	m_impl->legacyCoreMirrorRuntime.rendererDiscoverer = m_impl->subsystemRuntime.coreSession->rendererDiscoverer();
+	m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager = m_impl->subsystemRuntime.coreSession->rendererDiscovererEvents();
+	m_impl->diagnosticsRuntime.libVlcLoggingEnabled = m_impl->subsystemRuntime.coreSession->loggingEnabled();
+	m_impl->diagnosticsRuntime.libVlcLogFileEnabled = m_impl->subsystemRuntime.coreSession->logFileEnabled();
+	m_impl->diagnosticsRuntime.libVlcLogFilePath = m_impl->subsystemRuntime.coreSession->logFilePath();
+	m_impl->diagnosticsRuntime.libVlcLogFileHandle = m_impl->subsystemRuntime.coreSession->logFileHandle();
 }
 
 libvlc_instance_t * ofxVlc4::sessionInstance() const {
-	return subsystemRuntime.coreSession ? subsystemRuntime.coreSession->instance() : legacyCoreMirrorRuntime.libvlc;
+	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->instance() : m_impl->legacyCoreMirrorRuntime.libvlc;
 }
 
 libvlc_media_t * ofxVlc4::sessionMedia() const {
-	return subsystemRuntime.coreSession ? subsystemRuntime.coreSession->media() : legacyCoreMirrorRuntime.media;
+	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->media() : m_impl->legacyCoreMirrorRuntime.media;
 }
 
 libvlc_media_player_t * ofxVlc4::sessionPlayer() const {
-	return subsystemRuntime.coreSession ? subsystemRuntime.coreSession->player() : legacyCoreMirrorRuntime.mediaPlayer;
+	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->player() : m_impl->legacyCoreMirrorRuntime.mediaPlayer;
 }
 
 
 ofxVlc4::ofxVlc4()
+	: m_impl(std::make_unique<Impl>())
 	{
 	ofGLFWWindowSettings settings;
-	videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
-	if (videoResourceRuntime.mainWindow) {
-		settings = videoResourceRuntime.mainWindow->getSettings();
+	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
+	if (m_impl->videoResourceRuntime.mainWindow) {
+		settings = m_impl->videoResourceRuntime.mainWindow->getSettings();
 	}
 	settings.setSize(1, 1);
 	settings.setPosition(glm::vec2(-32000, -32000));
 	settings.visible = false;
 	settings.decorated = false;
 	settings.resizable = false;
-	settings.shareContextWith = videoResourceRuntime.mainWindow;
-	if (!videoResourceRuntime.mainWindow) {
+	settings.shareContextWith = m_impl->videoResourceRuntime.mainWindow;
+	if (!m_impl->videoResourceRuntime.mainWindow) {
 		ofLogWarning(kLogChannel) << "No main window available at construction; VLC render context will not share resources with the main context.";
 	}
-	videoResourceRuntime.vlcWindow = std::make_shared<ofAppGLFWWindow>();
-	videoResourceRuntime.vlcWindow->setup(settings);
+	m_impl->videoResourceRuntime.vlcWindow = std::make_shared<ofAppGLFWWindow>();
+	m_impl->videoResourceRuntime.vlcWindow->setup(settings);
 	// Vsync is intentionally disabled: VLC renders exclusively to an FBO and
 	// never swaps the window's default framebuffer, so enabling vsync here
 	// would only add unnecessary throttling on some drivers without providing
 	// any benefit.
-	videoResourceRuntime.vlcWindow->setVerticalSync(false);
-	videoResourceRuntime.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
+	m_impl->videoResourceRuntime.vlcWindow->setVerticalSync(false);
+	m_impl->videoResourceRuntime.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
 
-	videoResourceRuntime.videoTexture.allocate(1, 1, GL_RGBA);
-	videoResourceRuntime.videoTexture.getTextureData().bFlipTexture = true;
-	videoResourceRuntime.exposedTextureFbo.allocate(1, 1, GL_RGBA);
-	clearAllocatedFbo(videoResourceRuntime.exposedTextureFbo);
-	videoGeometryRuntime.allocatedVideoWidth = 1;
-	videoGeometryRuntime.allocatedVideoHeight = 1;
-	subsystemRuntime.audioComponent = std::make_unique<AudioComponent>(*this);
-	subsystemRuntime.videoComponent = std::make_unique<VideoComponent>(*this);
-	subsystemRuntime.mediaComponent = std::make_unique<MediaComponent>(*this);
-	subsystemRuntime.playbackController = std::make_unique<PlaybackController>(*this);
-	subsystemRuntime.mediaLibraryController = std::make_unique<MediaLibrary>(*this);
-	subsystemRuntime.coreSession = std::make_unique<VlcCoreSession>();
-	subsystemRuntime.eventRouter = std::make_unique<VlcEventRouter>(*this);
+	m_impl->videoResourceRuntime.videoTexture.allocate(1, 1, GL_RGBA);
+	m_impl->videoResourceRuntime.videoTexture.getTextureData().bFlipTexture = true;
+	m_impl->videoResourceRuntime.exposedTextureFbo.allocate(1, 1, GL_RGBA);
+	clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
+	m_impl->videoGeometryRuntime.allocatedVideoWidth = 1;
+	m_impl->videoGeometryRuntime.allocatedVideoHeight = 1;
+	m_impl->subsystemRuntime.audioComponent = std::make_unique<AudioComponent>(*this);
+	m_impl->subsystemRuntime.videoComponent = std::make_unique<VideoComponent>(*this);
+	m_impl->subsystemRuntime.mediaComponent = std::make_unique<MediaComponent>(*this);
+	m_impl->subsystemRuntime.playbackController = std::make_unique<PlaybackController>(*this);
+	m_impl->subsystemRuntime.mediaLibraryController = std::make_unique<MediaLibrary>(*this);
+	m_impl->subsystemRuntime.coreSession = std::make_unique<VlcCoreSession>();
+	m_impl->subsystemRuntime.eventRouter = std::make_unique<VlcEventRouter>(*this);
 	syncLegacyStateFromCoreSession();
-	effectsRuntime.equalizerBandAmps.assign(libvlc_audio_equalizer_get_band_count(), 0.0f);
+	m_impl->effectsRuntime.equalizerBandAmps.assign(libvlc_audio_equalizer_get_band_count(), 0.0f);
 }
 
 ofxVlc4::~ofxVlc4() {
@@ -660,11 +662,11 @@ void ofxVlc4::update() {
 	finalizeRecordingMuxThread();
 	processDeferredRecordingMuxCleanup();
 	updateMidiTransport(ofGetElapsedTimef());
-	if (windowCaptureRuntime.active && !recordingObjectRuntime.recorder.isVideoCaptureActive()) {
-		windowCaptureRuntime.active = false;
+	if (m_impl->windowCaptureRuntime.active && !m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
+		m_impl->windowCaptureRuntime.active = false;
 		unregisterWindowCaptureListener();
 	}
-	if (recordingObjectRuntime.recorder.needsCaptureUpdate()) {
+	if (m_impl->recordingObjectRuntime.recorder.needsCaptureUpdate()) {
 		updateRecorder();
 	}
 	updatePendingRecordingMux();
@@ -676,9 +678,9 @@ bool ofxVlc4::ensureWindowCaptureTarget(unsigned requiredWidth, unsigned require
 		return false;
 	}
 
-	if (windowCaptureRuntime.captureFbo.isAllocated() &&
-		windowCaptureRuntime.captureWidth == requiredWidth &&
-		windowCaptureRuntime.captureHeight == requiredHeight) {
+	if (m_impl->windowCaptureRuntime.captureFbo.isAllocated() &&
+		m_impl->windowCaptureRuntime.captureWidth == requiredWidth &&
+		m_impl->windowCaptureRuntime.captureHeight == requiredHeight) {
 		return true;
 	}
 
@@ -687,36 +689,36 @@ bool ofxVlc4::ensureWindowCaptureTarget(unsigned requiredWidth, unsigned require
 		return false;
 	}
 
-	clearAllocatedFbo(windowCaptureRuntime.captureFbo);
-	windowCaptureRuntime.captureFbo.allocate(requiredWidth, requiredHeight, GL_RGB);
-	if (!windowCaptureRuntime.captureFbo.isAllocated()) {
-		windowCaptureRuntime.capturePixels.clear();
-		windowCaptureRuntime.sourceTexture.clear();
+	clearAllocatedFbo(m_impl->windowCaptureRuntime.captureFbo);
+	m_impl->windowCaptureRuntime.captureFbo.allocate(requiredWidth, requiredHeight, GL_RGB);
+	if (!m_impl->windowCaptureRuntime.captureFbo.isAllocated()) {
+		m_impl->windowCaptureRuntime.capturePixels.clear();
+		m_impl->windowCaptureRuntime.sourceTexture.clear();
 		setError("Failed to allocate window capture buffer.");
 		return false;
 	}
 
-	windowCaptureRuntime.captureWidth = requiredWidth;
-	windowCaptureRuntime.captureHeight = requiredHeight;
-	windowCaptureRuntime.captureFbo.getTexture().setTextureMinMagFilter(GL_LINEAR, GL_LINEAR);
+	m_impl->windowCaptureRuntime.captureWidth = requiredWidth;
+	m_impl->windowCaptureRuntime.captureHeight = requiredHeight;
+	m_impl->windowCaptureRuntime.captureFbo.getTexture().setTextureMinMagFilter(GL_LINEAR, GL_LINEAR);
 	return true;
 }
 
 void ofxVlc4::registerWindowCaptureListener() {
-	if (!windowCaptureRuntime.listeners.empty()) {
+	if (!m_impl->windowCaptureRuntime.listeners.empty()) {
 		return;
 	}
 
-	windowCaptureRuntime.listeners.push(
+	m_impl->windowCaptureRuntime.listeners.push(
 		ofEvents().draw.newListener(this, &ofxVlc4::onWindowCaptureDraw, OF_EVENT_ORDER_AFTER_APP + 1));
 }
 
 void ofxVlc4::unregisterWindowCaptureListener() {
-	windowCaptureRuntime.listeners.unsubscribeAll();
+	m_impl->windowCaptureRuntime.listeners.unsubscribeAll();
 }
 
 void ofxVlc4::captureCurrentWindowBackbuffer() {
-	if (!windowCaptureRuntime.active || !windowCaptureRuntime.captureFbo.isAllocated()) {
+	if (!m_impl->windowCaptureRuntime.active || !m_impl->windowCaptureRuntime.captureFbo.isAllocated()) {
 		return;
 	}
 	if (glfwGetCurrentContext() == nullptr) {
@@ -729,20 +731,20 @@ void ofxVlc4::captureCurrentWindowBackbuffer() {
 		return;
 	}
 
-	if (!windowCaptureRuntime.capturePixels.isAllocated() ||
-		windowCaptureRuntime.sourceWidth != currentWidth ||
-		windowCaptureRuntime.sourceHeight != currentHeight) {
-		windowCaptureRuntime.capturePixels.allocate(
+	if (!m_impl->windowCaptureRuntime.capturePixels.isAllocated() ||
+		m_impl->windowCaptureRuntime.sourceWidth != currentWidth ||
+		m_impl->windowCaptureRuntime.sourceHeight != currentHeight) {
+		m_impl->windowCaptureRuntime.capturePixels.allocate(
 			currentWidth,
 			currentHeight,
 			OF_PIXELS_RGB);
-		windowCaptureRuntime.sourceTexture.clear();
-		windowCaptureRuntime.sourceTexture.allocate(currentWidth, currentHeight, GL_RGB);
-		windowCaptureRuntime.sourceTexture.setTextureMinMagFilter(GL_LINEAR, GL_LINEAR);
-		windowCaptureRuntime.sourceWidth = currentWidth;
-		windowCaptureRuntime.sourceHeight = currentHeight;
+		m_impl->windowCaptureRuntime.sourceTexture.clear();
+		m_impl->windowCaptureRuntime.sourceTexture.allocate(currentWidth, currentHeight, GL_RGB);
+		m_impl->windowCaptureRuntime.sourceTexture.setTextureMinMagFilter(GL_LINEAR, GL_LINEAR);
+		m_impl->windowCaptureRuntime.sourceWidth = currentWidth;
+		m_impl->windowCaptureRuntime.sourceHeight = currentHeight;
 	}
-	if (!windowCaptureRuntime.capturePixels.isAllocated()) {
+	if (!m_impl->windowCaptureRuntime.capturePixels.isAllocated()) {
 		return;
 	}
 
@@ -754,26 +756,26 @@ void ofxVlc4::captureCurrentWindowBackbuffer() {
 		static_cast<GLsizei>(currentHeight),
 		GL_RGB,
 		GL_UNSIGNED_BYTE,
-		windowCaptureRuntime.capturePixels.getData());
-	windowCaptureRuntime.capturePixels.mirror(true, false);
-	windowCaptureRuntime.sourceTexture.loadData(windowCaptureRuntime.capturePixels);
-	windowCaptureRuntime.captureFbo.begin();
+		m_impl->windowCaptureRuntime.capturePixels.getData());
+	m_impl->windowCaptureRuntime.capturePixels.mirror(true, false);
+	m_impl->windowCaptureRuntime.sourceTexture.loadData(m_impl->windowCaptureRuntime.capturePixels);
+	m_impl->windowCaptureRuntime.captureFbo.begin();
 	ofClear(0, 0, 0, 255);
 	ofSetColor(255);
-	windowCaptureRuntime.sourceTexture.draw(
+	m_impl->windowCaptureRuntime.sourceTexture.draw(
 		0.0f,
 		0.0f,
-		static_cast<float>(windowCaptureRuntime.captureWidth),
-		static_cast<float>(windowCaptureRuntime.captureHeight));
-	windowCaptureRuntime.captureFbo.end();
+		static_cast<float>(m_impl->windowCaptureRuntime.captureWidth),
+		static_cast<float>(m_impl->windowCaptureRuntime.captureHeight));
+	m_impl->windowCaptureRuntime.captureFbo.end();
 }
 
 void ofxVlc4::onWindowCaptureDraw(ofEventArgs &) {
-	if (!windowCaptureRuntime.active || lifecycleRuntime.shuttingDown.load()) {
+	if (!m_impl->windowCaptureRuntime.active || m_impl->lifecycleRuntime.shuttingDown.load()) {
 		return;
 	}
-	if (!recordingObjectRuntime.recorder.isVideoCaptureActive()) {
-		windowCaptureRuntime.active = false;
+	if (!m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
+		m_impl->windowCaptureRuntime.active = false;
 		unregisterWindowCaptureListener();
 		return;
 	}
@@ -941,16 +943,16 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	// Re-init starts from a clean VLC state so partial previous setup cannot leak across sessions.
 	syncCoreSessionStateFromLegacy();
 	releaseVlcResources();
-	videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
-	lifecycleRuntime.closeRequested.store(false);
-	lifecycleRuntime.shuttingDown.store(false);
-	subsystemRuntime.playbackController->resetTransportState();
-	subsystemRuntime.audioComponent->clearPendingEqualizerApplyOnPlay();
-	subsystemRuntime.videoComponent->clearPendingVideoAdjustApplyOnPlay();
+	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
+	m_impl->lifecycleRuntime.closeRequested.store(false);
+	m_impl->lifecycleRuntime.shuttingDown.store(false);
+	m_impl->subsystemRuntime.playbackController->resetTransportState();
+	m_impl->subsystemRuntime.audioComponent->clearPendingEqualizerApplyOnPlay();
+	m_impl->subsystemRuntime.videoComponent->clearPendingVideoAdjustApplyOnPlay();
 	resetCurrentMediaParseState();
-	clearWindowCaptureState(videoResourceRuntime.mainWindow);
-	if (recordingObjectRuntime.recorder.hasCleanupState()) {
-		clearRecorderCaptureState(videoResourceRuntime.mainWindow);
+	clearWindowCaptureState(m_impl->videoResourceRuntime.mainWindow);
+	if (m_impl->recordingObjectRuntime.recorder.hasCleanupState()) {
+		clearRecorderCaptureState(m_impl->videoResourceRuntime.mainWindow);
 	}
 	clearLastMessages();
 	clearLastDialogError();
@@ -960,22 +962,22 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 #endif
 
 	std::vector<std::string> initArgs;
-	initArgs.reserve(static_cast<size_t>(std::max(0, vlc_argc)) + playerConfigRuntime.extraInitArgs.size() + 8);
+	initArgs.reserve(static_cast<size_t>(std::max(0, vlc_argc)) + m_impl->playerConfigRuntime.extraInitArgs.size() + 8);
 
 #ifdef TARGET_WIN32
-	switch (videoPresentationRuntime.preferredDecoderDevice) {
+	switch (m_impl->videoPresentationRuntime.preferredDecoderDevice) {
 	case PreferredDecoderDevice::D3D11:
 		initArgs.emplace_back("--dec-dev=d3d11_filters");
 		break;
 	case PreferredDecoderDevice::DXVA2:
 		initArgs.emplace_back("--dec-dev=d3d9_filters");
-		if (videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::Texture) {
+		if (m_impl->videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::Texture) {
 			initArgs.emplace_back("--glinterop=glinterop_dxva2");
 		}
 		break;
 	case PreferredDecoderDevice::Nvdec:
 		initArgs.emplace_back("--dec-dev=nvdec");
-		if (videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::Texture) {
+		if (m_impl->videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::Texture) {
 			initArgs.emplace_back("--glinterop=glinterop_nvdec");
 		}
 		break;
@@ -988,15 +990,15 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 #endif
 
-	const char * textRendererName = subtitleTextRendererOptionName(playerConfigRuntime.subtitleTextRenderer);
+	const char * textRendererName = subtitleTextRendererOptionName(m_impl->playerConfigRuntime.subtitleTextRenderer);
 	if (textRendererName[0] != '\0') {
 		initArgs.emplace_back(std::string("--text-renderer=") + textRendererName);
 	}
-	appendPrefixedInitArg(initArgs, "--freetype-font=", playerConfigRuntime.subtitleFontFamily);
-	initArgs.emplace_back(std::string("--freetype-color=") + ofToString(ofClamp(playerConfigRuntime.subtitleTextColor, 0, 16777215)));
-	initArgs.emplace_back(std::string("--freetype-opacity=") + ofToString(ofClamp(playerConfigRuntime.subtitleTextOpacity, 0, 255)));
-	initArgs.emplace_back(playerConfigRuntime.subtitleBold ? "--freetype-bold" : "--no-freetype-bold");
-	appendAudioVisualizerInitArgs(initArgs, playerConfigRuntime.audioVisualizerSettings);
+	appendPrefixedInitArg(initArgs, "--freetype-font=", m_impl->playerConfigRuntime.subtitleFontFamily);
+	initArgs.emplace_back(std::string("--freetype-color=") + ofToString(ofClamp(m_impl->playerConfigRuntime.subtitleTextColor, 0, 16777215)));
+	initArgs.emplace_back(std::string("--freetype-opacity=") + ofToString(ofClamp(m_impl->playerConfigRuntime.subtitleTextOpacity, 0, 255)));
+	initArgs.emplace_back(m_impl->playerConfigRuntime.subtitleBold ? "--freetype-bold" : "--no-freetype-bold");
+	appendAudioVisualizerInitArgs(initArgs, m_impl->playerConfigRuntime.audioVisualizerSettings);
 
 	for (int i = 0; i < vlc_argc; ++i) {
 		if (vlc_argv != nullptr && vlc_argv[i] != nullptr) {
@@ -1004,7 +1006,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		}
 	}
 
-	for (const std::string & argument : playerConfigRuntime.extraInitArgs) {
+	for (const std::string & argument : m_impl->playerConfigRuntime.extraInitArgs) {
 		if (!argument.empty()) {
 			initArgs.push_back(argument);
 		}
@@ -1016,25 +1018,25 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		initArgPointers.push_back(argument.c_str());
 	}
 
-	legacyCoreMirrorRuntime.libvlc = libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data());
-	if (!legacyCoreMirrorRuntime.libvlc) {
+	m_impl->legacyCoreMirrorRuntime.libvlc = libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data());
+	if (!m_impl->legacyCoreMirrorRuntime.libvlc) {
 		const char * error = libvlc_errmsg();
 		setError(error ? error : "libvlc_new failed");
 		return;
 	}
-	subsystemRuntime.coreSession->setInstance(legacyCoreMirrorRuntime.libvlc);
+	m_impl->subsystemRuntime.coreSession->setInstance(m_impl->legacyCoreMirrorRuntime.libvlc);
 	syncLegacyStateFromCoreSession();
 
-	subsystemRuntime.mediaComponent->applyLibVlcLogging();
+	m_impl->subsystemRuntime.mediaComponent->applyLibVlcLogging();
 
-	legacyCoreMirrorRuntime.mediaPlayer = libvlc_media_player_new(legacyCoreMirrorRuntime.libvlc);
-	if (!legacyCoreMirrorRuntime.mediaPlayer) {
+	m_impl->legacyCoreMirrorRuntime.mediaPlayer = libvlc_media_player_new(m_impl->legacyCoreMirrorRuntime.libvlc);
+	if (!m_impl->legacyCoreMirrorRuntime.mediaPlayer) {
 		const char * error = libvlc_errmsg();
 		setError(error ? error : "libvlc_media_player_new failed");
 		releaseVlcResources();
 		return;
 	}
-	subsystemRuntime.coreSession->setPlayer(legacyCoreMirrorRuntime.mediaPlayer);
+	m_impl->subsystemRuntime.coreSession->setPlayer(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
 	syncLegacyStateFromCoreSession();
 
 	resetAudioStateInfo();
@@ -1048,24 +1050,24 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		return;
 	}
 
-	if (playerConfigRuntime.audioCaptureEnabled) {
-		libvlc_audio_set_callbacks(legacyCoreMirrorRuntime.mediaPlayer, audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
-		libvlc_audio_set_volume_callback(legacyCoreMirrorRuntime.mediaPlayer, audioSetVolume);
+	if (m_impl->playerConfigRuntime.audioCaptureEnabled) {
+		libvlc_audio_set_callbacks(m_impl->legacyCoreMirrorRuntime.mediaPlayer, audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
+		libvlc_audio_set_volume_callback(m_impl->legacyCoreMirrorRuntime.mediaPlayer, audioSetVolume);
 		libvlc_audio_set_format(
-			legacyCoreMirrorRuntime.mediaPlayer,
-			subsystemRuntime.audioComponent->getStartupAudioCaptureSampleFormatCode(),
-			subsystemRuntime.audioComponent->getStartupAudioCaptureSampleRate(),
-			subsystemRuntime.audioComponent->getStartupAudioCaptureChannelCount());
+			m_impl->legacyCoreMirrorRuntime.mediaPlayer,
+			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureSampleFormatCode(),
+			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureSampleRate(),
+			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureChannelCount());
 	} else {
-		audioRuntime.ready.store(false);
+		m_impl->audioRuntime.ready.store(false);
 		resetAudioBuffer();
 	}
 
-	legacyCoreMirrorRuntime.mediaPlayerEventManager = libvlc_media_player_event_manager(legacyCoreMirrorRuntime.mediaPlayer);
-	subsystemRuntime.coreSession->setPlayerEvents(legacyCoreMirrorRuntime.mediaPlayerEventManager);
+	m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager = libvlc_media_player_event_manager(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
+	m_impl->subsystemRuntime.coreSession->setPlayerEvents(m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager);
 	syncLegacyStateFromCoreSession();
-	if (legacyCoreMirrorRuntime.mediaPlayerEventManager && subsystemRuntime.coreSession && subsystemRuntime.eventRouter) {
-		subsystemRuntime.coreSession->attachPlayerEvents(subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
+	if (m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager && m_impl->subsystemRuntime.coreSession && m_impl->subsystemRuntime.eventRouter) {
+		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
 	}
 
 	const libvlc_dialog_cbs dialogCallbacks = {
@@ -1075,11 +1077,11 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		VlcEventRouter::dialogCancelStatic,
 		VlcEventRouter::dialogUpdateProgressStatic
 	};
-	libvlc_dialog_set_callbacks(legacyCoreMirrorRuntime.libvlc, &dialogCallbacks, subsystemRuntime.eventRouter.get());
-	libvlc_dialog_set_error_callback(legacyCoreMirrorRuntime.libvlc, VlcEventRouter::dialogErrorStatic, subsystemRuntime.eventRouter.get());
+	libvlc_dialog_set_callbacks(m_impl->legacyCoreMirrorRuntime.libvlc, &dialogCallbacks, m_impl->subsystemRuntime.eventRouter.get());
+	libvlc_dialog_set_error_callback(m_impl->legacyCoreMirrorRuntime.libvlc, VlcEventRouter::dialogErrorStatic, m_impl->subsystemRuntime.eventRouter.get());
 
-	if (!rendererDiscoveryRuntime.discovererName.empty()) {
-		startRendererDiscovery(rendererDiscoveryRuntime.discovererName);
+	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
+		startRendererDiscovery(m_impl->rendererDiscoveryRuntime.discovererName);
 	}
 
 	applyWatchTimeObserver();
@@ -1089,14 +1091,14 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 }
 
 std::vector<std::string> ofxVlc4::getExtraInitArgs() const {
-	return playerConfigRuntime.extraInitArgs;
+	return m_impl->playerConfigRuntime.extraInitArgs;
 }
 
 void ofxVlc4::setExtraInitArgs(const std::vector<std::string> & args) {
-	playerConfigRuntime.extraInitArgs.clear();
+	m_impl->playerConfigRuntime.extraInitArgs.clear();
 	for (const std::string & arg : args) {
 		if (!arg.empty()) {
-			playerConfigRuntime.extraInitArgs.push_back(arg);
+			m_impl->playerConfigRuntime.extraInitArgs.push_back(arg);
 		}
 	}
 	setStatus("Extra init args updated for the next init.");
@@ -1106,106 +1108,106 @@ void ofxVlc4::addExtraInitArg(const std::string & arg) {
 	if (arg.empty()) {
 		return;
 	}
-	playerConfigRuntime.extraInitArgs.push_back(arg);
+	m_impl->playerConfigRuntime.extraInitArgs.push_back(arg);
 	setStatus("Extra init args updated for the next init.");
 }
 
 void ofxVlc4::clearExtraInitArgs() {
-	if (playerConfigRuntime.extraInitArgs.empty()) {
+	if (m_impl->playerConfigRuntime.extraInitArgs.empty()) {
 		return;
 	}
-	playerConfigRuntime.extraInitArgs.clear();
+	m_impl->playerConfigRuntime.extraInitArgs.clear();
 	setStatus("Extra init args cleared for the next init.");
 }
 
 ofxVlc4AudioVisualizerSettings ofxVlc4::getAudioVisualizerSettings() const {
-	return playerConfigRuntime.audioVisualizerSettings;
+	return m_impl->playerConfigRuntime.audioVisualizerSettings;
 }
 
 void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & settings) {
-	playerConfigRuntime.audioVisualizerSettings.module = settings.module;
-	playerConfigRuntime.audioVisualizerSettings.visualEffect = settings.visualEffect;
-	playerConfigRuntime.audioVisualizerSettings.width = std::max(64, settings.width);
-	playerConfigRuntime.audioVisualizerSettings.height = std::max(64, settings.height);
-	playerConfigRuntime.audioVisualizerSettings.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
-	playerConfigRuntime.audioVisualizerSettings.projectMPresetPath = settings.projectMPresetPath;
-	playerConfigRuntime.audioVisualizerSettings.projectMTextureSize = std::max(0, settings.projectMTextureSize);
-	playerConfigRuntime.audioVisualizerSettings.projectMMeshX = std::max(0, settings.projectMMeshX);
-	playerConfigRuntime.audioVisualizerSettings.projectMMeshY = std::max(0, settings.projectMMeshY);
+	m_impl->playerConfigRuntime.audioVisualizerSettings.module = settings.module;
+	m_impl->playerConfigRuntime.audioVisualizerSettings.visualEffect = settings.visualEffect;
+	m_impl->playerConfigRuntime.audioVisualizerSettings.width = std::max(64, settings.width);
+	m_impl->playerConfigRuntime.audioVisualizerSettings.height = std::max(64, settings.height);
+	m_impl->playerConfigRuntime.audioVisualizerSettings.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
+	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMPresetPath = settings.projectMPresetPath;
+	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMTextureSize = std::max(0, settings.projectMTextureSize);
+	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMMeshX = std::max(0, settings.projectMMeshX);
+	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMMeshY = std::max(0, settings.projectMMeshY);
 	setStatus("Audio visualizer settings updated for the next init.");
 }
 
 ofxVlc4SubtitleTextRenderer ofxVlc4::getSubtitleTextRenderer() const {
-	return playerConfigRuntime.subtitleTextRenderer;
+	return m_impl->playerConfigRuntime.subtitleTextRenderer;
 }
 
 void ofxVlc4::setSubtitleTextRenderer(ofxVlc4SubtitleTextRenderer renderer) {
-	if (playerConfigRuntime.subtitleTextRenderer == renderer) {
+	if (m_impl->playerConfigRuntime.subtitleTextRenderer == renderer) {
 		return;
 	}
-	playerConfigRuntime.subtitleTextRenderer = renderer;
+	m_impl->playerConfigRuntime.subtitleTextRenderer = renderer;
 	setStatus("Subtitle text renderer updated for the next init.");
 }
 
 std::string ofxVlc4::getSubtitleFontFamily() const {
-	return playerConfigRuntime.subtitleFontFamily;
+	return m_impl->playerConfigRuntime.subtitleFontFamily;
 }
 
 void ofxVlc4::setSubtitleFontFamily(const std::string & family) {
-	if (playerConfigRuntime.subtitleFontFamily == family) {
+	if (m_impl->playerConfigRuntime.subtitleFontFamily == family) {
 		return;
 	}
-	playerConfigRuntime.subtitleFontFamily = family;
+	m_impl->playerConfigRuntime.subtitleFontFamily = family;
 	setStatus("Subtitle font updated for the next init.");
 }
 
 int ofxVlc4::getSubtitleTextColor() const {
-	return playerConfigRuntime.subtitleTextColor;
+	return m_impl->playerConfigRuntime.subtitleTextColor;
 }
 
 void ofxVlc4::setSubtitleTextColor(int color) {
 	const int clampedColor = ofClamp(color, 0, 16777215);
-	if (playerConfigRuntime.subtitleTextColor == clampedColor) {
+	if (m_impl->playerConfigRuntime.subtitleTextColor == clampedColor) {
 		return;
 	}
-	playerConfigRuntime.subtitleTextColor = clampedColor;
+	m_impl->playerConfigRuntime.subtitleTextColor = clampedColor;
 	setStatus("Subtitle text color updated for the next init.");
 }
 
 int ofxVlc4::getSubtitleTextOpacity() const {
-	return playerConfigRuntime.subtitleTextOpacity;
+	return m_impl->playerConfigRuntime.subtitleTextOpacity;
 }
 
 void ofxVlc4::setSubtitleTextOpacity(int opacity) {
 	const int clampedOpacity = ofClamp(opacity, 0, 255);
-	if (playerConfigRuntime.subtitleTextOpacity == clampedOpacity) {
+	if (m_impl->playerConfigRuntime.subtitleTextOpacity == clampedOpacity) {
 		return;
 	}
-	playerConfigRuntime.subtitleTextOpacity = clampedOpacity;
+	m_impl->playerConfigRuntime.subtitleTextOpacity = clampedOpacity;
 	setStatus("Subtitle text opacity updated for the next init.");
 }
 
 bool ofxVlc4::isSubtitleBold() const {
-	return playerConfigRuntime.subtitleBold;
+	return m_impl->playerConfigRuntime.subtitleBold;
 }
 
 void ofxVlc4::setSubtitleBold(bool enabled) {
-	if (playerConfigRuntime.subtitleBold == enabled) {
+	if (m_impl->playerConfigRuntime.subtitleBold == enabled) {
 		return;
 	}
-	playerConfigRuntime.subtitleBold = enabled;
+	m_impl->playerConfigRuntime.subtitleBold = enabled;
 	setStatus("Subtitle bold styling updated for the next init.");
 }
 
 void ofxVlc4::setError(const std::string & message) {
-	diagnosticsRuntime.lastErrorMessage = message;
-	diagnosticsRuntime.lastStatusMessage.clear();
+	m_impl->diagnosticsRuntime.lastErrorMessage = message;
+	m_impl->diagnosticsRuntime.lastStatusMessage.clear();
 	logError(message);
 }
 
 void ofxVlc4::setStatus(const std::string & message) {
-	diagnosticsRuntime.lastStatusMessage = message;
-	diagnosticsRuntime.lastErrorMessage.clear();
+	m_impl->diagnosticsRuntime.lastStatusMessage = message;
+	m_impl->diagnosticsRuntime.lastErrorMessage.clear();
 }
 
 std::string ofxVlc4::vlcHelpModeToOptionString(ofxVlc4VlcHelpMode mode) {
@@ -1305,12 +1307,12 @@ void ofxVlc4::printVlcModuleHelp(const std::string & moduleName) const {
 }
 
 void ofxVlc4::setRecordingSessionState(ofxVlc4RecordingSessionState state) {
-	recordingMuxRuntime.sessionState.store(static_cast<int>(state), std::memory_order_release);
+	m_impl->recordingMuxRuntime.sessionState.store(static_cast<int>(state), std::memory_order_release);
 }
 
 ofxVlc4RecordingSessionState ofxVlc4::getRecordingSessionState() const {
 	return static_cast<ofxVlc4RecordingSessionState>(
-		recordingMuxRuntime.sessionState.load(std::memory_order_acquire));
+		m_impl->recordingMuxRuntime.sessionState.load(std::memory_order_acquire));
 }
 
 ofxVlc4RecorderSettingsInfo ofxVlc4::getRecorderSettingsInfo() const {
@@ -1328,15 +1330,15 @@ ofxVlc4RecorderSettingsInfo ofxVlc4::getRecorderSettingsInfo() const {
 }
 
 ofxVlc4RecordingAudioSource ofxVlc4::getRecordingAudioSource() const {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	return recordingSessionRuntime.hasConfig
-		? recordingSessionRuntime.config.audioSource
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	return m_impl->recordingSessionRuntime.hasConfig
+		? m_impl->recordingSessionRuntime.config.audioSource
 		: ofxVlc4RecordingAudioSource::None;
 }
 
 void ofxVlc4::setRecordingPresetInternal(const ofxVlc4RecordingPreset & preset) {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.preset = preset;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	m_impl->recordingSessionRuntime.preset = preset;
 }
 
 void ofxVlc4::setRecordingPreset(const ofxVlc4RecordingPreset & preset) {
@@ -1354,8 +1356,8 @@ void ofxVlc4::setRecordingPreset(const ofxVlc4RecordingPreset & preset) {
 }
 
 ofxVlc4RecordingPreset ofxVlc4::getRecordingPreset() const {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	ofxVlc4RecordingPreset preset = recordingSessionRuntime.preset;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	ofxVlc4RecordingPreset preset = m_impl->recordingSessionRuntime.preset;
 	preset.videoFrameRate = getVideoRecordingFrameRate();
 	preset.videoBitrateKbps = getVideoRecordingBitrateKbps();
 	preset.videoCodecPreset = getVideoRecordingCodecPreset();
@@ -1365,35 +1367,35 @@ ofxVlc4RecordingPreset ofxVlc4::getRecordingPreset() const {
 }
 
 void ofxVlc4::setRecordingAudioSourcePreset(ofxVlc4RecordingAudioSource source) {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.preset.audioSource = source;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	m_impl->recordingSessionRuntime.preset.audioSource = source;
 }
 
 ofxVlc4RecordingAudioSource ofxVlc4::getRecordingAudioSourcePreset() const {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	return recordingSessionRuntime.preset.audioSource;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	return m_impl->recordingSessionRuntime.preset.audioSource;
 }
 
 void ofxVlc4::setRecordingOutputSizePreset(int width, int height) {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.preset.targetWidth = std::max(0, width);
-	recordingSessionRuntime.preset.targetHeight = std::max(0, height);
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	m_impl->recordingSessionRuntime.preset.targetWidth = std::max(0, width);
+	m_impl->recordingSessionRuntime.preset.targetHeight = std::max(0, height);
 }
 
 std::pair<int, int> ofxVlc4::getRecordingOutputSizePreset() const {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
 	return {
-		recordingSessionRuntime.preset.targetWidth,
-		recordingSessionRuntime.preset.targetHeight
+		m_impl->recordingSessionRuntime.preset.targetWidth,
+		m_impl->recordingSessionRuntime.preset.targetHeight
 	};
 }
 
 void ofxVlc4::setRecordingMuxProfile(ofxVlc4RecordingMuxProfile profile) {
 	ofxVlc4RecordingVideoCodecPreset codecPreset = ofxVlc4RecordingVideoCodecPreset::H264;
 	{
-		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-		recordingSessionRuntime.preset.muxProfile = profile;
-		codecPreset = recordingSessionRuntime.preset.videoCodecPreset;
+		std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+		m_impl->recordingSessionRuntime.preset.muxProfile = profile;
+		codecPreset = m_impl->recordingSessionRuntime.preset.videoCodecPreset;
 	}
 	if (const std::string compatibilityMessage = recordingMuxProfileCompatibilityMessage(profile, codecPreset);
 		!compatibilityMessage.empty()) {
@@ -1402,14 +1404,14 @@ void ofxVlc4::setRecordingMuxProfile(ofxVlc4RecordingMuxProfile profile) {
 }
 
 ofxVlc4RecordingMuxProfile ofxVlc4::getRecordingMuxProfile() const {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	return recordingSessionRuntime.preset.muxProfile;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	return m_impl->recordingSessionRuntime.preset.muxProfile;
 }
 
 void ofxVlc4::setRecordingVideoFrameRatePreset(int fps) {
 	{
-		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-		recordingSessionRuntime.preset.videoFrameRate = std::max(1, fps);
+		std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+		m_impl->recordingSessionRuntime.preset.videoFrameRate = std::max(1, fps);
 	}
 	setVideoRecordingFrameRate(fps);
 }
@@ -1420,8 +1422,8 @@ int ofxVlc4::getRecordingVideoFrameRatePreset() const {
 
 void ofxVlc4::setRecordingVideoBitratePreset(int bitrateKbps) {
 	{
-		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-		recordingSessionRuntime.preset.videoBitrateKbps = std::max(0, bitrateKbps);
+		std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+		m_impl->recordingSessionRuntime.preset.videoBitrateKbps = std::max(0, bitrateKbps);
 	}
 	setVideoRecordingBitrateKbps(bitrateKbps);
 }
@@ -1431,46 +1433,46 @@ int ofxVlc4::getRecordingVideoBitratePreset() const {
 }
 
 void ofxVlc4::setRecordingAudioBitratePreset(int bitrateKbps) {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.preset.audioBitrateKbps = std::max(0, bitrateKbps);
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	m_impl->recordingSessionRuntime.preset.audioBitrateKbps = std::max(0, bitrateKbps);
 }
 
 int ofxVlc4::getRecordingAudioBitratePreset() const {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	return recordingSessionRuntime.preset.audioBitrateKbps;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	return m_impl->recordingSessionRuntime.preset.audioBitrateKbps;
 }
 
 void ofxVlc4::setRecordingDeleteMuxSourceFilesOnSuccess(bool enabled) {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.preset.deleteMuxSourceFilesOnSuccess = enabled;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	m_impl->recordingSessionRuntime.preset.deleteMuxSourceFilesOnSuccess = enabled;
 }
 
 bool ofxVlc4::getRecordingDeleteMuxSourceFilesOnSuccess() const {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	return recordingSessionRuntime.preset.deleteMuxSourceFilesOnSuccess;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	return m_impl->recordingSessionRuntime.preset.deleteMuxSourceFilesOnSuccess;
 }
 
 void ofxVlc4::clearRecordingSessionConfig() {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.hasConfig = false;
-	recordingSessionRuntime.config = {};
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	m_impl->recordingSessionRuntime.hasConfig = false;
+	m_impl->recordingSessionRuntime.config = {};
 }
 
 void ofxVlc4::storeRecordingSessionConfig(const ofxVlc4RecordingSessionConfig & config) {
-	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-	recordingSessionRuntime.hasConfig = true;
-	recordingSessionRuntime.config = config;
+	std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+	m_impl->recordingSessionRuntime.hasConfig = true;
+	m_impl->recordingSessionRuntime.config = config;
 }
 
 void ofxVlc4::finalizeRecordingMuxThread() {
-	const std::shared_ptr<RecordingMuxRuntimeState::TaskState> activeTask = recordingMuxRuntime.activeTask;
-	if (!recordingMuxRuntime.worker.joinable() || !activeTask || activeTask->inProgress.load()) {
+	const std::shared_ptr<RecordingMuxRuntimeState::TaskState> activeTask = m_impl->recordingMuxRuntime.activeTask;
+	if (!m_impl->recordingMuxRuntime.worker.joinable() || !activeTask || activeTask->inProgress.load()) {
 		return;
 	}
 
-	recordingMuxRuntime.worker.join();
-	recordingMuxRuntime.activeTask.reset();
-	recordingMuxRuntime.inProgress.store(false);
+	m_impl->recordingMuxRuntime.worker.join();
+	m_impl->recordingMuxRuntime.activeTask.reset();
+	m_impl->recordingMuxRuntime.inProgress.store(false);
 	if (!activeTask->completed.exchange(false)) {
 		return;
 	}
@@ -1489,9 +1491,9 @@ void ofxVlc4::finalizeRecordingMuxThread() {
 		completedError = activeTask->completedError;
 	}
 	{
-		std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
-		recordingMuxRuntime.completedOutputPath = completedOutputPath;
-		recordingMuxRuntime.completedError = completedError;
+		std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
+		m_impl->recordingMuxRuntime.completedOutputPath = completedOutputPath;
+		m_impl->recordingMuxRuntime.completedError = completedError;
 	}
 
 	if (!completedError.empty()) {
@@ -1512,17 +1514,17 @@ void ofxVlc4::finalizeRecordingMuxThread() {
 			const auto deadline = std::chrono::steady_clock::now()
 				+ std::chrono::milliseconds(std::max<uint64_t>(options.sourceDeleteTimeoutMs * 24, 120000));
 			const auto duplicate = std::find_if(
-				recordingMuxRuntime.deferredSourceCleanup.begin(),
-				recordingMuxRuntime.deferredSourceCleanup.end(),
+				m_impl->recordingMuxRuntime.deferredSourceCleanup.begin(),
+				m_impl->recordingMuxRuntime.deferredSourceCleanup.end(),
 				[&](const RecordingMuxRuntimeState::DeferredSourceCleanup & item) {
 					return item.path == path;
 				});
-			if (duplicate != recordingMuxRuntime.deferredSourceCleanup.end()) {
+			if (duplicate != m_impl->recordingMuxRuntime.deferredSourceCleanup.end()) {
 				duplicate->label = label;
 				duplicate->deadline = deadline;
 				return;
 			}
-			recordingMuxRuntime.deferredSourceCleanup.push_back({ path, label, deadline });
+			m_impl->recordingMuxRuntime.deferredSourceCleanup.push_back({ path, label, deadline });
 		};
 
 		if (!tryRemoveRecordingFileOnce(sourceVideoPath)) {
@@ -1543,11 +1545,11 @@ void ofxVlc4::finalizeRecordingMuxThread() {
 void ofxVlc4::processDeferredRecordingMuxCleanup(bool finalPass) {
 	std::vector<RecordingMuxRuntimeState::DeferredSourceCleanup> cleanupItems;
 	{
-		std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
-		if (recordingMuxRuntime.deferredSourceCleanup.empty()) {
+		std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
+		if (m_impl->recordingMuxRuntime.deferredSourceCleanup.empty()) {
 			return;
 		}
-		cleanupItems.swap(recordingMuxRuntime.deferredSourceCleanup);
+		cleanupItems.swap(m_impl->recordingMuxRuntime.deferredSourceCleanup);
 	}
 
 	const auto now = std::chrono::steady_clock::now();
@@ -1573,38 +1575,38 @@ void ofxVlc4::processDeferredRecordingMuxCleanup(bool finalPass) {
 		return;
 	}
 
-	std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
+	std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
 	for (auto & item : retryItems) {
 		const auto duplicate = std::find_if(
-			recordingMuxRuntime.deferredSourceCleanup.begin(),
-			recordingMuxRuntime.deferredSourceCleanup.end(),
+			m_impl->recordingMuxRuntime.deferredSourceCleanup.begin(),
+			m_impl->recordingMuxRuntime.deferredSourceCleanup.end(),
 			[&](const RecordingMuxRuntimeState::DeferredSourceCleanup & existingItem) {
 				return existingItem.path == item.path;
 			});
-		if (duplicate != recordingMuxRuntime.deferredSourceCleanup.end()) {
+		if (duplicate != m_impl->recordingMuxRuntime.deferredSourceCleanup.end()) {
 			duplicate->label = item.label;
 			duplicate->deadline = std::max(duplicate->deadline, item.deadline);
 			continue;
 		}
-		recordingMuxRuntime.deferredSourceCleanup.push_back(std::move(item));
+		m_impl->recordingMuxRuntime.deferredSourceCleanup.push_back(std::move(item));
 	}
 }
 
 void ofxVlc4::updatePendingRecordingMux() {
-	if (!recordingMuxRuntime.pending.load()) {
+	if (!m_impl->recordingMuxRuntime.pending.load()) {
 		return;
 	}
-	const std::shared_ptr<RecordingMuxRuntimeState::TaskState> activeTask = recordingMuxRuntime.activeTask;
+	const std::shared_ptr<RecordingMuxRuntimeState::TaskState> activeTask = m_impl->recordingMuxRuntime.activeTask;
 	if (activeTask && activeTask->inProgress.load()) {
 		return;
 	}
-	if (recordingObjectRuntime.recorder.hasActiveCaptureSession()) {
+	if (m_impl->recordingObjectRuntime.recorder.hasActiveCaptureSession()) {
 		setRecordingSessionState(ofxVlc4RecordingSessionState::Finalizing);
 		return;
 	}
 
-	const std::string finishedVideoPath = recordingObjectRuntime.recorder.getLastFinishedVideoPath();
-	const std::string finishedAudioPath = recordingObjectRuntime.recorder.getLastFinishedAudioPath();
+	const std::string finishedVideoPath = m_impl->recordingObjectRuntime.recorder.getLastFinishedVideoPath();
+	const std::string finishedAudioPath = m_impl->recordingObjectRuntime.recorder.getLastFinishedAudioPath();
 	ofxVlc4MuxOptions options;
 	std::string previousVideoPath;
 	std::string previousAudioPath;
@@ -1612,13 +1614,13 @@ void ofxVlc4::updatePendingRecordingMux() {
 	std::string expectedAudioPath;
 	std::string requestedOutputPath;
 	{
-		std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
-		options = recordingMuxRuntime.options;
-		previousVideoPath = recordingMuxRuntime.previousVideoPath;
-		previousAudioPath = recordingMuxRuntime.previousAudioPath;
-		expectedVideoPath = recordingMuxRuntime.expectedVideoPath;
-		expectedAudioPath = recordingMuxRuntime.expectedAudioPath;
-		requestedOutputPath = recordingMuxRuntime.requestedOutputPath;
+		std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
+		options = m_impl->recordingMuxRuntime.options;
+		previousVideoPath = m_impl->recordingMuxRuntime.previousVideoPath;
+		previousAudioPath = m_impl->recordingMuxRuntime.previousAudioPath;
+		expectedVideoPath = m_impl->recordingMuxRuntime.expectedVideoPath;
+		expectedAudioPath = m_impl->recordingMuxRuntime.expectedAudioPath;
+		requestedOutputPath = m_impl->recordingMuxRuntime.requestedOutputPath;
 	}
 
 	const std::string resolvedVideoPath = !finishedVideoPath.empty() ? finishedVideoPath : expectedVideoPath;
@@ -1630,8 +1632,8 @@ void ofxVlc4::updatePendingRecordingMux() {
 		return;
 	}
 
-	recordingMuxRuntime.pending.store(false);
-	recordingMuxRuntime.inProgress.store(true);
+	m_impl->recordingMuxRuntime.pending.store(false);
+	m_impl->recordingMuxRuntime.inProgress.store(true);
 	setRecordingSessionState(ofxVlc4RecordingSessionState::Muxing);
 	const std::string outputPath =
 		requestedOutputPath.empty()
@@ -1639,8 +1641,8 @@ void ofxVlc4::updatePendingRecordingMux() {
 			: requestedOutputPath;
 	const auto task = std::make_shared<RecordingMuxRuntimeState::TaskState>();
 	{
-		std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
-		recordingMuxRuntime.activeTask = task;
+		std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
+		m_impl->recordingMuxRuntime.activeTask = task;
 	}
 	{
 		std::lock_guard<std::mutex> lock(task->mutex);
@@ -1650,7 +1652,7 @@ void ofxVlc4::updatePendingRecordingMux() {
 		task->outputPath = outputPath;
 	}
 	setStatus("Muxing recording...");
-	recordingMuxRuntime.worker = std::thread([task, resolvedVideoPath, resolvedAudioPath, outputPath, options]() {
+	m_impl->recordingMuxRuntime.worker = std::thread([task, resolvedVideoPath, resolvedAudioPath, outputPath, options]() {
 		std::string muxError;
 		const bool muxed = ofxVlc4::muxRecordingFilesInternal(
 			resolvedVideoPath,
@@ -1670,29 +1672,29 @@ void ofxVlc4::updatePendingRecordingMux() {
 }
 
 void ofxVlc4::cancelPendingRecordingMux() {
-	recordingMuxRuntime.pending.store(false);
-	const std::shared_ptr<RecordingMuxRuntimeState::TaskState> activeTask = recordingMuxRuntime.activeTask;
+	m_impl->recordingMuxRuntime.pending.store(false);
+	const std::shared_ptr<RecordingMuxRuntimeState::TaskState> activeTask = m_impl->recordingMuxRuntime.activeTask;
 	if (activeTask) {
 		activeTask->cancelRequested.store(true, std::memory_order_release);
 	}
-	if (recordingMuxRuntime.worker.joinable()) {
+	if (m_impl->recordingMuxRuntime.worker.joinable()) {
 		if (activeTask && activeTask->inProgress.load()) {
-			recordingMuxRuntime.worker.detach();
+			m_impl->recordingMuxRuntime.worker.detach();
 		} else {
-			recordingMuxRuntime.worker.join();
+			m_impl->recordingMuxRuntime.worker.join();
 		}
 	}
-	recordingMuxRuntime.inProgress.store(false);
-	recordingMuxRuntime.activeTask.reset();
+	m_impl->recordingMuxRuntime.inProgress.store(false);
+	m_impl->recordingMuxRuntime.activeTask.reset();
 	setRecordingSessionState(ofxVlc4RecordingSessionState::Idle);
-	std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
-	recordingMuxRuntime.previousVideoPath.clear();
-	recordingMuxRuntime.previousAudioPath.clear();
-	recordingMuxRuntime.expectedVideoPath.clear();
-	recordingMuxRuntime.expectedAudioPath.clear();
-	recordingMuxRuntime.requestedOutputPath.clear();
-	recordingMuxRuntime.completedOutputPath.clear();
-	recordingMuxRuntime.completedError.clear();
+	std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
+	m_impl->recordingMuxRuntime.previousVideoPath.clear();
+	m_impl->recordingMuxRuntime.previousAudioPath.clear();
+	m_impl->recordingMuxRuntime.expectedVideoPath.clear();
+	m_impl->recordingMuxRuntime.expectedAudioPath.clear();
+	m_impl->recordingMuxRuntime.requestedOutputPath.clear();
+	m_impl->recordingMuxRuntime.completedOutputPath.clear();
+	m_impl->recordingMuxRuntime.completedError.clear();
 	clearRecordingSessionConfig();
 }
 
@@ -1704,23 +1706,23 @@ void ofxVlc4::clearRecorderCaptureState(const std::shared_ptr<ofAppGLFWWindow> &
 	if (cleanupWindow) {
 		cleanupWindow->makeCurrent();
 	}
-	recordingObjectRuntime.recorder.clearCaptureState();
+	m_impl->recordingObjectRuntime.recorder.clearCaptureState();
 }
 
 void ofxVlc4::clearWindowCaptureState(const std::shared_ptr<ofAppGLFWWindow> & cleanupWindow) {
 	unregisterWindowCaptureListener();
-	windowCaptureRuntime.active = false;
-	windowCaptureRuntime.includeAudioCapture = false;
-	windowCaptureRuntime.sourceWidth = 0;
-	windowCaptureRuntime.sourceHeight = 0;
-	windowCaptureRuntime.captureWidth = 0;
-	windowCaptureRuntime.captureHeight = 0;
-	windowCaptureRuntime.capturePixels.clear();
+	m_impl->windowCaptureRuntime.active = false;
+	m_impl->windowCaptureRuntime.includeAudioCapture = false;
+	m_impl->windowCaptureRuntime.sourceWidth = 0;
+	m_impl->windowCaptureRuntime.sourceHeight = 0;
+	m_impl->windowCaptureRuntime.captureWidth = 0;
+	m_impl->windowCaptureRuntime.captureHeight = 0;
+	m_impl->windowCaptureRuntime.capturePixels.clear();
 	if (cleanupWindow) {
 		cleanupWindow->makeCurrent();
 	}
-	windowCaptureRuntime.sourceTexture.clear();
-	clearAllocatedFbo(windowCaptureRuntime.captureFbo);
+	m_impl->windowCaptureRuntime.sourceTexture.clear();
+	clearAllocatedFbo(m_impl->windowCaptureRuntime.captureFbo);
 }
 
 void ofxVlc4::releaseVlcResources() {
@@ -1731,25 +1733,25 @@ void ofxVlc4::releaseVlcResources() {
 	dismissAllDialogs();
 	stopMediaDiscoveryInternal();
 	stopRendererDiscoveryInternal();
-	std::shared_ptr<ofAppGLFWWindow> cleanupWindow = videoResourceRuntime.vlcWindow ? videoResourceRuntime.vlcWindow : videoResourceRuntime.mainWindow;
-	const bool recorderNeedsCleanup = recordingObjectRuntime.recorder.hasCleanupState();
+	std::shared_ptr<ofAppGLFWWindow> cleanupWindow = m_impl->videoResourceRuntime.vlcWindow ? m_impl->videoResourceRuntime.vlcWindow : m_impl->videoResourceRuntime.mainWindow;
+	const bool recorderNeedsCleanup = m_impl->recordingObjectRuntime.recorder.hasCleanupState();
 	const bool needsGlCleanup =
-		videoResourceRuntime.vlcFramebufferId != 0 ||
-		videoResourceRuntime.videoTexture.isAllocated() ||
-		videoResourceRuntime.exposedTextureFbo.isAllocated() ||
-		windowCaptureRuntime.captureFbo.isAllocated() ||
+		m_impl->videoResourceRuntime.vlcFramebufferId != 0 ||
+		m_impl->videoResourceRuntime.videoTexture.isAllocated() ||
+		m_impl->videoResourceRuntime.exposedTextureFbo.isAllocated() ||
+		m_impl->windowCaptureRuntime.captureFbo.isAllocated() ||
 		recorderNeedsCleanup;
 
-	if (legacyCoreMirrorRuntime.mediaPlayer) {
-		if (watchTimeRuntime.registered) {
-			libvlc_media_player_unwatch_time(legacyCoreMirrorRuntime.mediaPlayer);
-			watchTimeRuntime.registered = false;
+	if (m_impl->legacyCoreMirrorRuntime.mediaPlayer) {
+		if (m_impl->watchTimeRuntime.registered) {
+			libvlc_media_player_unwatch_time(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
+			m_impl->watchTimeRuntime.registered = false;
 		}
-		libvlc_video_set_adjust_int(legacyCoreMirrorRuntime.mediaPlayer, libvlc_adjust_Enable, 0);
-		libvlc_media_player_release(legacyCoreMirrorRuntime.mediaPlayer);
-		legacyCoreMirrorRuntime.mediaPlayer = nullptr;
-		subsystemRuntime.coreSession->setPlayer(nullptr);
-		subsystemRuntime.coreSession->setPlayerEvents(nullptr);
+		libvlc_video_set_adjust_int(m_impl->legacyCoreMirrorRuntime.mediaPlayer, libvlc_adjust_Enable, 0);
+		libvlc_media_player_release(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
+		m_impl->legacyCoreMirrorRuntime.mediaPlayer = nullptr;
+		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
+		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 	}
 
 	clearCurrentMedia(false);
@@ -1765,30 +1767,30 @@ void ofxVlc4::releaseVlcResources() {
 	clearWindowCaptureState(nullptr);
 
 	if (needsGlCleanup) {
-		subsystemRuntime.videoComponent->clearPublishedFrameFence();
-		if (videoResourceRuntime.vlcWindow && videoResourceRuntime.vlcFramebufferId != 0) {
-			glDeleteFramebuffers(1, &videoResourceRuntime.vlcFramebufferId);
-			videoResourceRuntime.vlcFramebufferId = 0;
+		m_impl->subsystemRuntime.videoComponent->clearPublishedFrameFence();
+		if (m_impl->videoResourceRuntime.vlcWindow && m_impl->videoResourceRuntime.vlcFramebufferId != 0) {
+			glDeleteFramebuffers(1, &m_impl->videoResourceRuntime.vlcFramebufferId);
+			m_impl->videoResourceRuntime.vlcFramebufferId = 0;
 		}
-		videoResourceRuntime.videoTexture.clear();
-		clearAllocatedFbo(videoResourceRuntime.exposedTextureFbo);
+		m_impl->videoResourceRuntime.videoTexture.clear();
+		clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
 	}
 	if (cleanupWindow && needsGlCleanup) {
 		glfwMakeContextCurrent(nullptr);
 	}
 	releaseD3D11Resources();
 	clearVideoHdrMetadata();
-	videoGeometryRuntime.allocatedVideoWidth = 1;
-	videoGeometryRuntime.allocatedVideoHeight = 1;
+	m_impl->videoGeometryRuntime.allocatedVideoWidth = 1;
+	m_impl->videoGeometryRuntime.allocatedVideoHeight = 1;
 
-	if (legacyCoreMirrorRuntime.libvlc) {
-		libvlc_log_unset(legacyCoreMirrorRuntime.libvlc);
-		subsystemRuntime.mediaComponent->closeLibVlcLogFile();
-		libvlc_dialog_set_error_callback(legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
-		libvlc_dialog_set_callbacks(legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
-		libvlc_release(legacyCoreMirrorRuntime.libvlc);
-		legacyCoreMirrorRuntime.libvlc = nullptr;
-		subsystemRuntime.coreSession->setInstance(nullptr);
+	if (m_impl->legacyCoreMirrorRuntime.libvlc) {
+		libvlc_log_unset(m_impl->legacyCoreMirrorRuntime.libvlc);
+		m_impl->subsystemRuntime.mediaComponent->closeLibVlcLogFile();
+		libvlc_dialog_set_error_callback(m_impl->legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
+		libvlc_dialog_set_callbacks(m_impl->legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
+		libvlc_release(m_impl->legacyCoreMirrorRuntime.libvlc);
+		m_impl->legacyCoreMirrorRuntime.libvlc = nullptr;
+		m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
 	}
 	processDeferredRecordingMuxCleanup(true);
 
@@ -1800,276 +1802,283 @@ void ofxVlc4::releaseVlcResources() {
 	resetSubtitleStateInfo();
 	resetNavigationStateInfo();
 
-	videoPresentationRuntime.activeVideoOutputBackend = videoPresentationRuntime.videoOutputBackend;
-	effectsRuntime.activeVideoAdjustmentEngine = effectsRuntime.videoAdjustmentEngine;
+	m_impl->videoPresentationRuntime.activeVideoOutputBackend = m_impl->videoPresentationRuntime.videoOutputBackend;
+	m_impl->effectsRuntime.activeVideoAdjustmentEngine = m_impl->effectsRuntime.videoAdjustmentEngine;
 	syncLegacyStateFromCoreSession();
 }
 
 void ofxVlc4::close() {
 	bool expected = false;
-	if (!lifecycleRuntime.closeRequested.compare_exchange_strong(expected, true)) {
+	if (!m_impl->lifecycleRuntime.closeRequested.compare_exchange_strong(expected, true)) {
 		return;
 	}
 
-	subsystemRuntime.playbackController->prepareForClose();
+	m_impl->subsystemRuntime.playbackController->prepareForClose();
 
 	// Only flip the hard shutdown guard once playback had a chance to unwind cleanly.
-	lifecycleRuntime.shuttingDown.store(true);
+	m_impl->lifecycleRuntime.shuttingDown.store(true);
 	releaseVlcResources();
-	audioRuntime.ready.store(false);
-	videoFrameRuntime.isVideoLoaded.store(false);
-	videoFrameRuntime.startupPlaybackStatePrepared.store(false);
-	videoFrameRuntime.hasReceivedVideoFrame.store(false);
-	videoFrameRuntime.vlcFboBound = false;
+	m_impl->audioRuntime.ready.store(false);
+	m_impl->videoFrameRuntime.isVideoLoaded.store(false);
+	m_impl->videoFrameRuntime.startupPlaybackStatePrepared.store(false);
+	m_impl->videoFrameRuntime.hasReceivedVideoFrame.store(false);
+	m_impl->videoFrameRuntime.vlcFboBound = false;
 	setStatus("Player closed.");
 }
 
 void ofxVlc4::updateMidiTransport(double nowSeconds) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	if (!midiRuntime.playback.isLoaded()) {
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	if (!m_impl->midiRuntime.playback.isLoaded()) {
 		return;
 	}
 
-	if (midiRuntime.syncToWatchTime && midiRuntime.syncSource == ofxVlc4MidiSyncSource::WatchTime) {
+	if (m_impl->midiRuntime.syncToWatchTime && m_impl->midiRuntime.syncSource == ofxVlc4MidiSyncSource::WatchTime) {
 		const WatchTimeInfo watchTime = getWatchTimeInfo();
 		const int64_t targetTimeUs = watchTime.interpolatedTimeUs >= 0 ? watchTime.interpolatedTimeUs : watchTime.timeUs;
 		if (watchTime.available && targetTimeUs >= 0) {
 			const double targetSeconds = static_cast<double>(targetTimeUs) / 1000000.0;
-			const double currentSeconds = midiRuntime.playback.getPositionSeconds();
-			const bool discontinuity = midiRuntime.lastWatchTimeUs < 0 ||
-				std::llabs(targetTimeUs - midiRuntime.lastWatchTimeUs) > 200000;
+			const double currentSeconds = m_impl->midiRuntime.playback.getPositionSeconds();
+			const bool discontinuity = m_impl->midiRuntime.lastWatchTimeUs < 0 ||
+				std::llabs(targetTimeUs - m_impl->midiRuntime.lastWatchTimeUs) > 200000;
 			const bool drifted = std::abs(currentSeconds - targetSeconds) > 0.05;
 
 			if (watchTime.seeking || discontinuity || drifted) {
-				midiRuntime.playback.seek(targetSeconds, nowSeconds);
+				m_impl->midiRuntime.playback.seek(targetSeconds, nowSeconds);
 			}
 
 			if (watchTime.paused) {
-				if (midiRuntime.playback.isPlaying()) {
-					midiRuntime.playback.pause(nowSeconds);
+				if (m_impl->midiRuntime.playback.isPlaying()) {
+					m_impl->midiRuntime.playback.pause(nowSeconds);
 				}
-			} else if (!midiRuntime.playback.isPlaying()) {
-				midiRuntime.playback.play(nowSeconds);
+			} else if (!m_impl->midiRuntime.playback.isPlaying()) {
+				m_impl->midiRuntime.playback.play(nowSeconds);
 			}
 
-			midiRuntime.lastWatchTimeUs = targetTimeUs;
+			m_impl->midiRuntime.lastWatchTimeUs = targetTimeUs;
 		}
 	}
 
-	midiRuntime.playback.update(nowSeconds);
+	m_impl->midiRuntime.playback.update(nowSeconds);
 }
 
 bool ofxVlc4::loadMidiFile(const std::string & path, bool noteOffAsZeroVelocity) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	MidiAnalysisReport report = midiRuntime.analyzer.analyzeFile(path);
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	MidiAnalysisReport report = m_impl->midiRuntime.analyzer.analyzeFile(path);
 	if (!report.valid) {
-		midiRuntime.report = report;
-		midiRuntime.messages.clear();
-		midiRuntime.playback.clear();
-		midiRuntime.lastWatchTimeUs = -1;
+		m_impl->midiRuntime.report = report;
+		m_impl->midiRuntime.messages.clear();
+		m_impl->midiRuntime.playback.clear();
+		m_impl->midiRuntime.lastWatchTimeUs = -1;
 		return false;
 	}
 
 	std::vector<MidiChannelMessage> messages = MidiBridge::toMessages(report, noteOffAsZeroVelocity);
-	if (!midiRuntime.playback.load(path, report, messages)) {
-		midiRuntime.report = report;
-		midiRuntime.messages.clear();
-		midiRuntime.lastWatchTimeUs = -1;
+	if (!m_impl->midiRuntime.playback.load(path, report, messages)) {
+		m_impl->midiRuntime.report = report;
+		m_impl->midiRuntime.messages.clear();
+		m_impl->midiRuntime.lastWatchTimeUs = -1;
 		return false;
 	}
 
-	midiRuntime.noteOffAsZeroVelocity = noteOffAsZeroVelocity;
-	midiRuntime.report = std::move(report);
-	midiRuntime.messages = std::move(messages);
-	midiRuntime.lastWatchTimeUs = -1;
+	m_impl->midiRuntime.noteOffAsZeroVelocity = noteOffAsZeroVelocity;
+	m_impl->midiRuntime.report = std::move(report);
+	m_impl->midiRuntime.messages = std::move(messages);
+	m_impl->midiRuntime.lastWatchTimeUs = -1;
 	return true;
 }
 
 void ofxVlc4::clearMidiTransport() {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.clear();
-	midiRuntime.report = {};
-	midiRuntime.messages.clear();
-	midiRuntime.lastWatchTimeUs = -1;
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.clear();
+	m_impl->midiRuntime.report = {};
+	m_impl->midiRuntime.messages.clear();
+	m_impl->midiRuntime.lastWatchTimeUs = -1;
 }
 
 bool ofxVlc4::hasMidiLoaded() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.isLoaded();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.isLoaded();
 }
 
 bool ofxVlc4::isMidiPlaying() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.isPlaying();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.isPlaying();
 }
 
 bool ofxVlc4::isMidiPaused() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.isPaused();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.isPaused();
 }
 
 bool ofxVlc4::isMidiFinished() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.isFinished();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.isFinished();
 }
 
 double ofxVlc4::getMidiDurationSeconds() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.getDurationSeconds();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.getDurationSeconds();
 }
 
 double ofxVlc4::getMidiPositionSeconds() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.getPositionSeconds();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.getPositionSeconds();
 }
 
 double ofxVlc4::getMidiTempoMultiplier() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.getTempoMultiplier();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.getTempoMultiplier();
 }
 
 void ofxVlc4::playMidi() {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.play(ofGetElapsedTimef());
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.play(ofGetElapsedTimef());
 }
 
 void ofxVlc4::pauseMidi() {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.pause(ofGetElapsedTimef());
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.pause(ofGetElapsedTimef());
 }
 
 void ofxVlc4::stopMidi() {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.stop();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.stop();
 }
 
 void ofxVlc4::seekMidi(double seconds) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.seek(seconds, ofGetElapsedTimef());
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.seek(seconds, ofGetElapsedTimef());
 }
 
 void ofxVlc4::setMidiTempoMultiplier(double multiplier) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.setTempoMultiplier(multiplier, ofGetElapsedTimef());
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.setTempoMultiplier(multiplier, ofGetElapsedTimef());
 }
 
 MidiAnalysisReport ofxVlc4::getMidiAnalysisReport() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.report;
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.report;
 }
 
 std::vector<MidiChannelMessage> ofxVlc4::getMidiMessages() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.messages;
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.messages;
 }
 
 ofxVlc4::MidiTransportInfo ofxVlc4::getMidiTransportInfo() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
 	MidiTransportInfo info;
-	info.loaded = midiRuntime.playback.isLoaded();
-	info.playing = midiRuntime.playback.isPlaying();
-	info.paused = midiRuntime.playback.isPaused();
-	info.finished = midiRuntime.playback.isFinished();
-	info.loopEnabled = midiRuntime.playback.isLoopEnabled();
-	info.durationSeconds = midiRuntime.playback.getDurationSeconds();
-	info.positionSeconds = midiRuntime.playback.getPositionSeconds();
-	info.positionFraction = midiRuntime.playback.getPositionFraction();
-	info.tempoMultiplier = midiRuntime.playback.getTempoMultiplier();
-	info.currentBpm = midiRuntime.playback.getCurrentBpm();
-	info.dispatchedCount = midiRuntime.playback.getDispatchedCount();
-	info.messageCount = midiRuntime.messages.size();
-	info.syncSource = midiRuntime.syncSource;
-	info.syncToWatchTime = midiRuntime.syncToWatchTime;
-	info.hasCallback = midiRuntime.playback.hasMessageCallback();
-	info.hasFinishedCallback = midiRuntime.playback.hasFinishedCallback();
-	info.syncSettings = midiRuntime.playback.getSyncSettings();
+	info.loaded = m_impl->midiRuntime.playback.isLoaded();
+	info.playing = m_impl->midiRuntime.playback.isPlaying();
+	info.paused = m_impl->midiRuntime.playback.isPaused();
+	info.finished = m_impl->midiRuntime.playback.isFinished();
+	info.loopEnabled = m_impl->midiRuntime.playback.isLoopEnabled();
+	info.durationSeconds = m_impl->midiRuntime.playback.getDurationSeconds();
+	info.positionSeconds = m_impl->midiRuntime.playback.getPositionSeconds();
+	info.positionFraction = m_impl->midiRuntime.playback.getPositionFraction();
+	info.tempoMultiplier = m_impl->midiRuntime.playback.getTempoMultiplier();
+	info.currentBpm = m_impl->midiRuntime.playback.getCurrentBpm();
+	info.dispatchedCount = m_impl->midiRuntime.playback.getDispatchedCount();
+	info.messageCount = m_impl->midiRuntime.messages.size();
+	info.syncSource = m_impl->midiRuntime.syncSource;
+	info.syncToWatchTime = m_impl->midiRuntime.syncToWatchTime;
+	info.hasCallback = m_impl->midiRuntime.playback.hasMessageCallback();
+	info.hasFinishedCallback = m_impl->midiRuntime.playback.hasFinishedCallback();
+	info.syncSettings = m_impl->midiRuntime.playback.getSyncSettings();
 	return info;
 }
 
 void ofxVlc4::setMidiMessageCallback(MidiMessageCallback callback) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.setMessageCallback(std::move(callback));
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.setMessageCallback(std::move(callback));
 }
 
 void ofxVlc4::clearMidiMessageCallback() {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.clearMessageCallback();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.clearMessageCallback();
 }
 
 bool ofxVlc4::hasMidiMessageCallback() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.hasMessageCallback();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.hasMessageCallback();
 }
 
 void ofxVlc4::setMidiSyncSettings(const MidiSyncSettings & settings) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.setSyncSettings(settings);
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.setSyncSettings(settings);
 }
 
 MidiSyncSettings ofxVlc4::getMidiSyncSettings() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.getSyncSettings();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.getSyncSettings();
 }
 
 void ofxVlc4::setMidiSyncSource(ofxVlc4MidiSyncSource source) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.syncSource = source;
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.syncSource = source;
 }
 
 ofxVlc4MidiSyncSource ofxVlc4::getMidiSyncSource() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.syncSource;
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.syncSource;
 }
 
 void ofxVlc4::setMidiSyncToWatchTimeEnabled(bool enabled) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.syncToWatchTime = enabled;
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.syncToWatchTime = enabled;
 	if (!enabled) {
-		midiRuntime.lastWatchTimeUs = -1;
+		m_impl->midiRuntime.lastWatchTimeUs = -1;
 	}
 }
 
 bool ofxVlc4::isMidiSyncToWatchTimeEnabled() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.syncToWatchTime;
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.syncToWatchTime;
 }
 
 void ofxVlc4::setMidiLoopEnabled(bool enabled) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.setLoopEnabled(enabled);
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.setLoopEnabled(enabled);
 }
 
 bool ofxVlc4::isMidiLoopEnabled() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.isLoopEnabled();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.isLoopEnabled();
 }
 
 double ofxVlc4::getMidiCurrentBpm() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.getCurrentBpm();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.getCurrentBpm();
 }
 
 double ofxVlc4::getMidiPositionFraction() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.getPositionFraction();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.getPositionFraction();
 }
 
 void ofxVlc4::seekMidiFraction(double fraction) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.seekFraction(fraction, ofGetElapsedTimef());
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.seekFraction(fraction, ofGetElapsedTimef());
 }
 
 void ofxVlc4::setMidiFinishedCallback(MidiFinishedCallback callback) {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.setFinishedCallback(std::move(callback));
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.setFinishedCallback(std::move(callback));
 }
 
 void ofxVlc4::clearMidiFinishedCallback() {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	midiRuntime.playback.clearFinishedCallback();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	m_impl->midiRuntime.playback.clearFinishedCallback();
 }
 
 bool ofxVlc4::hasMidiFinishedCallback() const {
-	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
-	return midiRuntime.playback.hasFinishedCallback();
+	std::lock_guard<std::mutex> lock(m_impl->midiRuntime.mutex);
+	return m_impl->midiRuntime.playback.hasFinishedCallback();
+}
+
+int ofxVlc4::getChannelCount() const {
+	return m_impl->audioRuntime.channels.load(std::memory_order_relaxed);
+}
+int ofxVlc4::getSampleRate() const {
+	return m_impl->audioRuntime.sampleRate.load(std::memory_order_relaxed);
 }
