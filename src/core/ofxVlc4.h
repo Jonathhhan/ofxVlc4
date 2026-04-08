@@ -807,14 +807,18 @@ public:
 		bool playing = false;
 		bool paused = false;
 		bool finished = false;
+		bool loopEnabled = false;
 		double durationSeconds = 0.0;
 		double positionSeconds = 0.0;
+		double positionFraction = 0.0;
 		double tempoMultiplier = 1.0;
+		double currentBpm = 120.0;
 		size_t dispatchedCount = 0;
 		size_t messageCount = 0;
 		ofxVlc4MidiSyncSource syncSource = ofxVlc4MidiSyncSource::Internal;
 		bool syncToWatchTime = false;
 		bool hasCallback = false;
+		bool hasFinishedCallback = false;
 		MidiSyncSettings syncSettings;
 	};
 
@@ -2219,6 +2223,14 @@ public:
 	ofxVlc4MidiSyncSource getMidiSyncSource() const;
 	void setMidiSyncToWatchTimeEnabled(bool enabled);
 	bool isMidiSyncToWatchTimeEnabled() const;
+	void setMidiLoopEnabled(bool enabled);
+	bool isMidiLoopEnabled() const;
+	double getMidiCurrentBpm() const;
+	double getMidiPositionFraction() const;
+	void seekMidiFraction(double fraction);
+	void setMidiFinishedCallback(MidiFinishedCallback callback);
+	void clearMidiFinishedCallback();
+	bool hasMidiFinishedCallback() const;
 	bool postDialogLogin(std::uintptr_t token, const std::string & username, const std::string & password, bool store);
 	bool postDialogAction(std::uintptr_t token, int action);
 	bool dismissDialog(std::uintptr_t token);

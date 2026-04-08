@@ -2223,14 +2223,18 @@ ofxVlc4::MidiTransportInfo ofxVlc4::getMidiTransportInfo() const {
 	info.playing = midiRuntime.playback.isPlaying();
 	info.paused = midiRuntime.playback.isPaused();
 	info.finished = midiRuntime.playback.isFinished();
+	info.loopEnabled = midiRuntime.playback.isLoopEnabled();
 	info.durationSeconds = midiRuntime.playback.getDurationSeconds();
 	info.positionSeconds = midiRuntime.playback.getPositionSeconds();
+	info.positionFraction = midiRuntime.playback.getPositionFraction();
 	info.tempoMultiplier = midiRuntime.playback.getTempoMultiplier();
+	info.currentBpm = midiRuntime.playback.getCurrentBpm();
 	info.dispatchedCount = midiRuntime.playback.getDispatchedCount();
 	info.messageCount = midiRuntime.messages.size();
 	info.syncSource = midiRuntime.syncSource;
 	info.syncToWatchTime = midiRuntime.syncToWatchTime;
 	info.hasCallback = midiRuntime.playback.hasMessageCallback();
+	info.hasFinishedCallback = midiRuntime.playback.hasFinishedCallback();
 	info.syncSettings = midiRuntime.playback.getSyncSettings();
 	return info;
 }
@@ -2281,4 +2285,44 @@ void ofxVlc4::setMidiSyncToWatchTimeEnabled(bool enabled) {
 bool ofxVlc4::isMidiSyncToWatchTimeEnabled() const {
 	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
 	return midiRuntime.syncToWatchTime;
+}
+
+void ofxVlc4::setMidiLoopEnabled(bool enabled) {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	midiRuntime.playback.setLoopEnabled(enabled);
+}
+
+bool ofxVlc4::isMidiLoopEnabled() const {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	return midiRuntime.playback.isLoopEnabled();
+}
+
+double ofxVlc4::getMidiCurrentBpm() const {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	return midiRuntime.playback.getCurrentBpm();
+}
+
+double ofxVlc4::getMidiPositionFraction() const {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	return midiRuntime.playback.getPositionFraction();
+}
+
+void ofxVlc4::seekMidiFraction(double fraction) {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	midiRuntime.playback.seekFraction(fraction, ofGetElapsedTimef());
+}
+
+void ofxVlc4::setMidiFinishedCallback(MidiFinishedCallback callback) {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	midiRuntime.playback.setFinishedCallback(std::move(callback));
+}
+
+void ofxVlc4::clearMidiFinishedCallback() {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	midiRuntime.playback.clearFinishedCallback();
+}
+
+bool ofxVlc4::hasMidiFinishedCallback() const {
+	std::lock_guard<std::mutex> lock(midiRuntime.mutex);
+	return midiRuntime.playback.hasFinishedCallback();
 }

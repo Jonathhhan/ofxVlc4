@@ -44,6 +44,7 @@ struct MidiSyncSettings {
 };
 
 using MidiMessageCallback = std::function<void(const MidiChannelMessage &)>;
+using MidiFinishedCallback = std::function<void()>;
 
 class MidiBridge {
 public:
