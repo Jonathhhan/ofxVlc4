@@ -65,8 +65,7 @@ inline std::string getAbsolutePath(const std::string & path) {
 	if (path.empty()) return path;
 	std::error_code ec;
 	const auto absolute = std::filesystem::absolute(path, ec);
-	if (ec) return path;
-	return absolute.string();
+	return ec ? path : absolute.string();
 }
 } // namespace ofFilePath
 

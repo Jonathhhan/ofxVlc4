@@ -38,8 +38,8 @@ constexpr const char * kLogChannel = "ofxVlc4";
 std::atomic<int> gLogLevel { static_cast<int>(OF_LOG_NOTICE) };
 constexpr int kOfxVlc4AddonVersionMajor = 1;
 constexpr int kOfxVlc4AddonVersionMinor = 0;
-constexpr int kOfxVlc4AddonVersionPatch = 3;
-constexpr const char * kOfxVlc4AddonVersionString = "1.0.3";
+constexpr int kOfxVlc4AddonVersionPatch = 4;
+constexpr const char * kOfxVlc4AddonVersionString = "1.0.4";
 
 bool shouldLog(ofLogLevel level) {
 	const ofLogLevel configuredLevel = static_cast<ofLogLevel>(gLogLevel.load());
@@ -1756,11 +1756,7 @@ void ofxVlc4::cancelPendingRecordingMux() {
 		activeTask->cancelRequested.store(true, std::memory_order_release);
 	}
 	if (m_impl->recordingMuxRuntime.worker.joinable()) {
-		if (activeTask && activeTask->inProgress.load()) {
-			m_impl->recordingMuxRuntime.worker.detach();
-		} else {
-			m_impl->recordingMuxRuntime.worker.join();
-		}
+		m_impl->recordingMuxRuntime.worker.join();
 	}
 	m_impl->recordingMuxRuntime.inProgress.store(false);
 	m_impl->recordingMuxRuntime.activeTask.reset();
