@@ -170,6 +170,7 @@ public:
 	bool selectTrackById(libvlc_track_type_t type, const std::string & trackId);
 	bool selectAudioTrackById(const std::string & trackId);
 	bool selectSubtitleTrackById(const std::string & trackId);
+	bool selectVideoTrackById(const std::string & trackId);
 	std::vector<ofxVlc4::MediaSlaveInfo> getMediaSlaves() const;
 	bool addMediaSlave(ofxVlc4::MediaSlaveType type, const std::string & uri, unsigned priority);
 	void clearMediaSlaves();

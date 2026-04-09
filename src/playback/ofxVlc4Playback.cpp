@@ -182,6 +182,10 @@ void ofxVlc4::setTime(int ms) {
 	playbackController->setTime(ms);
 }
 
+void ofxVlc4::jumpTime(int deltaMs) {
+	playbackController->jumpTime(deltaMs);
+}
+
 float ofxVlc4::getLength() const {
 	return playbackController->getLength();
 }

@@ -60,6 +60,7 @@ public:
 	float getPosition() const;
 	int getTime() const;
 	void setTime(int ms);
+	void jumpTime(int deltaMs);
 	float getLength() const;
 	void setPlaybackMode(ofxVlc4::PlaybackMode mode);
 	void setPlaybackMode(const std::string & mode);

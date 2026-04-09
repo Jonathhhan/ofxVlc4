@@ -1630,6 +1630,7 @@ public:
 	std::vector<MediaTrackInfo> getSubtitleTracks() const;
 	bool selectAudioTrackById(const std::string & trackId);
 	bool selectSubtitleTrackById(const std::string & trackId);
+	bool selectVideoTrackById(const std::string & trackId);
 	bool isEqualizerEnabled() const;
 	void setEqualizerEnabled(bool enabled);
 	float getEqualizerPreamp() const;
@@ -1745,6 +1746,7 @@ public:
 	float getPosition() const;
 	int getTime() const;
 	void setTime(int ms);
+	void jumpTime(int deltaMs);
 	float getLength() const;
 	int getVolume() const;
 	void setVolume(int volume);

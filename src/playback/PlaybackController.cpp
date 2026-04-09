@@ -1150,6 +1150,13 @@ void PlaybackController::setTime(int ms) {
 	}
 }
 
+void PlaybackController::jumpTime(int deltaMs) {
+	if (libvlc_media_player_t * player = owner.sessionPlayer()) {
+		resetAudioBuffer();
+		libvlc_media_player_jump_time(player, static_cast<libvlc_time_t>(deltaMs));
+	}
+}
+
 float PlaybackController::getLength() const {
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	return (player && owner.sessionMedia()) ? static_cast<float>(libvlc_media_player_get_length(player)) : 0.f;

@@ -4389,11 +4389,6 @@ void ofxVlc4::navigate(NavigationMode mode) {
 }
 
 bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
-	const auto seekByMilliseconds = [this](int deltaMs) {
-		const int currentTimeMs = std::max(0, getTime());
-		setTime(std::max(0, currentTimeMs + deltaMs));
-	};
-
 	switch (command) {
 	case PlayerCommand::PlayPause:
 		if (isPlaying()) {
@@ -4418,16 +4413,16 @@ bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
 		previousMediaListItem();
 		return true;
 	case PlayerCommand::SeekForwardSmall:
-		seekByMilliseconds(5000);
+		jumpTime(5000);
 		return true;
 	case PlayerCommand::SeekBackwardSmall:
-		seekByMilliseconds(-5000);
+		jumpTime(-5000);
 		return true;
 	case PlayerCommand::SeekForwardLarge:
-		seekByMilliseconds(30000);
+		jumpTime(30000);
 		return true;
 	case PlayerCommand::SeekBackwardLarge:
-		seekByMilliseconds(-30000);
+		jumpTime(-30000);
 		return true;
 	case PlayerCommand::VolumeUp:
 		setVolume(getVolume() + 5);
@@ -4636,6 +4631,10 @@ bool ofxVlc4::MediaComponent::selectSubtitleTrackById(const std::string & trackI
 	return applied;
 }
 
+bool ofxVlc4::MediaComponent::selectVideoTrackById(const std::string & trackId) {
+	return selectTrackById(libvlc_track_video, trackId);
+}
+
 std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::getTrackInfos(libvlc_track_type_t type) const {
 	return mediaComponent->getTrackInfos(type);
 }
@@ -4662,6 +4661,10 @@ bool ofxVlc4::selectAudioTrackById(const std::string & trackId) {
 
 bool ofxVlc4::selectSubtitleTrackById(const std::string & trackId) {
 	return mediaComponent->selectSubtitleTrackById(trackId);
+}
+
+bool ofxVlc4::selectVideoTrackById(const std::string & trackId) {
+	return mediaComponent->selectVideoTrackById(trackId);
 }
 
 void ofxVlc4::clearCurrentMedia(bool clearVideoResources) {
