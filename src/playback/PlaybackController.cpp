@@ -1157,8 +1157,7 @@ float PlaybackController::getLength() const {
 
 void PlaybackController::setPlaybackMode(ofxVlc4::PlaybackMode mode) {
 	setPlaybackModeValue(mode);
-	owner.setStatus("Playback mode set to " + ofxVlc4::playbackModeToString(mode) + ".");
-	owner.logNotice("Playback mode: " + ofxVlc4::playbackModeToString(mode));
+	owner.setStatusAndNotice("Playback mode set to " + ofxVlc4::playbackModeToString(mode) + ".", "Playback mode: " + ofxVlc4::playbackModeToString(mode));
 }
 
 void PlaybackController::setPlaybackMode(const std::string & mode) {
@@ -1178,8 +1177,7 @@ void PlaybackController::setShuffleEnabled(bool enabled) {
 	if (!enabled) {
 		invalidateShuffleQueue();
 	}
-	owner.setStatus(std::string("Shuffle ") + (enabled ? "enabled." : "disabled."));
-	owner.logNotice(std::string("Shuffle ") + (enabled ? "enabled." : "disabled."));
+	owner.setStatusAndNotice(std::string("Shuffle ") + (enabled ? "enabled." : "disabled."));
 }
 
 bool PlaybackController::isShuffleEnabled() const {

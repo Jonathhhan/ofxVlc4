@@ -651,8 +651,7 @@ void ofxVlc4::AudioComponent::setAudioFilterChain(const std::string & filterChai
 			owner.logNotice("Audio filter chain cleared.");
 			return;
 		}
-		owner.setStatus("Audio filter chain cleared. Reload media to apply.");
-		owner.logNotice("Audio filter chain cleared.");
+		owner.setStatusAndNotice("Audio filter chain cleared. Reload media to apply.", "Audio filter chain cleared.");
 		return;
 	}
 
@@ -661,8 +660,7 @@ void ofxVlc4::AudioComponent::setAudioFilterChain(const std::string & filterChai
 		return;
 	}
 
-	owner.setStatus("Audio filter chain set. Reload media to apply.");
-	owner.logNotice("Audio filter chain: " + owner.m_impl->playerConfigRuntime.audioFilterChain + ".");
+	owner.setStatusAndNotice("Audio filter chain set. Reload media to apply.", "Audio filter chain: " + owner.m_impl->playerConfigRuntime.audioFilterChain + ".");
 }
 
 const std::string & ofxVlc4::AudioComponent::getSelectedAudioOutputModuleName() const {
@@ -682,11 +680,8 @@ bool ofxVlc4::AudioComponent::selectAudioOutputModule(const std::string & module
 	if (trimmedModuleName.empty()) {
 		owner.m_impl->playerConfigRuntime.audioOutputModuleName.clear();
 		owner.m_impl->playerConfigRuntime.audioOutputDeviceId.clear();
-		owner.setStatus(player ? "Audio output module reset for the next init." : "Audio output module reset.");
-		owner.logNotice(
-			player
-				? "Audio output module reset for the next init."
-				: "Audio output module reset.");
+		owner.setStatusAndNotice(
+			player ? "Audio output module reset for the next init." : "Audio output module reset.");
 		return true;
 	}
 
@@ -698,8 +693,7 @@ bool ofxVlc4::AudioComponent::selectAudioOutputModule(const std::string & module
 	}
 
 	applyAudioOutputDevice();
-	owner.setStatus("Audio output module set.");
-	owner.logNotice("Audio output module: " + owner.m_impl->playerConfigRuntime.audioOutputModuleName + ".");
+	owner.setStatusAndNotice("Audio output module set.", "Audio output module: " + owner.m_impl->playerConfigRuntime.audioOutputModuleName + ".");
 	return true;
 }
 
@@ -741,10 +735,10 @@ std::string ofxVlc4::AudioComponent::getSelectedAudioOutputDeviceId() const {
 bool ofxVlc4::AudioComponent::selectAudioOutputDevice(const std::string & deviceId) {
 	owner.m_impl->playerConfigRuntime.audioOutputDeviceId = trimWhitespace(deviceId);
 	applyAudioOutputDevice();
-	owner.setStatus(owner.m_impl->playerConfigRuntime.audioOutputDeviceId.empty() ? "Audio output device reset." : "Audio output device set.");
-	owner.logNotice(
+	owner.setStatusAndNotice(
+		owner.m_impl->playerConfigRuntime.audioOutputDeviceId.empty() ? "Audio output device reset." : "Audio output device set.",
 		owner.m_impl->playerConfigRuntime.audioOutputDeviceId.empty()
-			? "Audio output device reset."
+			? std::string("Audio output device reset.")
 			: ("Audio output device: " + owner.m_impl->playerConfigRuntime.audioOutputDeviceId + "."));
 	return true;
 }
@@ -785,8 +779,7 @@ bool ofxVlc4::AudioComponent::isEqualizerEnabled() const {
 void ofxVlc4::AudioComponent::setEqualizerEnabled(bool enabled) {
 	owner.m_impl->effectsRuntime.equalizerEnabled = enabled;
 	applyOrQueueEqualizerSettings();
-	owner.setStatus(std::string("Equalizer ") + (enabled ? "enabled." : "disabled."));
-	owner.logNotice(std::string("Equalizer ") + (enabled ? "enabled." : "disabled."));
+	owner.setStatusAndNotice(std::string("Equalizer ") + (enabled ? "enabled." : "disabled."));
 }
 
 float ofxVlc4::AudioComponent::getEqualizerPreamp() const {
@@ -971,8 +964,7 @@ bool ofxVlc4::AudioComponent::importEqualizerPreset(const std::string & serializ
 	owner.m_impl->effectsRuntime.equalizerBandAmps = std::move(importedBandAmps);
 	owner.m_impl->effectsRuntime.currentEqualizerPresetIndex = findMatchingEqualizerPresetIndex(kEqualizerPresetMatchToleranceDb);
 	applyOrQueueEqualizerSettings();
-	owner.setStatus("Equalizer preset imported.");
-	owner.logNotice("Equalizer preset imported.");
+	owner.setStatusAndNotice("Equalizer preset imported.");
 	return true;
 }
 
@@ -1004,8 +996,7 @@ bool ofxVlc4::AudioComponent::applyEqualizerPreset(int index) {
 
 	const char * presetName = libvlc_audio_equalizer_get_preset_name(static_cast<unsigned>(index));
 	const std::string label = trimWhitespace(presetName ? presetName : "");
-	owner.setStatus("Equalizer preset applied: " + (label.empty() ? ofToString(index) : label));
-	owner.logNotice("Equalizer preset applied: " + (label.empty() ? ofToString(index) : label));
+	owner.setStatusAndNotice("Equalizer preset applied: " + (label.empty() ? ofToString(index) : label));
 	return true;
 }
 
@@ -1026,8 +1017,7 @@ void ofxVlc4::AudioComponent::resetEqualizer() {
 	std::fill(owner.m_impl->effectsRuntime.equalizerBandAmps.begin(), owner.m_impl->effectsRuntime.equalizerBandAmps.end(), 0.0f);
 	owner.m_impl->effectsRuntime.currentEqualizerPresetIndex = -1;
 	applyOrQueueEqualizerSettings();
-	owner.setStatus("Equalizer reset.");
-	owner.logNotice("Equalizer reset.");
+	owner.setStatusAndNotice("Equalizer reset.");
 }
 
 std::vector<float> ofxVlc4::AudioComponent::getEqualizerSpectrumLevels(size_t pointCount) const {
@@ -1272,8 +1262,7 @@ void ofxVlc4::AudioComponent::setAudioMixMode(AudioMixMode mode) {
 	owner.m_impl->playerConfigRuntime.audioMixMode = mode;
 	applyAudioMixMode();
 
-	owner.setStatus(std::string("Audio mix mode set to ") + audioMixModeLabel(mode) + ".");
-	owner.logNotice(std::string("Audio mix mode: ") + audioMixModeLabel(mode));
+	owner.setStatusAndNotice(std::string("Audio mix mode set to ") + audioMixModeLabel(mode) + ".", std::string("Audio mix mode: ") + audioMixModeLabel(mode));
 }
 
 ofxVlc4::AudioStereoMode ofxVlc4::AudioComponent::getAudioStereoMode() const {
@@ -1284,8 +1273,7 @@ void ofxVlc4::AudioComponent::setAudioStereoMode(AudioStereoMode mode) {
 	owner.m_impl->playerConfigRuntime.audioStereoMode = mode;
 	applyAudioStereoMode();
 
-	owner.setStatus(std::string("Audio stereo mode set to ") + audioStereoModeLabel(mode) + ".");
-	owner.logNotice(std::string("Audio stereo mode: ") + audioStereoModeLabel(mode));
+	owner.setStatusAndNotice(std::string("Audio stereo mode set to ") + audioStereoModeLabel(mode) + ".", std::string("Audio stereo mode: ") + audioStereoModeLabel(mode));
 }
 
 float ofxVlc4::AudioComponent::getPlaybackRate() const {
@@ -1347,8 +1335,7 @@ ofxVlc4::AudioCaptureSampleFormat ofxVlc4::AudioComponent::getAudioCaptureSample
 
 void ofxVlc4::AudioComponent::setAudioCaptureSampleFormat(AudioCaptureSampleFormat format) {
 	owner.m_impl->playerConfigRuntime.audioCaptureSampleFormat = format;
-	owner.setStatus(std::string("Audio callback format set to ") + audioCaptureSampleFormatLabel(format) + ".");
-	owner.logNotice(std::string("Audio callback format: ") + audioCaptureSampleFormatLabel(format));
+	owner.setStatusAndNotice(std::string("Audio callback format set to ") + audioCaptureSampleFormatLabel(format) + ".", std::string("Audio callback format: ") + audioCaptureSampleFormatLabel(format));
 }
 
 int ofxVlc4::AudioComponent::getAudioCaptureSampleRate() const {
@@ -1357,8 +1344,7 @@ int ofxVlc4::AudioComponent::getAudioCaptureSampleRate() const {
 
 void ofxVlc4::AudioComponent::setAudioCaptureSampleRate(int rate) {
 	owner.m_impl->playerConfigRuntime.audioCaptureSampleRate = normalizeAudioCaptureSampleRate(rate);
-	owner.setStatus("Audio callback rate set to " + ofToString(owner.m_impl->playerConfigRuntime.audioCaptureSampleRate) + " Hz.");
-	owner.logNotice("Audio callback rate: " + ofToString(owner.m_impl->playerConfigRuntime.audioCaptureSampleRate) + " Hz");
+	owner.setStatusAndNotice("Audio callback rate set to " + ofToString(owner.m_impl->playerConfigRuntime.audioCaptureSampleRate) + " Hz.", "Audio callback rate: " + ofToString(owner.m_impl->playerConfigRuntime.audioCaptureSampleRate) + " Hz");
 }
 
 int ofxVlc4::AudioComponent::getAudioCaptureChannelCount() const {

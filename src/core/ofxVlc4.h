@@ -1022,6 +1022,8 @@ private:
 	void setRecordingPresetInternal(const ofxVlc4RecordingPreset & preset);
 	void setError(const std::string & message);
 	void setStatus(const std::string & message);
+	void setStatusAndNotice(const std::string & message);
+	void setStatusAndNotice(const std::string & status, const std::string & notice);
 	static PlaybackMode playbackModeFromString(const std::string & mode);
 	static std::string playbackModeToString(PlaybackMode mode);
 	bool isSupportedMediaFile(const ofFile & file, const std::set<std::string> * extensions = nullptr) const;

@@ -464,8 +464,7 @@ void MediaLibrary::addToPlaylistInternal(const std::string & path, bool preloadM
 			setCurrentIndexLocked(0);
 		}
 	}
-	owner.setStatus("Added media to playlist.");
-	owner.logNotice("Playlist item added: " + ofxVlc4Utils::mediaLabelForPath(path) + ".");
+	owner.setStatusAndNotice("Added media to playlist.", "Playlist item added: " + ofxVlc4Utils::mediaLabelForPath(path) + ".");
 
 	if (preloadMetadata) {
 		getMetadataAtIndex(static_cast<int>(getPlaylistSize()));
@@ -1311,8 +1310,7 @@ void MediaLibrary::updateSnapshotStateFromEvent(const std::string & savedPath) {
 	}
 
 	if (!resolvedPath.empty()) {
-		owner.setStatus("Snapshot saved: " + resolvedPath);
-		owner.logNotice("Snapshot saved: " + resolvedPath);
+		owner.setStatusAndNotice("Snapshot saved: " + resolvedPath);
 	}
 }
 
@@ -1383,8 +1381,7 @@ bool MediaLibrary::saveCurrentMediaMeta() {
 	}
 
 	clearMetadataCache();
-	owner.setStatus("Media metadata saved.");
-	owner.logNotice("Media metadata saved.");
+	owner.setStatusAndNotice("Media metadata saved.");
 	return true;
 }
 

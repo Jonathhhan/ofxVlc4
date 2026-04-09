@@ -1307,6 +1307,16 @@ void ofxVlc4::setStatus(const std::string & message) {
 	m_impl->diagnosticsRuntime.lastErrorMessage.clear();
 }
 
+void ofxVlc4::setStatusAndNotice(const std::string & message) {
+	setStatus(message);
+	logNotice(message);
+}
+
+void ofxVlc4::setStatusAndNotice(const std::string & status, const std::string & notice) {
+	setStatus(status);
+	logNotice(notice);
+}
+
 std::string ofxVlc4::vlcHelpModeToOptionString(ofxVlc4VlcHelpMode mode) {
 	switch (mode) {
 	case ofxVlc4VlcHelpMode::Help:

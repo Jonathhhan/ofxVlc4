@@ -808,8 +808,7 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 		}
 		owner.m_impl->videoPresentationRuntime.activeVideoOutputBackend = VideoOutputBackend::D3D11Metadata;
 		updateNativeVideoWindowVisibility();
-		owner.setStatus("D3D11 HDR metadata backend configured.");
-		owner.logNotice("Video output backend: D3D11 HDR metadata.");
+		owner.setStatusAndNotice("D3D11 HDR metadata backend configured.", "Video output backend: D3D11 HDR metadata.");
 		return true;
 #else
 		owner.setError("D3D11 HDR metadata output is only supported on Windows.");
@@ -1513,8 +1512,7 @@ void ofxVlc4::VideoComponent::setVideoScale(float scale) {
 	owner.m_impl->videoPresentationRuntime.videoScale = clampedScale;
 	owner.m_impl->videoPresentationRuntime.videoDisplayFitMode = VideoDisplayFitMode::Scale;
 	applyVideoScaleAndFit();
-	owner.setStatus("Video scale set.");
-	owner.logNotice("Video scale: " + ofToString(owner.m_impl->videoPresentationRuntime.videoScale, 2) + "x.");
+	owner.setStatusAndNotice("Video scale set.", "Video scale: " + ofToString(owner.m_impl->videoPresentationRuntime.videoScale, 2) + "x.");
 }
 
 ofxVlc4::VideoProjectionMode ofxVlc4::VideoComponent::getVideoProjectionMode() const {
@@ -1543,8 +1541,7 @@ void ofxVlc4::VideoComponent::setVideoProjectionMode(VideoProjectionMode mode) {
 	default:
 		break;
 	}
-	owner.setStatus("3D projection set.");
-	owner.logNotice("3D projection set: " + modeLabel + ".");
+	owner.setStatusAndNotice("3D projection set.", "3D projection set: " + modeLabel + ".");
 }
 
 ofxVlc4::VideoStereoMode ofxVlc4::VideoComponent::getVideoStereoMode() const {
@@ -1576,8 +1573,7 @@ void ofxVlc4::VideoComponent::setVideoStereoMode(VideoStereoMode mode) {
 	default:
 		break;
 	}
-	owner.setStatus("3D stereo mode set.");
-	owner.logNotice("3D stereo mode set: " + modeLabel + ".");
+	owner.setStatusAndNotice("3D stereo mode set.", "3D stereo mode set: " + modeLabel + ".");
 }
 
 float ofxVlc4::VideoComponent::getVideoYaw() const {
@@ -1610,8 +1606,7 @@ void ofxVlc4::VideoComponent::resetVideoViewpoint() {
 	owner.m_impl->videoPresentationRuntime.videoViewRoll = 0.0f;
 	owner.m_impl->videoPresentationRuntime.videoViewFov = 80.0f;
 	applyVideoViewpoint();
-	owner.setStatus("3D view reset.");
-	owner.logNotice("3D view reset.");
+	owner.setStatusAndNotice("3D view reset.");
 }
 
 bool ofxVlc4::VideoComponent::isMarqueeEnabled() const {
@@ -1770,14 +1765,9 @@ int ofxVlc4::VideoComponent::getTeletextPage() const {
 }
 
 void ofxVlc4::VideoComponent::setTeletextPage(int page) {
-	const int clampedPage = ofClamp(page, 0, 999);
-	if (owner.m_impl->videoPresentationRuntime.teletextPage == clampedPage) {
-		return;
+	if (setAndApply(owner.m_impl->videoPresentationRuntime.teletextPage, ofClamp(page, 0, 999), [this]() { applyTeletextSettings(); })) {
+		media().refreshSubtitleStateInfo();
 	}
-
-	owner.m_impl->videoPresentationRuntime.teletextPage = clampedPage;
-	applyTeletextSettings();
-	media().refreshSubtitleStateInfo();
 }
 
 bool ofxVlc4::VideoComponent::isTeletextTransparencyEnabled() const {
@@ -1788,13 +1778,9 @@ bool ofxVlc4::VideoComponent::isTeletextTransparencyEnabled() const {
 }
 
 void ofxVlc4::VideoComponent::setTeletextTransparencyEnabled(bool enabled) {
-	if (owner.m_impl->videoPresentationRuntime.teletextTransparencyEnabled == enabled) {
-		return;
+	if (setAndApply(owner.m_impl->videoPresentationRuntime.teletextTransparencyEnabled, enabled, [this]() { applyTeletextSettings(); })) {
+		media().refreshSubtitleStateInfo();
 	}
-
-	owner.m_impl->videoPresentationRuntime.teletextTransparencyEnabled = enabled;
-	applyTeletextSettings();
-	media().refreshSubtitleStateInfo();
 }
 
 void ofxVlc4::VideoComponent::sendTeletextKey(TeletextKey key) {
@@ -1841,13 +1827,9 @@ bool ofxVlc4::VideoComponent::isVlcFullscreenEnabled() const {
 }
 
 void ofxVlc4::VideoComponent::setVlcFullscreenEnabled(bool enabled) {
-	if (owner.m_impl->videoPresentationRuntime.vlcFullscreenEnabled == enabled) {
-		return;
+	if (setAndApply(owner.m_impl->videoPresentationRuntime.vlcFullscreenEnabled, enabled, [this]() { applyVlcFullscreen(); })) {
+		owner.logNotice(std::string("libVLC fullscreen ") + (owner.m_impl->videoPresentationRuntime.vlcFullscreenEnabled ? "enabled." : "disabled."));
 	}
-
-	owner.m_impl->videoPresentationRuntime.vlcFullscreenEnabled = enabled;
-	applyVlcFullscreen();
-	owner.logNotice(std::string("libVLC fullscreen ") + (owner.m_impl->videoPresentationRuntime.vlcFullscreenEnabled ? "enabled." : "disabled."));
 }
 
 void ofxVlc4::VideoComponent::toggleVlcFullscreen() {
@@ -1859,12 +1841,7 @@ bool ofxVlc4::VideoComponent::isVideoTitleDisplayEnabled() const {
 }
 
 void ofxVlc4::VideoComponent::setVideoTitleDisplayEnabled(bool enabled) {
-	if (owner.m_impl->videoPresentationRuntime.videoTitleDisplayEnabled == enabled) {
-		return;
-	}
-
-	owner.m_impl->videoPresentationRuntime.videoTitleDisplayEnabled = enabled;
-	applyVideoTitleDisplay();
+	setAndApply(owner.m_impl->videoPresentationRuntime.videoTitleDisplayEnabled, enabled, [this]() { applyVideoTitleDisplay(); });
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getVideoTitleDisplayPosition() const {
@@ -1872,12 +1849,7 @@ ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getVideoTitleDisplayPosition()
 }
 
 void ofxVlc4::VideoComponent::setVideoTitleDisplayPosition(OverlayPosition position) {
-	if (owner.m_impl->videoPresentationRuntime.videoTitleDisplayPosition == position) {
-		return;
-	}
-
-	owner.m_impl->videoPresentationRuntime.videoTitleDisplayPosition = position;
-	applyVideoTitleDisplay();
+	setAndApply(owner.m_impl->videoPresentationRuntime.videoTitleDisplayPosition, position, [this]() { applyVideoTitleDisplay(); });
 }
 
 unsigned ofxVlc4::VideoComponent::getVideoTitleDisplayTimeoutMs() const {
@@ -1885,13 +1857,7 @@ unsigned ofxVlc4::VideoComponent::getVideoTitleDisplayTimeoutMs() const {
 }
 
 void ofxVlc4::VideoComponent::setVideoTitleDisplayTimeoutMs(unsigned timeoutMs) {
-	const unsigned clampedTimeoutMs = std::min(timeoutMs, 60000u);
-	if (owner.m_impl->videoPresentationRuntime.videoTitleDisplayTimeoutMs == clampedTimeoutMs) {
-		return;
-	}
-
-	owner.m_impl->videoPresentationRuntime.videoTitleDisplayTimeoutMs = clampedTimeoutMs;
-	applyVideoTitleDisplay();
+	setAndApply(owner.m_impl->videoPresentationRuntime.videoTitleDisplayTimeoutMs, std::min(timeoutMs, 60000u), [this]() { applyVideoTitleDisplay(); });
 }
 
 bool ofxVlc4::VideoComponent::getCursorPosition(int & x, int & y) const {
@@ -2031,8 +1997,7 @@ void ofxVlc4::VideoComponent::setVideoDeinterlaceMode(VideoDeinterlaceMode mode)
 
 	owner.m_impl->videoPresentationRuntime.videoDeinterlaceMode = mode;
 	applyVideoDeinterlace();
-	owner.setStatus("Video deinterlace set.");
-	owner.logNotice(std::string("Video deinterlace: ") + videoDeinterlaceModeLabel(mode) + ".");
+	owner.setStatusAndNotice("Video deinterlace set.", std::string("Video deinterlace: ") + videoDeinterlaceModeLabel(mode) + ".");
 }
 
 ofxVlc4::VideoAspectRatioMode ofxVlc4::VideoComponent::getVideoAspectRatioMode() const {
@@ -2046,8 +2011,7 @@ void ofxVlc4::VideoComponent::setVideoAspectRatioMode(VideoAspectRatioMode mode)
 
 	owner.m_impl->videoPresentationRuntime.videoAspectRatioMode = mode;
 	applyVideoAspectRatio();
-	owner.setStatus("Video aspect ratio set.");
-	owner.logNotice(std::string("Video aspect ratio: ") + videoAspectRatioLabel(mode) + ".");
+	owner.setStatusAndNotice("Video aspect ratio set.", std::string("Video aspect ratio: ") + videoAspectRatioLabel(mode) + ".");
 }
 
 ofxVlc4::VideoCropMode ofxVlc4::VideoComponent::getVideoCropMode() const {
@@ -2061,8 +2025,7 @@ void ofxVlc4::VideoComponent::setVideoCropMode(VideoCropMode mode) {
 
 	owner.m_impl->videoPresentationRuntime.videoCropMode = mode;
 	applyVideoCrop();
-	owner.setStatus("Video crop set.");
-	owner.logNotice(std::string("Video crop: ") + videoCropLabel(mode) + ".");
+	owner.setStatusAndNotice("Video crop set.", std::string("Video crop: ") + videoCropLabel(mode) + ".");
 }
 
 ofxVlc4::VideoDisplayFitMode ofxVlc4::VideoComponent::getVideoDisplayFitMode() const {
@@ -2076,8 +2039,7 @@ void ofxVlc4::VideoComponent::setVideoDisplayFitMode(VideoDisplayFitMode mode) {
 
 	owner.m_impl->videoPresentationRuntime.videoDisplayFitMode = mode;
 	applyVideoScaleAndFit();
-	owner.setStatus("Video fit set.");
-	owner.logNotice("Video fit set.");
+	owner.setStatusAndNotice("Video fit set.");
 }
 
 ofxVlc4::VideoOutputBackend ofxVlc4::VideoComponent::getVideoOutputBackend() const {
@@ -2131,8 +2093,7 @@ void ofxVlc4::VideoComponent::resetVideoAdjustments() {
 	owner.m_impl->effectsRuntime.videoAdjustSaturation = 1.0f;
 	owner.m_impl->effectsRuntime.videoAdjustGamma = 1.0f;
 	applyOrQueueVideoAdjustments();
-	owner.setStatus("Video adjustments reset.");
-	owner.logNotice("Video adjustments reset.");
+	owner.setStatusAndNotice("Video adjustments reset.");
 }
 
 std::vector<ofxVlc4::VideoFilterInfo> ofxVlc4::VideoComponent::getVideoFilters() const {
@@ -2167,11 +2128,9 @@ void ofxVlc4::VideoComponent::setVideoFilterChain(const std::string & filterChai
 	owner.m_impl->playerConfigRuntime.videoFilterChain = trimWhitespace(filterChain);
 	if (!owner.canApplyNativeVideoFilters()) {
 		if (owner.m_impl->playerConfigRuntime.videoFilterChain.empty()) {
-			owner.setStatus("Video filter chain cleared. NativeWindow backend is required to apply video filters.");
-			owner.logNotice("Video filter chain cleared.");
+			owner.setStatusAndNotice("Video filter chain cleared. NativeWindow backend is required to apply video filters.", "Video filter chain cleared.");
 		} else {
-			owner.setStatus("Video filter chain stored. Switch to NativeWindow backend and reload/play media to apply.");
-			owner.logNotice("Video filter chain stored: " + owner.m_impl->playerConfigRuntime.videoFilterChain + ".");
+			owner.setStatusAndNotice("Video filter chain stored. Switch to NativeWindow backend and reload/play media to apply.", "Video filter chain stored: " + owner.m_impl->playerConfigRuntime.videoFilterChain + ".");
 		}
 		return;
 	}
@@ -2181,8 +2140,7 @@ void ofxVlc4::VideoComponent::setVideoFilterChain(const std::string & filterChai
 			owner.logNotice("Video filter chain cleared.");
 			return;
 		}
-		owner.setStatus("Video filter chain cleared. Reload media to apply.");
-		owner.logNotice("Video filter chain cleared.");
+		owner.setStatusAndNotice("Video filter chain cleared. Reload media to apply.", "Video filter chain cleared.");
 		return;
 	}
 
@@ -2191,8 +2149,7 @@ void ofxVlc4::VideoComponent::setVideoFilterChain(const std::string & filterChai
 		return;
 	}
 
-	owner.setStatus("Video filter chain set. Reload media to apply.");
-	owner.logNotice("Video filter chain: " + owner.m_impl->playerConfigRuntime.videoFilterChain + ".");
+	owner.setStatusAndNotice("Video filter chain set. Reload media to apply.", "Video filter chain: " + owner.m_impl->playerConfigRuntime.videoFilterChain + ".");
 }
 
 unsigned ofxVlc4::VideoComponent::getVideoOutputCount() const {

@@ -575,8 +575,7 @@ bool ofxVlc4::MediaComponent::reapplyCurrentMediaForFilterChainChange(const std:
 		}
 	}
 
-	owner.setStatus(label + " filter chain applied to current media.");
-	owner.logNotice(label + " filter chain applied to current media.");
+	owner.setStatusAndNotice(label + " filter chain applied to current media.");
 	return true;
 }
 
@@ -1480,8 +1479,7 @@ void ofxVlc4::MediaComponent::updateNativeRecordingStateFromEvent(bool active, c
 	}
 
 	if (!resolvedPath.empty()) {
-		owner.setStatus("Native VLC recording saved: " + resolvedPath);
-		owner.logNotice("Native VLC recording saved: " + resolvedPath);
+		owner.setStatusAndNotice("Native VLC recording saved: " + resolvedPath);
 	}
 }
 
@@ -1698,11 +1696,10 @@ bool ofxVlc4::MediaComponent::startMediaDiscovery(const std::string & discoverer
 		setMediaDiscoveryDescriptorLocked(trimmedName, discovererLongName, discovererCategory, false);
 	}
 	refreshDiscoveredMediaItems();
-	owner.setStatus("Media discovery started.");
 	const std::string discoveryLabel = discovererLongName.empty()
 		? trimmedName
 		: (discovererLongName + " (" + trimmedName + ")");
-	owner.logNotice("Media discovery started: " + discoveryLabel + ".");
+	owner.setStatusAndNotice("Media discovery started.", "Media discovery started: " + discoveryLabel + ".");
 	return true;
 }
 
@@ -1712,8 +1709,7 @@ void ofxVlc4::MediaComponent::stopMediaDiscovery() {
 	}
 
 	stopMediaDiscoveryInternal();
-	owner.setStatus("Media discovery stopped.");
-	owner.logNotice("Media discovery stopped.");
+	owner.setStatusAndNotice("Media discovery stopped.");
 }
 
 bool ofxVlc4::MediaComponent::isMediaDiscoveryActive() const {
@@ -2985,8 +2981,7 @@ void ofxVlc4::MediaComponent::clearPlaylist() {
 	playback().invalidateShuffleQueue();
 	mediaLibrary().clearPlaylistState();
 	clearCurrentMedia();
-	owner.setStatus("Playlist cleared.");
-	owner.logNotice("Playlist cleared.");
+	owner.setStatusAndNotice("Playlist cleared.");
 }
 
 void ofxVlc4::MediaComponent::removeFromPlaylist(int index) {
@@ -3111,8 +3106,7 @@ bool ofxVlc4::MediaComponent::startRendererDiscovery(const std::string & discove
 		setRendererDiscovererNameLocked(trimmedName);
 	}
 	refreshRendererStateInfo();
-	owner.setStatus("Renderer discovery started.");
-	owner.logNotice("Renderer discovery started: " + trimmedName + ".");
+	owner.setStatusAndNotice("Renderer discovery started.", "Renderer discovery started: " + trimmedName + ".");
 	return true;
 }
 
@@ -3135,8 +3129,7 @@ void ofxVlc4::MediaComponent::stopRendererDiscovery() {
 		applySelectedRenderer();
 	}
 	refreshRendererStateInfo();
-	owner.setStatus("Renderer discovery stopped.");
-	owner.logNotice("Renderer discovery stopped.");
+	owner.setStatusAndNotice("Renderer discovery stopped.");
 }
 
 bool ofxVlc4::isRendererDiscoveryActive() const {
@@ -3175,8 +3168,7 @@ void ofxVlc4::MediaComponent::handleRendererDiscovererEvent(const libvlc_event_t
 		if (shouldReconnectSelectedRenderer && owner.sessionPlayer()) {
 			applySelectedRenderer();
 			refreshRendererStateInfo();
-			owner.setStatus("Selected renderer is available again.");
-			owner.logNotice("Renderer available again: " + rendererLabel + ".");
+			owner.setStatusAndNotice("Selected renderer is available again.", "Renderer available again: " + rendererLabel + ".");
 		}
 		return;
 	}
@@ -3193,8 +3185,7 @@ void ofxVlc4::MediaComponent::handleRendererDiscovererEvent(const libvlc_event_t
 		if (removedSelectedRenderer && owner.sessionPlayer()) {
 			applySelectedRenderer();
 			refreshRendererStateInfo();
-			owner.setStatus("Selected renderer unavailable; using local output until it returns.");
-			owner.logNotice("Selected renderer became unavailable; using local output.");
+			owner.setStatusAndNotice("Selected renderer unavailable; using local output until it returns.", "Selected renderer became unavailable; using local output.");
 		}
 	}
 }
@@ -3368,8 +3359,7 @@ bool ofxVlc4::MediaComponent::selectRenderer(const std::string & rendererId) {
 	}
 	refreshRendererStateInfo();
 
-	owner.setStatus(canApplyImmediately ? "Renderer selected." : "Renderer will apply on next play.");
-	owner.logNotice("Renderer selected: " + rendererDisplayLabel(selectedRenderer) + ".");
+	owner.setStatusAndNotice(canApplyImmediately ? "Renderer selected." : "Renderer will apply on next play.", "Renderer selected: " + rendererDisplayLabel(selectedRenderer) + ".");
 	return true;
 }
 
@@ -3388,8 +3378,7 @@ bool ofxVlc4::MediaComponent::clearRenderer() {
 	}
 	refreshRendererStateInfo();
 
-	owner.setStatus(canApplyImmediately ? "Renderer reset to local output." : "Local output will apply on next play.");
-	owner.logNotice("Renderer reset to local output.");
+	owner.setStatusAndNotice(canApplyImmediately ? "Renderer reset to local output." : "Local output will apply on next play.", "Renderer reset to local output.");
 	return true;
 }
 
