@@ -744,9 +744,11 @@ void ofxVlc4::VideoComponent::updateNativeVideoWindowVisibility() {
 		owner.m_impl->videoResourceRuntime.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
 		owner.m_impl->videoResourceRuntime.vlcWindow->setWindowShape(960, 540);
 		owner.m_impl->videoResourceRuntime.vlcWindow->setWindowPosition(560, 24);
+		glfwSetWindowAttrib(glfwWindow, GLFW_DECORATED, GLFW_TRUE);
 		glfwShowWindow(glfwWindow);
 	} else {
 		glfwHideWindow(glfwWindow);
+		glfwSetWindowAttrib(glfwWindow, GLFW_DECORATED, GLFW_FALSE);
 	}
 }
 
