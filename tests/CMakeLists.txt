@@ -330,3 +330,22 @@ target_include_directories(test_playlist_helpers PRIVATE
 )
 
 add_test(NAME playlist_helpers COMMAND test_playlist_helpers)
+
+# ---------------------------------------------------------------------------
+# test_video_pipeline
+# Mock-based pipeline test that exercises the video callback → FBO →
+# fence-sync → consumer read chain without a real VLC or GL runtime.
+# Validates the core data path that all video features depend on.
+# Uses the same stubs_gl/ directory as test_gl and test_gl_ops.
+# ---------------------------------------------------------------------------
+
+add_executable(test_video_pipeline
+    test_video_pipeline.cpp
+)
+
+target_include_directories(test_video_pipeline PRIVATE
+    "${STUBS_GL_DIR}"        # ofMain.h stub + GLFW/ sub-stub (controllable)
+    "${SRC_DIR}/support"     # ofxVlc4GlOps.h, ofxVlc4VideoHelpers.h
+)
+
+add_test(NAME video_pipeline COMMAND test_video_pipeline)
