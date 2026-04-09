@@ -167,3 +167,108 @@ target_include_directories(test_types PRIVATE
 )
 
 add_test(NAME types COMMAND test_types)
+
+# ---------------------------------------------------------------------------
+# test_midi_report
+# Tests the MidiJsonWriter, MidiTextWriter, MidiReportExporter, and the
+# toJson()/toTextReport() wrappers.  Depends on the MIDI analysis source file.
+# ---------------------------------------------------------------------------
+
+add_executable(test_midi_report
+    test_midi_report.cpp
+    "${SRC_DIR}/midi/ofxVlc4MidiAnalysis.cpp"
+)
+
+target_include_directories(test_midi_report PRIVATE
+    "${SRC_DIR}/midi"
+)
+
+add_test(NAME midi_report COMMAND test_midi_report)
+
+# ---------------------------------------------------------------------------
+# test_audio_helpers
+# Tests the pure audio helper functions (format labels, mode labels,
+# normalisation, equalizer serialisation, bit reversal, FFT, atomic max)
+# extracted into ofxVlc4AudioHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_audio_helpers
+    test_audio_helpers.cpp
+)
+
+target_include_directories(test_audio_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME audio_helpers COMMAND test_audio_helpers)
+
+# ---------------------------------------------------------------------------
+# test_video_helpers
+# Tests the pure video helper functions (deinterlace/aspect/crop labels,
+# mode conversions, colour clamping, visible size, playback mode strings)
+# extracted into ofxVlc4VideoHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_video_helpers
+    test_video_helpers.cpp
+)
+
+target_include_directories(test_video_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME video_helpers COMMAND test_video_helpers)
+
+# ---------------------------------------------------------------------------
+# test_media_helpers
+# Tests the pure media helper functions (FOURCC conversion, bitrate/frame-rate
+# formatting, bookmark time labels, float formatting, WAV header binary
+# output, PlaybackTransportState defaults) extracted into
+# ofxVlc4MediaHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_media_helpers
+    test_media_helpers.cpp
+)
+
+target_include_directories(test_media_helpers PRIVATE
+    "${SRC_DIR}/support"
+    "${SRC_DIR}"
+)
+
+add_test(NAME media_helpers COMMAND test_media_helpers)
+
+# ---------------------------------------------------------------------------
+# test_recording_helpers
+# Tests the recording path-building helpers (trimRecorderText,
+# buildRecordingOutputStem, buildRecordingOutputPath,
+# buildRecordingOutputPaths) extracted into ofxVlc4RecordingHelpers.h.
+# Uses inline OF function stubs (ofFilePath::getFileExt etc.).
+# ---------------------------------------------------------------------------
+
+add_executable(test_recording_helpers
+    test_recording_helpers.cpp
+)
+
+target_include_directories(test_recording_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME recording_helpers COMMAND test_recording_helpers)
+
+# ---------------------------------------------------------------------------
+# test_media_library_helpers
+# Tests the media-library pure helpers (normalizeExtensions,
+# appendMetadataValue, hasDetailedTrackMetadata) extracted into
+# ofxVlc4MediaLibraryHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_media_library_helpers
+    test_media_library_helpers.cpp
+)
+
+target_include_directories(test_media_library_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME media_library_helpers COMMAND test_media_library_helpers)

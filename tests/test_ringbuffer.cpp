@@ -469,6 +469,184 @@ static void testFullBufferCoincidentPeekLatest() {
 }
 
 // ---------------------------------------------------------------------------
+// Gain edge cases
+// ---------------------------------------------------------------------------
+
+static void testReadWithZeroGain() {
+	beginSuite("read with zero gain");
+
+	ofxVlc4RingBuffer rb(8);
+	float src[] = { 1.0f, 2.0f, 3.0f, 4.0f };
+	rb.write(src, 4);
+
+	float dst[4] = { 99.0f, 99.0f, 99.0f, 99.0f };
+	CHECK_EQ(rb.read(dst, 4, 0.0f), 4u);
+	for (int i = 0; i < 4; ++i) {
+		CHECK(nearlyEqual(dst[i], 0.0f));
+	}
+}
+
+static void testReadWithNegativeGain() {
+	beginSuite("read with negative gain");
+
+	ofxVlc4RingBuffer rb(8);
+	float src[] = { 1.0f, 2.0f, 3.0f };
+	rb.write(src, 3);
+
+	float dst[3] = {};
+	CHECK_EQ(rb.read(dst, 3, -1.0f), 3u);
+	CHECK(nearlyEqual(dst[0], -1.0f));
+	CHECK(nearlyEqual(dst[1], -2.0f));
+	CHECK(nearlyEqual(dst[2], -3.0f));
+}
+
+static void testReadWithLargeGain() {
+	beginSuite("read with large gain");
+
+	ofxVlc4RingBuffer rb(8);
+	float src[] = { 0.5f, -0.5f };
+	rb.write(src, 2);
+
+	float dst[2] = {};
+	CHECK_EQ(rb.read(dst, 2, 100.0f), 2u);
+	CHECK(nearlyEqual(dst[0], 50.0f));
+	CHECK(nearlyEqual(dst[1], -50.0f));
+}
+
+static void testPeekLatestWithZeroGain() {
+	beginSuite("peekLatest with zero gain");
+
+	ofxVlc4RingBuffer rb(8);
+	float src[] = { 5.0f, 10.0f, 15.0f };
+	rb.write(src, 3);
+
+	float dst[3] = { 99.0f, 99.0f, 99.0f };
+	CHECK_EQ(rb.peekLatest(dst, 3, 0.0f), 3u);
+	for (int i = 0; i < 3; ++i) {
+		CHECK(nearlyEqual(dst[i], 0.0f));
+	}
+}
+
+static void testReadIntoVectorWithZeroGain() {
+	beginSuite("readIntoVector with zero gain");
+
+	ofxVlc4RingBuffer rb(8);
+	float src[] = { 1.0f, 2.0f, 3.0f, 4.0f };
+	rb.write(src, 4);
+
+	std::vector<float> data(4);
+	rb.readIntoVector(data, 0.0f);
+	for (int i = 0; i < 4; ++i) {
+		CHECK(nearlyEqual(data[i], 0.0f));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Multiple rapid re-allocations
+// ---------------------------------------------------------------------------
+
+static void testMultipleReallocations() {
+	beginSuite("multiple rapid re-allocations");
+
+	ofxVlc4RingBuffer rb(4);
+	CHECK_EQ(rb.size(), 4u);
+
+	float src[] = { 1.0f, 2.0f };
+	rb.write(src, 2);
+	CHECK_EQ(rb.getNumReadableSamples(), 2u);
+
+	// Re-allocate to larger size — should clear state.
+	rb.allocate(16);
+	CHECK_EQ(rb.size(), 16u);
+	CHECK_EQ(rb.getNumReadableSamples(), 0u);
+
+	// Write into new buffer.
+	float src2[] = { 10.0f, 20.0f, 30.0f };
+	rb.write(src2, 3);
+	CHECK_EQ(rb.getNumReadableSamples(), 3u);
+
+	// Re-allocate to smaller size.
+	rb.allocate(4);
+	CHECK_EQ(rb.size(), 4u);
+	CHECK_EQ(rb.getNumReadableSamples(), 0u);
+
+	// Re-allocate again.
+	rb.allocate(32);
+	CHECK_EQ(rb.size(), 32u);
+	CHECK_EQ(rb.getNumReadableSamples(), 0u);
+
+	// Write and read should work after all reallocations.
+	float final_src[] = { 100.0f };
+	rb.write(final_src, 1);
+	CHECK_EQ(rb.getNumReadableSamples(), 1u);
+	float dst[1] = {};
+	rb.read(dst, 1);
+	CHECK(nearlyEqual(dst[0], 100.0f));
+}
+
+// ---------------------------------------------------------------------------
+// Read exactly the buffer capacity
+// ---------------------------------------------------------------------------
+
+static void testReadExactCapacity() {
+	beginSuite("read exact capacity");
+
+	ofxVlc4RingBuffer rb(4);
+	float src[] = { 1.0f, 2.0f, 3.0f, 4.0f };
+	rb.write(src, 4);
+	CHECK_EQ(rb.getNumReadableSamples(), 4u);
+	CHECK_EQ(rb.getNumWritableSamples(), 0u);
+
+	float dst[4] = {};
+	CHECK_EQ(rb.read(dst, 4), 4u);
+	CHECK_EQ(rb.getNumReadableSamples(), 0u);
+	CHECK_EQ(rb.getNumWritableSamples(), 4u);
+	for (int i = 0; i < 4; ++i) {
+		CHECK(nearlyEqual(dst[i], float(i + 1)));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Overrun counter increments
+// ---------------------------------------------------------------------------
+
+static void testOverrunCounterIncrement() {
+	beginSuite("overrun counter increment");
+
+	ofxVlc4RingBuffer rb(4);
+	float src[] = { 1.0f, 2.0f, 3.0f, 4.0f };
+	rb.write(src, 4); // fill completely
+
+	CHECK_EQ(rb.getOverrunCount(), 0u);
+
+	float extra1[] = { 5.0f };
+	rb.write(extra1, 1); // overrun 1
+	CHECK_EQ(rb.getOverrunCount(), 1u);
+
+	float extra2[] = { 6.0f };
+	rb.write(extra2, 1); // overrun 2
+	CHECK_EQ(rb.getOverrunCount(), 2u);
+}
+
+// ---------------------------------------------------------------------------
+// Underrun counter increments
+// ---------------------------------------------------------------------------
+
+static void testUnderrunCounterIncrement() {
+	beginSuite("underrun counter increment");
+
+	ofxVlc4RingBuffer rb(4);
+	CHECK_EQ(rb.getUnderrunCount(), 0u);
+
+	float dst[2] = {};
+	rb.read(dst, 2); // underrun 1
+	CHECK_EQ(rb.getUnderrunCount(), 1u);
+
+	rb.read(dst, 1); // underrun 2
+	CHECK_EQ(rb.getUnderrunCount(), 2u);
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -497,6 +675,15 @@ int main() {
 	testFullBufferCoincidentAtNonZero();
 	testFullBufferCoincidentPartialRead();
 	testFullBufferCoincidentPeekLatest();
+	testReadWithZeroGain();
+	testReadWithNegativeGain();
+	testReadWithLargeGain();
+	testPeekLatestWithZeroGain();
+	testReadIntoVectorWithZeroGain();
+	testMultipleReallocations();
+	testReadExactCapacity();
+	testOverrunCounterIncrement();
+	testUnderrunCounterIncrement();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

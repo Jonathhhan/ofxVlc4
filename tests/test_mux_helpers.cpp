@@ -295,6 +295,103 @@ static void testBuildDefaultMuxOutputPath() {
 }
 
 // ---------------------------------------------------------------------------
+// normalizeSoutPath: edge cases
+// ---------------------------------------------------------------------------
+
+static void testNormalizeSoutPathEdgeCases() {
+	beginSuite("normalizeSoutPath: edge cases");
+
+	using ofxVlc4MuxHelpers::normalizeSoutPath;
+
+	// Empty string.
+	{
+		const std::string result = normalizeSoutPath("");
+		CHECK(result.empty());
+	}
+
+	// Path with no special characters.
+	{
+		const std::string result = normalizeSoutPath("/tmp/simple.ts");
+		CHECK(result.find("simple.ts") != std::string::npos);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// pathToFileUri: edge cases
+// ---------------------------------------------------------------------------
+
+static void testPathToFileUriEdgeCases() {
+	beginSuite("pathToFileUri: edge cases");
+
+	using ofxVlc4MuxHelpers::pathToFileUri;
+
+	// Parentheses should be percent-encoded.
+	{
+		const std::string uri = pathToFileUri("/tmp/file(1).ts");
+		CHECK(uri.find("%28") != std::string::npos); // (
+		CHECK(uri.find("%29") != std::string::npos); // )
+	}
+
+	// Hash character should be percent-encoded.
+	{
+		const std::string uri = pathToFileUri("/tmp/file#1.ts");
+		CHECK(uri.find("%23") != std::string::npos);
+	}
+
+	// Dashes, underscores, tildes should NOT be encoded.
+	{
+		const std::string uri = pathToFileUri("/tmp/a-b_c~d.ts");
+		CHECK(uri.find("a-b_c~d.ts") != std::string::npos);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// buildDefaultMuxOutputPath: edge cases
+// ---------------------------------------------------------------------------
+
+static void testBuildDefaultMuxOutputPathEdgeCases() {
+	beginSuite("buildDefaultMuxOutputPath: edge cases");
+
+	using ofxVlc4MuxHelpers::buildDefaultMuxOutputPath;
+
+	// File with no extension → appends "-muxed.ext" to the stem.
+	{
+		const std::string result = buildDefaultMuxOutputPath("/tmp/videofile", "mp4");
+		CHECK(result.find("-muxed.mp4") != std::string::npos);
+	}
+
+	// File at root directory.
+	{
+		const std::string result = buildDefaultMuxOutputPath("/video.avi", "mkv");
+		CHECK(result.find("video-muxed.mkv") != std::string::npos);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// waitForRecordingFile: file already exists and is stable
+// ---------------------------------------------------------------------------
+
+static void testWaitForRecordingFileAlreadyStable() {
+	beginSuite("waitForRecordingFile: already stable");
+
+	using ofxVlc4MuxHelpers::waitForRecordingFile;
+
+	const std::string tmpPath = (std::filesystem::temp_directory_path() / "ofxvlc4_test_stable.bin").string();
+
+	// Create a stable file first.
+	{
+		std::ofstream f(tmpPath, std::ios::binary);
+		f.write("stable-data", 11);
+	}
+
+	// Wait should succeed quickly.
+	const bool result = waitForRecordingFile(tmpPath, 2000);
+	CHECK(result);
+
+	std::filesystem::remove(tmpPath);
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -306,6 +403,10 @@ int main() {
 	testRemoveRecordingFile();
 	testTryRemoveRecordingFileOnce();
 	testBuildDefaultMuxOutputPath();
+	testNormalizeSoutPathEdgeCases();
+	testPathToFileUriEdgeCases();
+	testBuildDefaultMuxOutputPathEdgeCases();
+	testWaitForRecordingFileAlreadyStable();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;
