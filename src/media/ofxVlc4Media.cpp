@@ -593,14 +593,18 @@ bool ofxVlc4::MediaComponent::reapplyCurrentMediaForFilterChainChange(const std:
 	}
 
 	if (resumeTimeMs > 0 && libvlc_media_player_is_seekable(player)) {
-		libvlc_media_player_set_time(player, resumeTimeMs, true);
+		if (libvlc_media_player_set_time(player, resumeTimeMs, true) != 0) {
+			owner.logWarning("libvlc_media_player_set_time failed while reapplying filter chain.");
+		}
 	}
 
 	if (wasPlaying || wasPaused) {
 		audio().applyEqualizerSettings();
 		audio().clearPendingEqualizerApplyOnPlay();
 		video().clearPendingVideoAdjustApplyOnPlay();
-		libvlc_media_player_play(player);
+		if (libvlc_media_player_play(player) != 0) {
+			owner.logWarning("libvlc_media_player_play failed while reapplying filter chain.");
+		}
 		if (wasPaused) {
 			libvlc_media_player_set_pause(player, 1);
 		}
@@ -701,15 +705,30 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 	for (const auto & option : options) {
 		const std::string trimmedOption = trimWhitespace(option);
 		if (!trimmedOption.empty()) {
+			libvlc_clearerr();
 			libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, trimmedOption.c_str());
+			const char * optionError = libvlc_errmsg();
+			if (optionError) {
+				owner.logWarning("libvlc_media_add_option may have failed for \"" + trimmedOption + "\": " + optionError);
+			}
 		}
 	}
 
 	if (!owner.m_impl->playerConfigRuntime.audioFilterChain.empty()) {
+		libvlc_clearerr();
 		libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, (":audio-filter=" + owner.m_impl->playerConfigRuntime.audioFilterChain).c_str());
+		const char * filterError = libvlc_errmsg();
+		if (filterError) {
+			owner.logWarning(std::string("libvlc_media_add_option may have failed for audio-filter: ") + filterError);
+		}
 	}
 	if (!owner.m_impl->playerConfigRuntime.videoFilterChain.empty() && owner.canApplyNativeVideoFilters()) {
+		libvlc_clearerr();
 		libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, (":video-filter=" + owner.m_impl->playerConfigRuntime.videoFilterChain).c_str());
+		const char * filterError = libvlc_errmsg();
+		if (filterError) {
+			owner.logWarning(std::string("libvlc_media_add_option may have failed for video-filter: ") + filterError);
+		}
 	}
 
 	owner.m_impl->legacyCoreMirrorRuntime.mediaEventManager = libvlc_media_event_manager(owner.m_impl->legacyCoreMirrorRuntime.media);
