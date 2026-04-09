@@ -361,19 +361,6 @@ struct ofxVlc4::Impl {
 		mutable std::mutex playbackStateMutex;
 	};
 
-	struct LegacyCoreMirrorState {
-		libvlc_instance_t * libvlc = nullptr;
-		libvlc_media_t * media = nullptr;
-		libvlc_media_player_t * mediaPlayer = nullptr;
-		libvlc_event_manager_t * mediaPlayerEventManager = nullptr;
-		libvlc_event_manager_t * mediaEventManager = nullptr;
-		libvlc_media_discoverer_t * mediaDiscoverer = nullptr;
-		libvlc_media_list_t * mediaDiscovererMediaList = nullptr;
-		libvlc_event_manager_t * mediaDiscovererMediaListEventManager = nullptr;
-		libvlc_renderer_discoverer_t * rendererDiscoverer = nullptr;
-		libvlc_event_manager_t * rendererDiscovererEventManager = nullptr;
-	};
-
 	struct SubsystemRuntimeState {
 		std::unique_ptr<VlcCoreSession> coreSession;
 		std::unique_ptr<VlcEventRouter> eventRouter;
@@ -427,7 +414,6 @@ struct ofxVlc4::Impl {
 	LifecycleRuntimeState lifecycleRuntime;
 	AnalysisRuntimeState analysisRuntime;
 	SynchronizationRuntimeState synchronizationRuntime;
-	LegacyCoreMirrorState legacyCoreMirrorRuntime;
 	SubsystemRuntimeState subsystemRuntime;
 	RecordingObjectRuntimeState recordingObjectRuntime;
 	VideoFrameRuntimeState videoFrameRuntime;
