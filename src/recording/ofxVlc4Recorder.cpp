@@ -1,5 +1,6 @@
 #include "ofxVlc4.h"
 #include "ofxVlc4Recorder.h"
+#include "support/ofxVlc4GlOps.h"
 #include "support/ofxVlc4MuxHelpers.h"
 
 #include <algorithm>
@@ -1268,27 +1269,13 @@ bool ofxVlc4Recorder::initializeVideoReadbackBuffersLocked(size_t frameBytes) {
 		return false;
 	}
 
-	recordingPixelPackBuffers.assign(recordingPboBufferCount, 0);
 	recordingPixelPackFences.assign(recordingPboBufferCount, nullptr);
 	recordingPboSubmitTimesUs.assign(recordingPboBufferCount, 0);
 	recordingPboPendingIndices.clear();
-	glGenBuffers(
-		static_cast<GLsizei>(recordingPixelPackBuffers.size()),
-		recordingPixelPackBuffers.data());
-	const bool hasInvalidBuffer = std::any_of(
-		recordingPixelPackBuffers.begin(),
-		recordingPixelPackBuffers.end(),
-		[](GLuint pbo) { return pbo == 0; });
-	if (hasInvalidBuffer) {
+	if (!ofxVlc4GlOps::allocatePixelPackBuffers(recordingPixelPackBuffers, recordingPboBufferCount, frameBytes)) {
 		destroyVideoReadbackBuffersLocked();
 		return false;
 	}
-
-	for (GLuint pbo : recordingPixelPackBuffers) {
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-		glBufferData(GL_PIXEL_PACK_BUFFER, static_cast<GLsizeiptr>(frameBytes), nullptr, GL_STREAM_READ);
-	}
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 	recordingPboWriteIndex = 0;
 	recordingPboPrimed = false;
@@ -1308,15 +1295,7 @@ void ofxVlc4Recorder::destroyVideoReadbackBuffersLocked() {
 
 #ifndef TARGET_OPENGLES
 	if (glfwGetCurrentContext() != nullptr) {
-		for (GLsync fence : pixelPackFences) {
-			if (fence != nullptr) {
-				glDeleteSync(fence);
-			}
-		}
-	}
-	if (!pixelPackBuffers.empty() && glfwGetCurrentContext() != nullptr) {
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		glDeleteBuffers(static_cast<GLsizei>(pixelPackBuffers.size()), pixelPackBuffers.data());
+		ofxVlc4GlOps::destroyPixelPackBuffers(pixelPackBuffers, pixelPackFences);
 	}
 #endif
 }
@@ -1365,7 +1344,7 @@ bool ofxVlc4Recorder::waitForSubmittedReadbackLocked(size_t bufferIndex, uint64_
 	const uint64_t waitStartUs = ofGetElapsedTimeMicros();
 
 	while (true) {
-		const GLenum waitResult = glClientWaitSync(fence, waitFlags, timeoutNs);
+		const GLenum waitResult = ofxVlc4GlOps::clientWaitFenceSync(fence, waitFlags, timeoutNs);
 		if (waitResult == GL_ALREADY_SIGNALED || waitResult == GL_CONDITION_SATISFIED) {
 			waitMicrosOut = ofGetElapsedTimeMicros() - waitStartUs;
 			return true;
@@ -1389,16 +1368,13 @@ bool ofxVlc4Recorder::consumeReadbackBufferLocked(size_t bufferIndex) {
 		return false;
 	}
 
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, recordingPixelPackBuffers[bufferIndex]);
-	void * mapped = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+	void * mapped = ofxVlc4GlOps::mapPixelPackBuffer(recordingPixelPackBuffers[bufferIndex]);
 	if (!mapped) {
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		return false;
 	}
 
 	std::memcpy(recordingPixels.getData(), mapped, recordingFrameSize);
-	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+	ofxVlc4GlOps::unmapPixelPackBuffer();
 	++videoFramesReady;
 	++videoAsyncFramesReady;
 	publishCapturedFrameLocked();
@@ -1408,10 +1384,7 @@ bool ofxVlc4Recorder::consumeReadbackBufferLocked(size_t bufferIndex) {
 		videoMaxReadbackLatencyMicros = std::max(videoMaxReadbackLatencyMicros, videoLastReadbackLatencyMicros);
 	}
 	recordingPboSubmitTimesUs[bufferIndex] = 0;
-	if (recordingPixelPackFences[bufferIndex] != nullptr) {
-		glDeleteSync(recordingPixelPackFences[bufferIndex]);
-		recordingPixelPackFences[bufferIndex] = nullptr;
-	}
+	ofxVlc4GlOps::deleteFenceSync(recordingPixelPackFences[bufferIndex]);
 	return true;
 #endif
 }
@@ -1524,16 +1497,12 @@ void ofxVlc4Recorder::captureVideoFrameLocked() {
 			pixelWidth,
 			bytesPerChannel,
 			channelCount);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, recordingPixelPackBuffers[writeIndex]);
-		glBindTexture(recordingTexture.getTextureData().textureTarget, recordingTexture.getTextureData().textureID);
-		glGetTexImage(recordingTexture.getTextureData().textureTarget, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-		glBindTexture(recordingTexture.getTextureData().textureTarget, 0);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		ofxVlc4GlOps::deleteFenceSync(recordingPixelPackFences[writeIndex]);
+		recordingPixelPackFences[writeIndex] = ofxVlc4GlOps::submitTextureReadback(
+			recordingPixelPackBuffers[writeIndex],
+			recordingTexture.getTextureData().textureTarget,
+			recordingTexture.getTextureData().textureID);
 		recordingPboSubmitTimesUs[writeIndex] = ofGetElapsedTimeMicros();
-		if (recordingPixelPackFences[writeIndex] != nullptr) {
-			glDeleteSync(recordingPixelPackFences[writeIndex]);
-		}
-		recordingPixelPackFences[writeIndex] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 		recordingPboPendingIndices.push_back(writeIndex);
 		videoMaxPendingFrames = std::max<uint64_t>(
 			videoMaxPendingFrames,

@@ -5,6 +5,7 @@
 #include "media/ofxVlc4Media.h"
 #include "playback/PlaybackController.h"
 #include "video/ofxVlc4Video.h"
+#include "support/ofxVlc4GlOps.h"
 #include "support/ofxVlc4MuxHelpers.h"
 #include "support/ofxVlc4Utils.h"
 #include "VlcCoreSession.h"
@@ -1791,9 +1792,8 @@ void ofxVlc4::releaseVlcResources() {
 
 	if (needsGlCleanup) {
 		m_impl->subsystemRuntime.videoComponent->clearPublishedFrameFence();
-		if (m_impl->videoResourceRuntime.vlcWindow && m_impl->videoResourceRuntime.vlcFramebufferId != 0) {
-			glDeleteFramebuffers(1, &m_impl->videoResourceRuntime.vlcFramebufferId);
-			m_impl->videoResourceRuntime.vlcFramebufferId = 0;
+		if (m_impl->videoResourceRuntime.vlcWindow) {
+			ofxVlc4GlOps::deleteFbo(m_impl->videoResourceRuntime.vlcFramebufferId);
 		}
 		m_impl->videoResourceRuntime.videoTexture.clear();
 		clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
