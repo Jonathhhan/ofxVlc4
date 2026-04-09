@@ -28,6 +28,7 @@ using ofxVlc4Utils::clearAllocatedFbo;
 using ofxVlc4Utils::joinFilterChainEntries;
 using ofxVlc4Utils::normalizeOptionalPath;
 using ofxVlc4Utils::parseFilterChainEntries;
+using ofxVlc4Utils::setAndApply;
 using ofxVlc4Utils::setInputHandlingEnabled;
 using ofxVlc4Utils::trimWhitespace;
 
@@ -1618,13 +1619,9 @@ bool ofxVlc4::VideoComponent::isMarqueeEnabled() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeEnabled(bool enabled) {
-	if (owner.m_impl->overlayRuntime.marqueeEnabled == enabled) {
-		return;
+	if (setAndApply(owner.m_impl->overlayRuntime.marqueeEnabled, enabled, [this]() { applyVideoMarquee(); })) {
+		owner.setStatus(std::string("Marquee ") + (owner.m_impl->overlayRuntime.marqueeEnabled ? "enabled." : "disabled."));
 	}
-
-	owner.m_impl->overlayRuntime.marqueeEnabled = enabled;
-	applyVideoMarquee();
-	owner.setStatus(std::string("Marquee ") + (owner.m_impl->overlayRuntime.marqueeEnabled ? "enabled." : "disabled."));
 }
 
 std::string ofxVlc4::VideoComponent::getMarqueeText() const {
@@ -1632,12 +1629,7 @@ std::string ofxVlc4::VideoComponent::getMarqueeText() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeText(const std::string & text) {
-	if (owner.m_impl->overlayRuntime.marqueeText == text) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueeText = text;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueeText, text, [this]() { applyVideoMarquee(); });
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getMarqueePosition() const {
@@ -1645,12 +1637,7 @@ ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getMarqueePosition() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueePosition(OverlayPosition position) {
-	if (owner.m_impl->overlayRuntime.marqueePosition == position) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueePosition = position;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueePosition, position, [this]() { applyVideoMarquee(); });
 }
 
 int ofxVlc4::VideoComponent::getMarqueeOpacity() const {
@@ -1658,13 +1645,7 @@ int ofxVlc4::VideoComponent::getMarqueeOpacity() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeOpacity(int opacity) {
-	const int clampedOpacity = ofClamp(opacity, 0, 255);
-	if (owner.m_impl->overlayRuntime.marqueeOpacity == clampedOpacity) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueeOpacity = clampedOpacity;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueeOpacity, ofClamp(opacity, 0, 255), [this]() { applyVideoMarquee(); });
 }
 
 int ofxVlc4::VideoComponent::getMarqueeSize() const {
@@ -1672,13 +1653,7 @@ int ofxVlc4::VideoComponent::getMarqueeSize() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeSize(int size) {
-	const int clampedSize = ofClamp(size, 6, 96);
-	if (owner.m_impl->overlayRuntime.marqueeSize == clampedSize) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueeSize = clampedSize;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueeSize, ofClamp(size, 6, 96), [this]() { applyVideoMarquee(); });
 }
 
 int ofxVlc4::VideoComponent::getMarqueeColor() const {
@@ -1686,13 +1661,7 @@ int ofxVlc4::VideoComponent::getMarqueeColor() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeColor(int color) {
-	const int clampedColor = clampPackedRgbColor(color);
-	if (owner.m_impl->overlayRuntime.marqueeColor == clampedColor) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueeColor = clampedColor;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueeColor, clampPackedRgbColor(color), [this]() { applyVideoMarquee(); });
 }
 
 int ofxVlc4::VideoComponent::getMarqueeRefresh() const {
@@ -1700,13 +1669,7 @@ int ofxVlc4::VideoComponent::getMarqueeRefresh() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeRefresh(int refreshMs) {
-	const int clampedRefreshMs = ofClamp(refreshMs, 0, 10000);
-	if (owner.m_impl->overlayRuntime.marqueeRefresh == clampedRefreshMs) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueeRefresh = clampedRefreshMs;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueeRefresh, ofClamp(refreshMs, 0, 10000), [this]() { applyVideoMarquee(); });
 }
 
 int ofxVlc4::VideoComponent::getMarqueeTimeout() const {
@@ -1714,13 +1677,7 @@ int ofxVlc4::VideoComponent::getMarqueeTimeout() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeTimeout(int timeoutMs) {
-	const int clampedTimeoutMs = ofClamp(timeoutMs, 0, 10000);
-	if (owner.m_impl->overlayRuntime.marqueeTimeout == clampedTimeoutMs) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueeTimeout = clampedTimeoutMs;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueeTimeout, ofClamp(timeoutMs, 0, 10000), [this]() { applyVideoMarquee(); });
 }
 
 int ofxVlc4::VideoComponent::getMarqueeX() const {
@@ -1728,13 +1685,7 @@ int ofxVlc4::VideoComponent::getMarqueeX() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeX(int x) {
-	const int clampedX = ofClamp(x, -4096, 4096);
-	if (owner.m_impl->overlayRuntime.marqueeX == clampedX) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueeX = clampedX;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueeX, ofClamp(x, -4096, 4096), [this]() { applyVideoMarquee(); });
 }
 
 int ofxVlc4::VideoComponent::getMarqueeY() const {
@@ -1742,13 +1693,7 @@ int ofxVlc4::VideoComponent::getMarqueeY() const {
 }
 
 void ofxVlc4::VideoComponent::setMarqueeY(int y) {
-	const int clampedY = ofClamp(y, -4096, 4096);
-	if (owner.m_impl->overlayRuntime.marqueeY == clampedY) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.marqueeY = clampedY;
-	applyVideoMarquee();
+	setAndApply(owner.m_impl->overlayRuntime.marqueeY, ofClamp(y, -4096, 4096), [this]() { applyVideoMarquee(); });
 }
 
 bool ofxVlc4::VideoComponent::isLogoEnabled() const {
@@ -1756,13 +1701,9 @@ bool ofxVlc4::VideoComponent::isLogoEnabled() const {
 }
 
 void ofxVlc4::VideoComponent::setLogoEnabled(bool enabled) {
-	if (owner.m_impl->overlayRuntime.logoEnabled == enabled) {
-		return;
+	if (setAndApply(owner.m_impl->overlayRuntime.logoEnabled, enabled, [this]() { applyVideoLogo(); })) {
+		owner.setStatus(std::string("Logo ") + (owner.m_impl->overlayRuntime.logoEnabled ? "enabled." : "disabled."));
 	}
-
-	owner.m_impl->overlayRuntime.logoEnabled = enabled;
-	applyVideoLogo();
-	owner.setStatus(std::string("Logo ") + (owner.m_impl->overlayRuntime.logoEnabled ? "enabled." : "disabled."));
 }
 
 std::string ofxVlc4::VideoComponent::getLogoPath() const {
@@ -1770,12 +1711,7 @@ std::string ofxVlc4::VideoComponent::getLogoPath() const {
 }
 
 void ofxVlc4::VideoComponent::setLogoPath(const std::string & path) {
-	if (owner.m_impl->overlayRuntime.logoPath == path) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.logoPath = path;
-	applyVideoLogo();
+	setAndApply(owner.m_impl->overlayRuntime.logoPath, path, [this]() { applyVideoLogo(); });
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getLogoPosition() const {
@@ -1783,12 +1719,7 @@ ofxVlc4::OverlayPosition ofxVlc4::VideoComponent::getLogoPosition() const {
 }
 
 void ofxVlc4::VideoComponent::setLogoPosition(OverlayPosition position) {
-	if (owner.m_impl->overlayRuntime.logoPosition == position) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.logoPosition = position;
-	applyVideoLogo();
+	setAndApply(owner.m_impl->overlayRuntime.logoPosition, position, [this]() { applyVideoLogo(); });
 }
 
 int ofxVlc4::VideoComponent::getLogoOpacity() const {
@@ -1796,13 +1727,7 @@ int ofxVlc4::VideoComponent::getLogoOpacity() const {
 }
 
 void ofxVlc4::VideoComponent::setLogoOpacity(int opacity) {
-	const int clampedOpacity = ofClamp(opacity, 0, 255);
-	if (owner.m_impl->overlayRuntime.logoOpacity == clampedOpacity) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.logoOpacity = clampedOpacity;
-	applyVideoLogo();
+	setAndApply(owner.m_impl->overlayRuntime.logoOpacity, ofClamp(opacity, 0, 255), [this]() { applyVideoLogo(); });
 }
 
 int ofxVlc4::VideoComponent::getLogoX() const {
@@ -1810,13 +1735,7 @@ int ofxVlc4::VideoComponent::getLogoX() const {
 }
 
 void ofxVlc4::VideoComponent::setLogoX(int x) {
-	const int clampedX = ofClamp(x, -4096, 4096);
-	if (owner.m_impl->overlayRuntime.logoX == clampedX) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.logoX = clampedX;
-	applyVideoLogo();
+	setAndApply(owner.m_impl->overlayRuntime.logoX, ofClamp(x, -4096, 4096), [this]() { applyVideoLogo(); });
 }
 
 int ofxVlc4::VideoComponent::getLogoY() const {
@@ -1824,13 +1743,7 @@ int ofxVlc4::VideoComponent::getLogoY() const {
 }
 
 void ofxVlc4::VideoComponent::setLogoY(int y) {
-	const int clampedY = ofClamp(y, -4096, 4096);
-	if (owner.m_impl->overlayRuntime.logoY == clampedY) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.logoY = clampedY;
-	applyVideoLogo();
+	setAndApply(owner.m_impl->overlayRuntime.logoY, ofClamp(y, -4096, 4096), [this]() { applyVideoLogo(); });
 }
 
 int ofxVlc4::VideoComponent::getLogoDelay() const {
@@ -1838,13 +1751,7 @@ int ofxVlc4::VideoComponent::getLogoDelay() const {
 }
 
 void ofxVlc4::VideoComponent::setLogoDelay(int delayMs) {
-	const int clampedDelayMs = ofClamp(delayMs, 0, 10000);
-	if (owner.m_impl->overlayRuntime.logoDelay == clampedDelayMs) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.logoDelay = clampedDelayMs;
-	applyVideoLogo();
+	setAndApply(owner.m_impl->overlayRuntime.logoDelay, ofClamp(delayMs, 0, 10000), [this]() { applyVideoLogo(); });
 }
 
 int ofxVlc4::VideoComponent::getLogoRepeat() const {
@@ -1852,13 +1759,7 @@ int ofxVlc4::VideoComponent::getLogoRepeat() const {
 }
 
 void ofxVlc4::VideoComponent::setLogoRepeat(int repeat) {
-	const int clampedRepeat = ofClamp(repeat, -1, 100);
-	if (owner.m_impl->overlayRuntime.logoRepeat == clampedRepeat) {
-		return;
-	}
-
-	owner.m_impl->overlayRuntime.logoRepeat = clampedRepeat;
-	applyVideoLogo();
+	setAndApply(owner.m_impl->overlayRuntime.logoRepeat, ofClamp(repeat, -1, 100), [this]() { applyVideoLogo(); });
 }
 
 int ofxVlc4::VideoComponent::getTeletextPage() const {

@@ -27,6 +27,7 @@ using ofxVlc4Utils::isStoppedOrIdleState;
 using ofxVlc4Utils::isTransientPlaybackState;
 using ofxVlc4Utils::mediaLabelForPath;
 using ofxVlc4Utils::normalizeOptionalPath;
+using ofxVlc4Utils::readLibvlcString;
 using ofxVlc4Utils::sanitizeFileStem;
 using ofxVlc4Utils::trimWhitespace;
 
@@ -312,23 +313,13 @@ std::string mediaDisplayName(libvlc_media_t * media) {
 		return "";
 	}
 
-	char * rawTitle = libvlc_media_get_meta(media, libvlc_meta_Title);
-	if (rawTitle) {
-		const std::string title = trimWhitespace(rawTitle);
-		libvlc_free(rawTitle);
-		if (!title.empty()) {
-			return title;
-		}
+	const std::string title = readLibvlcString(libvlc_media_get_meta(media, libvlc_meta_Title), libvlc_free);
+	if (!title.empty()) {
+		return title;
 	}
 
-	char * rawMrl = libvlc_media_get_mrl(media);
-	if (!rawMrl) {
-		return "";
-	}
-
-	const std::string mrl = trimWhitespace(rawMrl);
-	libvlc_free(rawMrl);
-	return mediaLabelForPath(mrl);
+	const std::string mrl = readLibvlcString(libvlc_media_get_mrl(media), libvlc_free);
+	return mrl.empty() ? "" : mediaLabelForPath(mrl);
 }
 
 ofxVlc4::DialogQuestionSeverity toDialogQuestionSeverity(libvlc_dialog_question_type type) {
@@ -445,74 +436,52 @@ libvlc_media_parse_flag_t toLibvlcMediaParseFlags(const ofxVlc4::MediaParseOptio
 	return static_cast<libvlc_media_parse_flag_t>(flags);
 }
 
+static constexpr std::pair<ofxVlc4::MediaPlayerRole, libvlc_media_player_role_t> kMediaPlayerRoleMap[] = {
+	{ ofxVlc4::MediaPlayerRole::Music, libvlc_role_Music },
+	{ ofxVlc4::MediaPlayerRole::Video, libvlc_role_Video },
+	{ ofxVlc4::MediaPlayerRole::Communication, libvlc_role_Communication },
+	{ ofxVlc4::MediaPlayerRole::Game, libvlc_role_Game },
+	{ ofxVlc4::MediaPlayerRole::Notification, libvlc_role_Notification },
+	{ ofxVlc4::MediaPlayerRole::Animation, libvlc_role_Animation },
+	{ ofxVlc4::MediaPlayerRole::Production, libvlc_role_Production },
+	{ ofxVlc4::MediaPlayerRole::Accessibility, libvlc_role_Accessibility },
+	{ ofxVlc4::MediaPlayerRole::Test, libvlc_role_Test },
+};
+
 libvlc_media_player_role_t toLibvlcMediaPlayerRole(ofxVlc4::MediaPlayerRole role) {
-	switch (role) {
-	case ofxVlc4::MediaPlayerRole::Music:
-		return libvlc_role_Music;
-	case ofxVlc4::MediaPlayerRole::Video:
-		return libvlc_role_Video;
-	case ofxVlc4::MediaPlayerRole::Communication:
-		return libvlc_role_Communication;
-	case ofxVlc4::MediaPlayerRole::Game:
-		return libvlc_role_Game;
-	case ofxVlc4::MediaPlayerRole::Notification:
-		return libvlc_role_Notification;
-	case ofxVlc4::MediaPlayerRole::Animation:
-		return libvlc_role_Animation;
-	case ofxVlc4::MediaPlayerRole::Production:
-		return libvlc_role_Production;
-	case ofxVlc4::MediaPlayerRole::Accessibility:
-		return libvlc_role_Accessibility;
-	case ofxVlc4::MediaPlayerRole::Test:
-		return libvlc_role_Test;
-	case ofxVlc4::MediaPlayerRole::None:
-	default:
-		return libvlc_role_None;
+	for (const auto & [appRole, vlcRole] : kMediaPlayerRoleMap) {
+		if (appRole == role) {
+			return vlcRole;
+		}
 	}
+	return libvlc_role_None;
 }
 
 ofxVlc4::MediaPlayerRole toMediaPlayerRole(int role) {
-	switch (static_cast<libvlc_media_player_role_t>(role)) {
-	case libvlc_role_Music:
-		return ofxVlc4::MediaPlayerRole::Music;
-	case libvlc_role_Video:
-		return ofxVlc4::MediaPlayerRole::Video;
-	case libvlc_role_Communication:
-		return ofxVlc4::MediaPlayerRole::Communication;
-	case libvlc_role_Game:
-		return ofxVlc4::MediaPlayerRole::Game;
-	case libvlc_role_Notification:
-		return ofxVlc4::MediaPlayerRole::Notification;
-	case libvlc_role_Animation:
-		return ofxVlc4::MediaPlayerRole::Animation;
-	case libvlc_role_Production:
-		return ofxVlc4::MediaPlayerRole::Production;
-	case libvlc_role_Accessibility:
-		return ofxVlc4::MediaPlayerRole::Accessibility;
-	case libvlc_role_Test:
-		return ofxVlc4::MediaPlayerRole::Test;
-	case libvlc_role_None:
-	default:
-		return ofxVlc4::MediaPlayerRole::None;
+	const auto vlc = static_cast<libvlc_media_player_role_t>(role);
+	for (const auto & [appRole, vlcRole] : kMediaPlayerRoleMap) {
+		if (vlcRole == vlc) {
+			return appRole;
+		}
 	}
+	return ofxVlc4::MediaPlayerRole::None;
 }
 
+static constexpr std::pair<ofxVlc4::NavigationMode, libvlc_navigate_mode_t> kNavigateModeMap[] = {
+	{ ofxVlc4::NavigationMode::Up, libvlc_navigate_up },
+	{ ofxVlc4::NavigationMode::Down, libvlc_navigate_down },
+	{ ofxVlc4::NavigationMode::Left, libvlc_navigate_left },
+	{ ofxVlc4::NavigationMode::Right, libvlc_navigate_right },
+	{ ofxVlc4::NavigationMode::Popup, libvlc_navigate_popup },
+};
+
 libvlc_navigate_mode_t toLibvlcNavigateMode(ofxVlc4::NavigationMode mode) {
-	switch (mode) {
-	case ofxVlc4::NavigationMode::Up:
-		return libvlc_navigate_up;
-	case ofxVlc4::NavigationMode::Down:
-		return libvlc_navigate_down;
-	case ofxVlc4::NavigationMode::Left:
-		return libvlc_navigate_left;
-	case ofxVlc4::NavigationMode::Right:
-		return libvlc_navigate_right;
-	case ofxVlc4::NavigationMode::Popup:
-		return libvlc_navigate_popup;
-	case ofxVlc4::NavigationMode::Activate:
-	default:
-		return libvlc_navigate_activate;
+	for (const auto & [appMode, vlcMode] : kNavigateModeMap) {
+		if (appMode == mode) {
+			return vlcMode;
+		}
 	}
+	return libvlc_navigate_activate;
 }
 
 }
@@ -1630,11 +1599,7 @@ void ofxVlc4::MediaComponent::refreshDiscoveredMediaItems() {
 			}
 
 			DiscoveredMediaItemInfo info;
-			char * rawMrl = libvlc_media_get_mrl(item);
-			info.mrl = rawMrl ? trimWhitespace(rawMrl) : "";
-			if (rawMrl) {
-				libvlc_free(rawMrl);
-			}
+			info.mrl = readLibvlcString(libvlc_media_get_mrl(item), libvlc_free);
 			info.name = mediaDisplayName(item);
 			info.isDirectory = libvlc_media_get_type(item) == libvlc_media_type_directory;
 			if (info.name.empty()) {
@@ -2196,59 +2161,11 @@ void ofxVlc4::applyWatchTimeObserver() {
 	mediaComponent->applyWatchTimeObserver();
 }
 
-void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data) {
-	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player || !value) {
-		return;
-	}
-
+void ofxVlc4::dispatchWatchTimeEvent(ofxVlc4 * player) {
 	WatchTimeCallback callback;
 	WatchTimeInfo info;
 	{
 		std::lock_guard<std::mutex> lock(player->watchTimeMutex);
-		player->lastWatchTimePoint = *value;
-		player->watchTimePointAvailable = true;
-		player->watchTimePaused = value->system_date_us == INT64_MAX;
-		player->watchTimeSeeking = false;
-		player->watchTimeLastEventType = WatchTimeEventType::Update;
-		++player->watchTimeUpdateSequence;
-		if (!player->watchTimePaused) {
-			player->watchTimePauseSystemDateUs = 0;
-		}
-		callback = player->watchTimeCallback;
-		info = buildWatchTimeInfoSnapshot(
-			*value,
-			player->watchTimeEnabled,
-			player->watchTimeRegistered,
-			player->watchTimePointAvailable,
-			player->watchTimePaused,
-			player->watchTimeSeeking,
-			player->watchTimeMinPeriodUs,
-			player->watchTimePauseSystemDateUs,
-			player->watchTimeLastEventType,
-			player->watchTimeUpdateSequence,
-			false);
-	}
-	if (callback) {
-		callback(info);
-	}
-}
-
-void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
-	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player) {
-		return;
-	}
-
-	WatchTimeCallback callback;
-	WatchTimeInfo info;
-	{
-		std::lock_guard<std::mutex> lock(player->watchTimeMutex);
-		player->watchTimePaused = true;
-		player->watchTimePauseSystemDateUs = system_date_us;
-		player->watchTimeSeeking = false;
-		player->watchTimeLastEventType = WatchTimeEventType::Paused;
-		++player->watchTimeUpdateSequence;
 		callback = player->watchTimeCallback;
 		info = buildWatchTimeInfoSnapshot(
 			player->lastWatchTimePoint,
@@ -2268,14 +2185,50 @@ void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
 	}
 }
 
+void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data) {
+	auto * player = static_cast<ofxVlc4 *>(data);
+	if (!player || !value) {
+		return;
+	}
+
+	{
+		std::lock_guard<std::mutex> lock(player->watchTimeMutex);
+		player->lastWatchTimePoint = *value;
+		player->watchTimePointAvailable = true;
+		player->watchTimePaused = value->system_date_us == INT64_MAX;
+		player->watchTimeSeeking = false;
+		player->watchTimeLastEventType = WatchTimeEventType::Update;
+		++player->watchTimeUpdateSequence;
+		if (!player->watchTimePaused) {
+			player->watchTimePauseSystemDateUs = 0;
+		}
+	}
+	dispatchWatchTimeEvent(player);
+}
+
+void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
+	auto * player = static_cast<ofxVlc4 *>(data);
+	if (!player) {
+		return;
+	}
+
+	{
+		std::lock_guard<std::mutex> lock(player->watchTimeMutex);
+		player->watchTimePaused = true;
+		player->watchTimePauseSystemDateUs = system_date_us;
+		player->watchTimeSeeking = false;
+		player->watchTimeLastEventType = WatchTimeEventType::Paused;
+		++player->watchTimeUpdateSequence;
+	}
+	dispatchWatchTimeEvent(player);
+}
+
 void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value, void * data) {
 	auto * player = static_cast<ofxVlc4 *>(data);
 	if (!player) {
 		return;
 	}
 
-	WatchTimeCallback callback;
-	WatchTimeInfo info;
 	{
 		std::lock_guard<std::mutex> lock(player->watchTimeMutex);
 		player->watchTimeSeeking = value != nullptr;
@@ -2289,23 +2242,8 @@ void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value
 				player->watchTimePauseSystemDateUs = 0;
 			}
 		}
-		callback = player->watchTimeCallback;
-		info = buildWatchTimeInfoSnapshot(
-			player->lastWatchTimePoint,
-			player->watchTimeEnabled,
-			player->watchTimeRegistered,
-			player->watchTimePointAvailable,
-			player->watchTimePaused,
-			player->watchTimeSeeking,
-			player->watchTimeMinPeriodUs,
-			player->watchTimePauseSystemDateUs,
-			player->watchTimeLastEventType,
-			player->watchTimeUpdateSequence,
-			false);
 	}
-	if (callback) {
-		callback(info);
-	}
+	dispatchWatchTimeEvent(player);
 }
 
 bool ofxVlc4::postDialogLogin(

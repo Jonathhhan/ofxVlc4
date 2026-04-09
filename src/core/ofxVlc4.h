@@ -1000,6 +1000,7 @@ private:
 	static void watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data);
 	static void watchTimePausedStatic(int64_t system_date_us, void * data);
 	static void watchTimeSeekStatic(const libvlc_media_player_time_point_t * value, void * data);
+	static void dispatchWatchTimeEvent(ofxVlc4 * player);
 
 	void detachEvents();
 	void stopMediaDiscoveryInternal();

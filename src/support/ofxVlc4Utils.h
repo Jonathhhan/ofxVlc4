@@ -207,4 +207,29 @@ inline std::string joinFilterChainEntries(const std::vector<std::string> & filte
 	}
 	return stream.str();
 }
+// Acquires a C string from a VLC getter, copies it into a std::string with
+// whitespace trimming, then releases the raw pointer with a free function.
+// Typical usage:
+//   auto s = readLibvlcString(libvlc_media_get_mrl(media), libvlc_free);
+template <typename FreeFunc>
+inline std::string readLibvlcString(char * raw, FreeFunc freeFn) {
+	if (!raw) {
+		return "";
+	}
+	std::string result = trimWhitespace(raw);
+	freeFn(raw);
+	return result;
+}
+
+// Assigns `value` to `member` and calls `apply` only when the value actually
+// changes.  Returns true if the member was updated.
+template <typename T, typename ApplyFunc>
+inline bool setAndApply(T & member, const T & value, ApplyFunc apply) {
+	if (member == value) {
+		return false;
+	}
+	member = value;
+	apply();
+	return true;
+}
 } // namespace ofxVlc4Utils

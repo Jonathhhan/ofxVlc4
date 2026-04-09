@@ -16,6 +16,7 @@
 
 using ofxVlc4Utils::isUri;
 using ofxVlc4Utils::fileNameFromUri;
+using ofxVlc4Utils::readLibvlcString;
 using ofxVlc4Utils::trimWhitespace;
 
 namespace {
@@ -25,14 +26,7 @@ std::string readMediaMeta(libvlc_media_t * media, libvlc_meta_t metaType) {
 		return "";
 	}
 
-	char * rawValue = libvlc_media_get_meta(media, metaType);
-	if (!rawValue) {
-		return "";
-	}
-
-	std::string value = trimWhitespace(rawValue);
-	libvlc_free(rawValue);
-	return value;
+	return readLibvlcString(libvlc_media_get_meta(media, metaType), libvlc_free);
 }
 
 void appendMetadataValue(
@@ -1346,11 +1340,7 @@ std::string MediaLibrary::getCurrentMediaMeta(ofxVlc4::MediaMetaField field) con
 		return value;
 	}
 
-	char * rawValue = libvlc_media_get_meta(sourceMedia, toLibvlcMetaField(field));
-	if (rawValue) {
-		value = trimWhitespace(rawValue);
-		libvlc_free(rawValue);
-	}
+	value = readLibvlcString(libvlc_media_get_meta(sourceMedia, toLibvlcMetaField(field)), libvlc_free);
 
 	libvlc_media_release(sourceMedia);
 	return value;
@@ -1441,12 +1431,7 @@ std::string MediaLibrary::getCurrentMediaMetaExtra(const std::string & name) con
 		return "";
 	}
 
-	std::string value;
-	char * rawValue = libvlc_media_get_meta_extra(sourceMedia, trimmedName.c_str());
-	if (rawValue) {
-		value = trimWhitespace(rawValue);
-		libvlc_free(rawValue);
-	}
+	std::string value = readLibvlcString(libvlc_media_get_meta_extra(sourceMedia, trimmedName.c_str()), libvlc_free);
 
 	libvlc_media_release(sourceMedia);
 	return value;
