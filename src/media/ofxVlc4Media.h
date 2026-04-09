@@ -136,6 +136,7 @@ public:
 	bool clearRenderer();
 	ofxVlc4::MediaStats getMediaStats() const;
 	std::vector<ofxVlc4::PlaylistItemInfo> getPlaylistItems() const;
+	std::vector<std::string> getPlaylist() const;
 	ofxVlc4::PlaylistStateInfo getPlaylistStateInfo() const;
 	ofxVlc4::PlaylistItemInfo getCurrentPlaylistItemInfo() const;
 	std::string getPathAtIndex(int index) const;

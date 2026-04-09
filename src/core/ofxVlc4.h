@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ofxVlc4Types.h"
+#include "midi/ofxVlc4MidiBridge.h"
 #include "ofMain.h"
 #include "vlc/vlc.h"
 
@@ -1202,7 +1203,7 @@ public:
 	void movePlaylistItem(int fromIndex, int toIndex);
 	void movePlaylistItems(const std::vector<int> & fromIndices, int toIndex);
 
-	const std::vector<std::string> & getPlaylist() const { return playlist; }
+	std::vector<std::string> getPlaylist() const;
 	std::vector<PlaylistItemInfo> getPlaylistItems() const;
 	PlaylistStateInfo getPlaylistStateInfo() const;
 	PlaylistItemInfo getCurrentPlaylistItemInfo() const;

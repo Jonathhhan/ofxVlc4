@@ -3845,6 +3845,10 @@ std::vector<ofxVlc4::PlaylistItemInfo> ofxVlc4::getPlaylistItems() const {
 	return mediaComponent->getPlaylistItems();
 }
 
+std::vector<std::string> ofxVlc4::getPlaylist() const {
+	return mediaComponent->getPlaylist();
+}
+
 ofxVlc4::PlaylistStateInfo ofxVlc4::getPlaylistStateInfo() const {
 	return mediaComponent->getPlaylistStateInfo();
 }
@@ -3943,6 +3947,10 @@ std::string ofxVlc4::MediaComponent::getPathAtIndex(int index) const {
 
 std::vector<ofxVlc4::PlaylistItemInfo> ofxVlc4::MediaComponent::getPlaylistItems() const {
 	return mediaLibrary().getPlaylistItems();
+}
+
+std::vector<std::string> ofxVlc4::MediaComponent::getPlaylist() const {
+	return mediaLibrary().getPlaylist();
 }
 
 ofxVlc4::PlaylistStateInfo ofxVlc4::MediaComponent::getPlaylistStateInfo() const {

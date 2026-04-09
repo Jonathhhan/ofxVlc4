@@ -31,6 +31,7 @@ public:
 	libvlc_media_t * retainCurrentOrLoadedMedia() const;
 	std::vector<std::pair<std::string, std::string>> buildMetadataForMedia(libvlc_media_t * sourceMedia) const;
 	std::vector<ofxVlc4::PlaylistItemInfo> getPlaylistItems() const;
+	std::vector<std::string> getPlaylist() const;
 	ofxVlc4::PlaylistStateInfo getPlaylistStateInfo() const;
 	ofxVlc4::PlaylistItemInfo getCurrentPlaylistItemInfo() const;
 	std::string getPathAtIndex(int index) const;
