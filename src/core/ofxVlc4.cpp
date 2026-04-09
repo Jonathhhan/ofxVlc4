@@ -342,6 +342,22 @@ void ofxVlc4::logNotice(const std::string & message) {
 	}
 }
 
+const char * ofxVlc4::getLibVlcVersion() {
+	return libvlc_get_version();
+}
+
+const char * ofxVlc4::getLibVlcCompiler() {
+	return libvlc_get_compiler();
+}
+
+const char * ofxVlc4::getLibVlcChangeset() {
+	return libvlc_get_changeset();
+}
+
+int ofxVlc4::getLibVlcAbiVersion() {
+	return libvlc_abi_version();
+}
+
 const char * ofxVlc4::recordingAudioSourceLabel(ofxVlc4RecordingAudioSource source) {
 	switch (source) {
 	case ofxVlc4RecordingAudioSource::None:
