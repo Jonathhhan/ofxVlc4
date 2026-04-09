@@ -47,7 +47,6 @@ public:
 	inline Timecode duration() const;
 
 	/// Find segment index at a given timecode on a specific track.
-	/// Returns -1 if nothing is found.
 	inline int segmentAtTimecode(size_t trackIndex, bool isVideo,
 								 const Timecode & tc) const;
 
@@ -135,11 +134,11 @@ inline bool Sequence::removeAudioTrack(size_t index) {
 inline Timecode Sequence::duration() const {
 	int64_t maxFrames = 0;
 	for (const auto & t : m_videoTracks) {
-		int64_t f = t.endTimecode().totalFrames();
+		const int64_t f = t.endTimecode().totalFrames();
 		if (f > maxFrames) maxFrames = f;
 	}
 	for (const auto & t : m_audioTracks) {
-		int64_t f = t.endTimecode().totalFrames();
+		const int64_t f = t.endTimecode().totalFrames();
 		if (f > maxFrames) maxFrames = f;
 	}
 	return Timecode(maxFrames, m_rate);

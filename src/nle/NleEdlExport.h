@@ -47,49 +47,56 @@ inline std::string exportEdlCmx3600(
 	size_t videoTrackIndex = 0,
 	const std::map<std::string, std::string> & clipIdToReelName = {})
 {
-	std::string edl;
-
-	// Title header.
-	edl += "TITLE: " + seq.name() + "\n";
-	edl += "FCM: ";
-	edl += isDropFrame(seq.rate()) ? "DROP FRAME" : "NON-DROP FRAME";
-	edl += "\n";
-
-	if (videoTrackIndex >= seq.videoTrackCount()) return edl;
+	if (videoTrackIndex >= seq.videoTrackCount()) {
+		// Header only.
+		std::string edl;
+		edl.reserve(64);
+		edl += "TITLE: ";
+		edl += seq.name();
+		edl += "\nFCM: ";
+		edl += isDropFrame(seq.rate()) ? "DROP FRAME" : "NON-DROP FRAME";
+		edl += '\n';
+		return edl;
+	}
 
 	const Track & trk = seq.videoTrack(videoTrackIndex);
 	const auto & segs = trk.segments();
 
+	// Pre-allocate: ~80 chars per header + ~80 chars per event line.
+	std::string edl;
+	edl.reserve(80 + segs.size() * 80);
+
+	edl += "TITLE: ";
+	edl += seq.name();
+	edl += "\nFCM: ";
+	edl += isDropFrame(seq.rate()) ? "DROP FRAME" : "NON-DROP FRAME";
+	edl += '\n';
+
+	// Reusable line buffer avoids per-event string concatenation overhead.
+	char lineBuf[128];
+
 	int eventNum = 1;
 	for (const auto & seg : segs) {
-		// Look up reel name (default to clip ID truncated).
-		std::string reelSrc;
-		auto it = clipIdToReelName.find(seg.masterClipId);
-		if (it != clipIdToReelName.end()) {
-			reelSrc = it->second;
-		} else {
-			reelSrc = seg.masterClipId;
-		}
-		std::string reel = detail::formatReelName(reelSrc);
+		const auto it = clipIdToReelName.find(seg.masterClipId);
+		const std::string & reelSrc = (it != clipIdToReelName.end())
+			? it->second : seg.masterClipId;
+		const std::string reel = detail::formatReelName(reelSrc);
 
-		// Timecodes as SMPTE.
-		Timecode srcIn  = seg.sourceIn;
-		Timecode srcOut = seg.sourceOut();
-		Timecode recIn  = seg.timelineStart;
-		Timecode recOut = seg.timelineEnd();
+		const std::string srcInStr  = seg.sourceIn.toSmpteString();
+		const std::string srcOutStr = seg.sourceOut().toSmpteString();
+		const std::string recInStr  = seg.timelineStart.toSmpteString();
+		const std::string recOutStr = seg.timelineEnd().toSmpteString();
 
-		// Format event number as 3 digits.
-		char numBuf[16];
-		std::snprintf(numBuf, sizeof(numBuf), "%03d", eventNum);
+		const int n = std::snprintf(lineBuf, sizeof(lineBuf),
+			"%03d  %s  V     C        %s %s %s %s\n",
+			eventNum,
+			reel.c_str(),
+			srcInStr.c_str(),
+			srcOutStr.c_str(),
+			recInStr.c_str(),
+			recOutStr.c_str());
 
-		edl += std::string(numBuf) + "  "
-			 + reel + "  "
-			 + "V     C        "
-			 + srcIn.toSmpteString() + " "
-			 + srcOut.toSmpteString() + " "
-			 + recIn.toSmpteString() + " "
-			 + recOut.toSmpteString() + "\n";
-
+		if (n > 0) edl.append(lineBuf, static_cast<size_t>(n));
 		++eventNum;
 	}
 

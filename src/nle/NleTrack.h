@@ -7,11 +7,15 @@
 // source media onto the timeline.  The Track enforces that no two segments
 // overlap on the timeline.
 //
+// Segments are kept sorted by timelineStart.  Lookup and overlap checks use
+// binary search for O(log n) performance.
+//
 // Pure logic — no dependencies on OF, GLFW, or VLC.
 // ---------------------------------------------------------------------------
 
 #include <algorithm>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "NleTimecode.h"
@@ -71,6 +75,7 @@ public:
 	inline bool removeSegment(size_t index);
 
 	/// Find segment at a given timeline timecode.  Returns index or -1.
+	/// Uses binary search — O(log n).
 	inline int segmentIndexAt(const Timecode & tc) const;
 
 	/// Get the last timecode on this track (end of last segment).
@@ -81,6 +86,11 @@ public:
 
 	/// Replace a segment (for trim operations).  Returns false on overlap.
 	inline bool replaceSegment(size_t index, const Segment & newSeg);
+
+	/// Bulk-replace all segments (avoids repeated addSegment overhead).
+	/// Segments are sorted and validated internally.  Returns false if
+	/// any overlap or zero-duration segment is detected.
+	inline bool setSegments(std::vector<Segment> segs);
 
 private:
 	TrackType m_type;
@@ -94,7 +104,11 @@ private:
 	inline void sortSegments();
 
 	/// Check if a segment would overlap any existing (excluding excludeIndex).
+	/// Uses binary search to find candidates — O(log n) average.
 	inline bool wouldOverlap(const Segment & seg, int excludeIndex = -1) const;
+
+	/// Find the first segment whose timelineEnd > tc via binary search.
+	inline size_t lowerBoundByEnd(int64_t tcFrames) const;
 };
 
 // ---------------------------------------------------------------------------
@@ -134,29 +148,46 @@ inline bool Track::removeSegment(size_t index) {
 }
 
 inline int Track::segmentIndexAt(const Timecode & tc) const {
-	for (size_t i = 0; i < m_segments.size(); ++i) {
-		const auto & seg = m_segments[i];
-		if (tc >= seg.timelineStart && tc < seg.timelineEnd()) {
-			return static_cast<int>(i);
-		}
+	if (m_segments.empty()) return -1;
+
+	const int64_t tcFrames = tc.totalFrames();
+
+	// Binary search: find rightmost segment whose timelineStart <= tc.
+	// Since segments are sorted by timelineStart, use upper_bound and step back.
+	auto it = std::upper_bound(
+		m_segments.begin(), m_segments.end(), tcFrames,
+		[](int64_t frame, const Segment & seg) {
+			return frame < seg.timelineStart.totalFrames();
+		});
+
+	if (it == m_segments.begin()) return -1;
+	--it;
+
+	// Check if tc falls within [timelineStart, timelineEnd).
+	if (tcFrames < it->timelineEnd().totalFrames()) {
+		return static_cast<int>(std::distance(m_segments.begin(), it));
 	}
 	return -1;
 }
 
 inline Timecode Track::endTimecode() const {
 	if (m_segments.empty()) return Timecode(0, FrameRate::Fps24);
-	// Segments are sorted — last one has the greatest timelineStart.
 	const auto & last = m_segments.back();
 	return last.timelineEnd();
 }
 
 inline void Track::rippleShift(const Timecode & from, int64_t offsetFrames) {
-	for (auto & seg : m_segments) {
-		if (seg.timelineStart >= from) {
-			int64_t newStart = seg.timelineStart.totalFrames() + offsetFrames;
-			if (newStart < 0) newStart = 0;
-			seg.timelineStart = Timecode(newStart, seg.timelineStart.rate());
-		}
+	// Binary search for the first segment at or after 'from'.
+	auto it = std::lower_bound(
+		m_segments.begin(), m_segments.end(), from.totalFrames(),
+		[](const Segment & seg, int64_t frame) {
+			return seg.timelineStart.totalFrames() < frame;
+		});
+
+	for (; it != m_segments.end(); ++it) {
+		int64_t newStart = it->timelineStart.totalFrames() + offsetFrames;
+		if (newStart < 0) newStart = 0;
+		it->timelineStart = Timecode(newStart, it->timelineStart.rate());
 	}
 	sortSegments();
 }
@@ -170,6 +201,25 @@ inline bool Track::replaceSegment(size_t index, const Segment & newSeg) {
 	return true;
 }
 
+inline bool Track::setSegments(std::vector<Segment> segs) {
+	// Sort by timelineStart.
+	std::sort(segs.begin(), segs.end(),
+		[](const Segment & a, const Segment & b) {
+			return a.timelineStart < b.timelineStart;
+		});
+
+	// Validate: no zero-duration and no overlaps.
+	for (size_t i = 0; i < segs.size(); ++i) {
+		if (segs[i].duration.totalFrames() <= 0) return false;
+		if (i > 0 && segs[i].timelineStart < segs[i - 1].timelineEnd()) {
+			return false;
+		}
+	}
+
+	m_segments = std::move(segs);
+	return true;
+}
+
 inline void Track::sortSegments() {
 	std::sort(m_segments.begin(), m_segments.end(),
 		[](const Segment & a, const Segment & b) {
@@ -177,13 +227,42 @@ inline void Track::sortSegments() {
 		});
 }
 
+inline size_t Track::lowerBoundByEnd(int64_t tcFrames) const {
+	// Find first segment whose timelineEnd() > tcFrames.
+	// Since segments are sorted by start and non-overlapping, we can
+	// binary search: a segment whose start is beyond tcFrames certainly
+	// has end > tcFrames.
+	size_t lo = 0;
+	size_t hi = m_segments.size();
+	while (lo < hi) {
+		size_t mid = lo + (hi - lo) / 2;
+		if (m_segments[mid].timelineEnd().totalFrames() <= tcFrames) {
+			lo = mid + 1;
+		} else {
+			hi = mid;
+		}
+	}
+	return lo;
+}
+
 inline bool Track::wouldOverlap(const Segment & seg, int excludeIndex) const {
-	for (size_t i = 0; i < m_segments.size(); ++i) {
+	if (m_segments.empty()) return false;
+
+	const int64_t segStart = seg.timelineStart.totalFrames();
+	const int64_t segEnd   = seg.timelineEnd().totalFrames();
+
+	// Find candidates: any existing segment whose timelineEnd > segStart
+	// AND whose timelineStart < segEnd.
+	// Use binary search to find the first segment that could overlap.
+	size_t start = lowerBoundByEnd(segStart);
+
+	for (size_t i = start; i < m_segments.size(); ++i) {
 		if (static_cast<int>(i) == excludeIndex) continue;
 		const auto & existing = m_segments[i];
-		// Two intervals [a, b) and [c, d) overlap iff a < d && c < b.
-		if (seg.timelineStart < existing.timelineEnd() &&
-			existing.timelineStart < seg.timelineEnd()) {
+		if (existing.timelineStart.totalFrames() >= segEnd) break;
+		// At this point: existing.timelineEnd > segStart && existing.start < segEnd
+		if (segStart < existing.timelineEnd().totalFrames() &&
+			existing.timelineStart.totalFrames() < segEnd) {
 			return true;
 		}
 	}

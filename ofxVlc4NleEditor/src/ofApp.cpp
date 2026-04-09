@@ -87,6 +87,11 @@ void ofApp::setup() {
 	sequence.addVideoTrack("V1");
 	sequence.addAudioTrack("A1");
 	sequence.addAudioTrack("A2");
+
+	// Initial layout computation.
+	layout.recompute(static_cast<float>(ofGetWidth()),
+					 static_cast<float>(ofGetHeight()),
+					 kTimelineHeightFraction, kBinWidthFraction);
 }
 
 void ofApp::update() {
@@ -101,43 +106,30 @@ void ofApp::update() {
 void ofApp::draw() {
 	ofBackground(30, 30, 34);
 
-	const float windowW = static_cast<float>(ofGetWidth());
-	const float windowH = static_cast<float>(ofGetHeight());
-
-	// Layout:
-	//  ┌──────────┬──────────┬──────┐
-	//  │  Source   │  Record  │ Bin  │  <- Monitors + Bin (top portion)
-	//  │  Monitor  │  Monitor │ List │
-	//  ├──────────┴──────────┴──────┤
-	//  │        Transport Bar       │
-	//  ├────────────────────────────┤
-	//  │    Timeline (ofxLDT)       │  <- Bottom portion
-	//  └────────────────────────────┘
-
-	const float timelineH = windowH * kTimelineHeightFraction;
-	const float transportH = 36.0f;
-	const float infoBarH = 22.0f;
-	const float monitorH = windowH - timelineH - transportH - infoBarH;
-	const float binW = windowW * kBinWidthFraction;
-	const float monitorW = (windowW - binW) * 0.5f;
+	const auto & L = layout;
 
 	// Draw monitors.
-	drawSourceMonitor(0.0f, kMonitorY, monitorW, monitorH);
-	drawRecordMonitor(monitorW, kMonitorY, monitorW, monitorH);
+	drawSourceMonitor(0.0f, kMonitorY, L.monitorW, L.monitorH);
+	drawRecordMonitor(L.monitorW, kMonitorY, L.monitorW, L.monitorH);
 
 	// Draw bin panel.
-	drawBinPanel(windowW - binW, kMonitorY, binW, monitorH);
+	drawBinPanel(L.windowW - L.binW, kMonitorY, L.binW, L.monitorH);
 
 	// Draw transport bar.
-	drawTransportBar(0.0f, monitorH, windowW, transportH);
+	drawTransportBar(0.0f, L.monitorH, L.windowW, L.transportH);
 
 	// Draw info bar.
-	drawInfoBar(0.0f, monitorH + transportH, windowW, infoBarH);
+	drawInfoBar(0.0f, L.monitorH + L.transportH, L.windowW, L.infoBarH);
 
 	// Draw timeline.
-	timeline.setShape(ofRectangle(0.0f, monitorH + transportH + infoBarH,
-								  windowW, timelineH));
+	timeline.setShape(ofRectangle(0.0f, L.monitorH + L.transportH + L.infoBarH,
+								  L.windowW, L.timelineH));
 	timeline.draw();
+}
+
+void ofApp::windowResized(int w, int h) {
+	layout.recompute(static_cast<float>(w), static_cast<float>(h),
+					 kTimelineHeightFraction, kBinWidthFraction);
 }
 
 void ofApp::exit() {
@@ -388,14 +380,12 @@ void ofApp::keyPressed(int key) {
 
 	// -- Volume --
 	case OF_KEY_UP: {
-		ofxVlc4 * active = (activeMonitor == ActiveMonitor::Source)
-			? sourcePlayer.get() : recordPlayer.get();
+		ofxVlc4 * active = activePlayer();
 		if (active) active->setVolume(std::min(100, active->getVolume() + 5));
 		break;
 	}
 	case OF_KEY_DOWN: {
-		ofxVlc4 * active = (activeMonitor == ActiveMonitor::Source)
-			? sourcePlayer.get() : recordPlayer.get();
+		ofxVlc4 * active = activePlayer();
 		if (active) active->setVolume(std::max(0, active->getVolume() - 5));
 		break;
 	}
@@ -629,21 +619,23 @@ void ofApp::drawTransportBar(float x, float y, float w, float h) {
 	// Shuttle speed indicator.
 	bx += 8.0f;
 	ofSetColor(180, 180, 50);
-	std::string speedLabel = "Speed: " + ofToString(shuttleSpeed);
-	ofDrawBitmapString(speedLabel, bx, by + btnH - 8.0f);
+	static const char * const kSpeedLabels[] = {
+		"Speed: -3", "Speed: -2", "Speed: -1", "Speed: 0",
+		"Speed: 1", "Speed: 2", "Speed: 3"
+	};
+	int speedIdx = shuttleSpeed + 3;
+	if (speedIdx >= 0 && speedIdx < 7) {
+		ofDrawBitmapString(kSpeedLabels[speedIdx], bx, by + btnH - 8.0f);
+	}
 	bx += 100.0f;
 
 	// Trim mode.
 	ofSetColor(140, 180, 140);
-	std::string trimLabel;
-	switch (currentTrimMode) {
-	case TrimMode::None:   trimLabel = "Trim: OFF"; break;
-	case TrimMode::Ripple: trimLabel = "Trim: RIPPLE"; break;
-	case TrimMode::Roll:   trimLabel = "Trim: ROLL"; break;
-	case TrimMode::Slip:   trimLabel = "Trim: SLIP"; break;
-	case TrimMode::Slide:  trimLabel = "Trim: SLIDE"; break;
-	}
-	ofDrawBitmapString(trimLabel, bx, by + btnH - 8.0f);
+	static const char * const kTrimLabels[] = {
+		"Trim: OFF", "Trim: RIPPLE", "Trim: ROLL", "Trim: SLIP", "Trim: SLIDE"
+	};
+	ofDrawBitmapString(kTrimLabels[static_cast<int>(currentTrimMode)],
+					   bx, by + btnH - 8.0f);
 	bx += 120.0f;
 
 	// Undo/Redo state.
@@ -667,17 +659,27 @@ void ofApp::drawInfoBar(float x, float y, float w, float h) {
 	ofDrawRectangle(x, y, w, h);
 
 	ofSetColor(130, 130, 135);
-	std::string info = "Seq: " + sequence.name()
-		+ "  |  Rate: " + nle::frameRateLabel(sequence.rate())
-		+ "  |  Dur: " + sequence.duration().toSmpteString()
-		+ "  |  V:" + ofToString(sequence.videoTrackCount())
-		+ "  A:" + ofToString(sequence.audioTrackCount())
-		+ "  |  Clips: " + ofToString(masterClips.size());
+
+	// Use snprintf to avoid per-frame string concatenation overhead.
+	char infoBuf[256];
+	const std::string durStr = sequence.duration().toSmpteString();
+	const std::string rateStr = nle::frameRateLabel(sequence.rate());
+	std::snprintf(infoBuf, sizeof(infoBuf),
+		"Seq: %s  |  Rate: %s  |  Dur: %s  |  V:%zu  A:%zu  |  Clips: %zu",
+		sequence.name().c_str(),
+		rateStr.c_str(),
+		durStr.c_str(),
+		sequence.videoTrackCount(),
+		sequence.audioTrackCount(),
+		masterClips.size());
+
+	std::string info(infoBuf);
 
 	if (exportState == ExportState::Done) {
 		info += "  |  EXPORT COMPLETE";
 	} else if (exportState == ExportState::Failed) {
-		info += "  |  EXPORT FAILED: " + exportError;
+		info += "  |  EXPORT FAILED: ";
+		info += exportError;
 	}
 
 	ofDrawBitmapString(info, x + 8.0f, y + 14.0f);
@@ -749,13 +751,7 @@ void ofApp::performOverwrite() {
 	if (sourceClipId.empty()) return;
 	if (sequence.videoTrackCount() == 0) return;
 
-	nle::Timecode * srcIn  = sourceInSet  ? &sourceInMark  : nullptr;
-	nle::Timecode * srcOut = sourceOutSet ? &sourceOutMark : nullptr;
-	nle::Timecode * recIn  = recordInSet  ? &recordInMark  : nullptr;
-	nle::Timecode * recOut = recordOutSet ? &recordOutMark : nullptr;
-
-	nle::ThreePointResult result = nle::resolveThreePointEdit(
-		srcIn, srcOut, recIn, recOut, sequence.rate());
+	nle::ThreePointResult result = resolveCurrentMarks();
 	if (!result.valid) return;
 
 	nle::editOverwrite(sequence.videoTrack(0), sourceClipId,
@@ -767,13 +763,7 @@ void ofApp::performSpliceIn() {
 	if (sourceClipId.empty()) return;
 	if (sequence.videoTrackCount() == 0) return;
 
-	nle::Timecode * srcIn  = sourceInSet  ? &sourceInMark  : nullptr;
-	nle::Timecode * srcOut = sourceOutSet ? &sourceOutMark : nullptr;
-	nle::Timecode * recIn  = recordInSet  ? &recordInMark  : nullptr;
-	nle::Timecode * recOut = recordOutSet ? &recordOutMark : nullptr;
-
-	nle::ThreePointResult result = nle::resolveThreePointEdit(
-		srcIn, srcOut, recIn, recOut, sequence.rate());
+	nle::ThreePointResult result = resolveCurrentMarks();
 	if (!result.valid) return;
 
 	nle::editSpliceIn(sequence.videoTrack(0), sourceClipId,
@@ -824,8 +814,7 @@ void ofApp::performMatchFrame() {
 // ---------------------------------------------------------------------------
 
 void ofApp::playPause() {
-	ofxVlc4 * active = (activeMonitor == ActiveMonitor::Source)
-		? sourcePlayer.get() : recordPlayer.get();
+	ofxVlc4 * active = activePlayer();
 	if (!active) return;
 
 	if (active->isPlaying()) {
@@ -844,8 +833,7 @@ void ofApp::stopPlayback() {
 }
 
 void ofApp::stepFrame(int direction) {
-	ofxVlc4 * active = (activeMonitor == ActiveMonitor::Source)
-		? sourcePlayer.get() : recordPlayer.get();
+	ofxVlc4 * active = activePlayer();
 	if (!active) return;
 
 	if (direction > 0) {
@@ -858,8 +846,7 @@ void ofApp::stepFrame(int direction) {
 void ofApp::updateShuttle() {
 	if (shuttleSpeed == 0) return;
 
-	ofxVlc4 * active = (activeMonitor == ActiveMonitor::Source)
-		? sourcePlayer.get() : recordPlayer.get();
+	ofxVlc4 * active = activePlayer();
 	if (!active) return;
 
 	float rate = shuttleSpeedToRate(shuttleSpeed);
@@ -965,6 +952,23 @@ void ofApp::exportEdl() {
 		file.close();
 		ofLogNotice("NLE") << "EDL exported to: " << edlPath;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+ofxVlc4 * ofApp::activePlayer() {
+	return (activeMonitor == ActiveMonitor::Source)
+		? sourcePlayer.get() : recordPlayer.get();
+}
+
+nle::ThreePointResult ofApp::resolveCurrentMarks() {
+	nle::Timecode * srcIn  = sourceInSet  ? &sourceInMark  : nullptr;
+	nle::Timecode * srcOut = sourceOutSet ? &sourceOutMark : nullptr;
+	nle::Timecode * recIn  = recordInSet  ? &recordInMark  : nullptr;
+	nle::Timecode * recOut = recordOutSet ? &recordOutMark : nullptr;
+	return nle::resolveThreePointEdit(srcIn, srcOut, recIn, recOut, sequence.rate());
 }
 
 // ---------------------------------------------------------------------------

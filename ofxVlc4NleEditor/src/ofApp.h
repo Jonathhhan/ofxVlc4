@@ -48,6 +48,7 @@ public:
 	void keyPressed(int key) override;
 	void keyReleased(int key) override;
 	void dragEvent(ofDragInfo dragInfo) override;
+	void windowResized(int w, int h) override;
 
 private:
 	// -- Active monitor tracking --
@@ -104,6 +105,28 @@ private:
 	static constexpr float kMonitorY = 0.0f;
 	static constexpr float kTimelineHeightFraction = 0.40f;
 	static constexpr float kBinWidthFraction = 0.20f;
+
+	// -- Cached layout (recomputed on window resize) --
+	struct LayoutCache {
+		float windowW = 1920.0f;
+		float windowH = 1080.0f;
+		float timelineH = 0.0f;
+		float transportH = 36.0f;
+		float infoBarH = 22.0f;
+		float monitorH = 0.0f;
+		float binW = 0.0f;
+		float monitorW = 0.0f;
+
+		void recompute(float w, float h, float tlFrac, float binFrac) {
+			windowW = w;
+			windowH = h;
+			timelineH = h * tlFrac;
+			monitorH = h - timelineH - transportH - infoBarH;
+			binW = w * binFrac;
+			monitorW = (w - binW) * 0.5f;
+		}
+	};
+	LayoutCache layout;
 
 	// -- Initialization --
 	void initPlayers();
@@ -166,6 +189,10 @@ private:
 	// -- Player shutdown --
 	void shutdownPlayers();
 
-	// -- Formatting --
+	// -- Helpers --
+	ofxVlc4 * activePlayer();
 	static std::string formatTimecodeMs(int ms);
+
+	// -- Three-point edit helper (shared by overwrite/splice-in) --
+	nle::ThreePointResult resolveCurrentMarks();
 };
