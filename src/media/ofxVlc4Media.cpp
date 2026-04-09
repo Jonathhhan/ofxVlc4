@@ -1778,6 +1778,22 @@ bool ofxVlc4::hasPlaylist() const {
 	return mediaComponent->hasPlaylist();
 }
 
+bool ofxVlc4::savePlaylistM3U(const std::string & filePath) const {
+	return mediaComponent->savePlaylistM3U(filePath);
+}
+
+bool ofxVlc4::savePlaylistXSPF(const std::string & filePath, const std::string & title) const {
+	return mediaComponent->savePlaylistXSPF(filePath, title);
+}
+
+std::vector<std::string> ofxVlc4::loadPlaylistM3U(const std::string & filePath) const {
+	return mediaComponent->loadPlaylistM3U(filePath);
+}
+
+std::vector<std::string> ofxVlc4::loadPlaylistXSPF(const std::string & filePath) const {
+	return mediaComponent->loadPlaylistXSPF(filePath);
+}
+
 const std::string & ofxVlc4::getLastStatusMessage() const {
 	return mediaComponent->getLastStatusMessage();
 }
@@ -1880,6 +1896,22 @@ std::vector<std::pair<std::string, std::string>> ofxVlc4::MediaComponent::getCur
 
 bool ofxVlc4::MediaComponent::hasPlaylist() const {
 	return mediaLibrary().hasPlaylist();
+}
+
+bool ofxVlc4::MediaComponent::savePlaylistM3U(const std::string & filePath) const {
+	return mediaLibrary().savePlaylistM3U(filePath);
+}
+
+bool ofxVlc4::MediaComponent::savePlaylistXSPF(const std::string & filePath, const std::string & title) const {
+	return mediaLibrary().savePlaylistXSPF(filePath, title);
+}
+
+std::vector<std::string> ofxVlc4::MediaComponent::loadPlaylistM3U(const std::string & filePath) const {
+	return mediaLibrary().loadPlaylistM3U(filePath);
+}
+
+std::vector<std::string> ofxVlc4::MediaComponent::loadPlaylistXSPF(const std::string & filePath) const {
+	return mediaLibrary().loadPlaylistXSPF(filePath);
 }
 
 std::vector<ofxVlc4::ProgramInfo> ofxVlc4::MediaComponent::getPrograms() const {

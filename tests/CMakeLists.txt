@@ -313,3 +313,20 @@ target_include_directories(test_media_library_helpers PRIVATE
 )
 
 add_test(NAME media_library_helpers COMMAND test_media_library_helpers)
+
+# ---------------------------------------------------------------------------
+# test_playlist_helpers
+# Tests the pure playlist serialisation helpers (M3U and XSPF format
+# serialize/deserialize, XML escape/unescape, percent encode/decode)
+# extracted into ofxVlc4PlaylistHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_playlist_helpers
+    test_playlist_helpers.cpp
+)
+
+target_include_directories(test_playlist_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME playlist_helpers COMMAND test_playlist_helpers)
