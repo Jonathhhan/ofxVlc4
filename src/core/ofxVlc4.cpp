@@ -19,6 +19,13 @@
 #include <fstream>
 #include <sstream>
 
+#ifdef TARGET_WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 using ofxVlc4Utils::clearAllocatedFbo;
 using ofxVlc4Utils::readTextFileIfPresent;
 using ofxVlc4MuxHelpers::removeRecordingFile;
@@ -32,6 +39,25 @@ void configureMacLibVlcEnvironment() {
 	const std::string bundledPluginPath = ofToDataPath("libvlc/macos/plugins", true);
 	if (ofDirectory::doesDirectoryExist(bundledPluginPath, true)) {
 		setenv("VLC_PLUGIN_PATH", bundledPluginPath.c_str(), 1);
+	}
+	const std::string bundledDataPath = ofToDataPath("libvlc/macos", true);
+	if (ofDirectory::doesDirectoryExist(bundledDataPath + "/lua", true)) {
+		setenv("VLC_DATA_PATH", bundledDataPath.c_str(), 1);
+	}
+}
+#endif
+
+#ifdef TARGET_WIN32
+void configureWindowsLibVlcEnvironment() {
+	wchar_t exePathBuf[MAX_PATH];
+	const DWORD len = GetModuleFileNameW(nullptr, exePathBuf, MAX_PATH);
+	if (len == 0 || len >= MAX_PATH) return;
+
+	const std::filesystem::path exeDir = std::filesystem::path(exePathBuf).parent_path();
+	std::error_code ec;
+	if (std::filesystem::is_directory(exeDir / L"lua", ec)) {
+		const std::string dirStr = exeDir.string();
+		_putenv_s("VLC_DATA_PATH", dirStr.c_str());
 	}
 }
 #endif
@@ -979,6 +1005,10 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 
 #ifdef TARGET_OSX
 	configureMacLibVlcEnvironment();
+#endif
+
+#ifdef TARGET_WIN32
+	configureWindowsLibVlcEnvironment();
 #endif
 
 	std::vector<std::string> initArgs;
