@@ -1153,8 +1153,6 @@ private:
 	bool queryVideoTrackGeometry(unsigned & width, unsigned & height, unsigned & sarNum, unsigned & sarDen) const;
 	std::vector<MediaTrackInfo> getTrackInfos(libvlc_track_type_t type) const;
 	bool selectTrackById(libvlc_track_type_t type, const std::string & trackId);
-	void unselectTrackType(libvlc_track_type_t type);
-	void selectTracksByIds(libvlc_track_type_t type, const std::string & commaSeparatedIds);
 	int getNextShuffleIndex() const;
 	bool isManualStopPending() const;
 	void clearRecorderCaptureState(const std::shared_ptr<ofAppGLFWWindow> & cleanupWindow);
@@ -1642,6 +1640,7 @@ public:
 	void unselectVideoTracks();
 	void unselectAudioTracks();
 	void unselectSubtitleTracks();
+	void unselectTrackType(libvlc_track_type_t type);
 	void selectTracksByIds(libvlc_track_type_t type, const std::string & commaSeparatedIds);
 	void selectVideoTracksByIds(const std::string & commaSeparatedIds);
 	void selectAudioTracksByIds(const std::string & commaSeparatedIds);

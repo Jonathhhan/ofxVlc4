@@ -36,6 +36,14 @@ namespace {
 constexpr size_t kLibVlcLogCapacity = VlcCoreSession::kLogCapacity;
 constexpr const char * kMediaLogChannel = "ofxVlc4";
 
+const char * trackTypeLabel(libvlc_track_type_t type) {
+	switch (type) {
+	case libvlc_track_video: return "Video";
+	case libvlc_track_audio: return "Audio";
+	default: return "Subtitle";
+	}
+}
+
 std::string defaultLibVlcLogFilePath() {
 	return normalizeOptionalPath(ofToDataPath("logs/ofxVlc4-libvlc.log", true));
 }
@@ -4663,9 +4671,8 @@ bool ofxVlc4::MediaComponent::selectTrackById(libvlc_track_type_t type, const st
 			info.selected = track->selected;
 			libvlc_media_player_select_track(player, track);
 			libvlc_media_tracklist_delete(tracklist);
-			const char * typeLabel = type == libvlc_track_video ? "Video" : (type == libvlc_track_audio ? "Audio" : "Subtitle");
-			owner.setStatus(std::string(typeLabel) + " track set.");
-			owner.logNotice(std::string(typeLabel) + " track: " + describeTrackLabel(info) + ".");
+			owner.setStatus(std::string(trackTypeLabel(type)) + " track set.");
+			owner.logNotice(std::string(trackTypeLabel(type)) + " track: " + describeTrackLabel(info) + ".");
 			return true;
 		}
 	}
@@ -4700,9 +4707,8 @@ void ofxVlc4::MediaComponent::unselectTrackType(libvlc_track_type_t type) {
 		return;
 	}
 	libvlc_media_player_unselect_track_type(player, type);
-	const char * typeLabel = type == libvlc_track_video ? "Video" : (type == libvlc_track_audio ? "Audio" : "Subtitle");
-	owner.setStatus(std::string(typeLabel) + " tracks unselected.");
-	owner.logNotice(std::string(typeLabel) + " tracks unselected.");
+	owner.setStatus(std::string(trackTypeLabel(type)) + " tracks unselected.");
+	owner.logNotice(std::string(trackTypeLabel(type)) + " tracks unselected.");
 }
 
 void ofxVlc4::MediaComponent::unselectVideoTracks() {
@@ -4724,9 +4730,8 @@ void ofxVlc4::MediaComponent::selectTracksByIds(libvlc_track_type_t type, const 
 		return;
 	}
 	libvlc_media_player_select_tracks_by_ids(player, type, commaSeparatedIds.c_str());
-	const char * typeLabel = type == libvlc_track_video ? "Video" : (type == libvlc_track_audio ? "Audio" : "Subtitle");
-	owner.setStatus(std::string(typeLabel) + " tracks selected by IDs.");
-	owner.logNotice(std::string(typeLabel) + " tracks selected by IDs: " + commaSeparatedIds);
+	owner.setStatus(std::string(trackTypeLabel(type)) + " tracks selected by IDs.");
+	owner.logNotice(std::string(trackTypeLabel(type)) + " tracks selected by IDs: " + commaSeparatedIds);
 }
 
 void ofxVlc4::MediaComponent::selectVideoTracksByIds(const std::string & commaSeparatedIds) {
