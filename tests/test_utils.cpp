@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -429,11 +430,11 @@ static void testReadTextFileIfPresent() {
 	using ofxVlc4Utils::readTextFileIfPresent;
 
 	// Non-existent file → empty string.
-	CHECK_EQ(readTextFileIfPresent("/tmp/ofxvlc4_nonexistent_file_12345.txt"), "");
+	CHECK_EQ(readTextFileIfPresent((std::filesystem::temp_directory_path() / "ofxvlc4_nonexistent_file_12345.txt").string()), "");
 
 	// Write a test file, read it back.
 	{
-		const std::string path = "/tmp/ofxvlc4_test_readtext.txt";
+		const std::string path = (std::filesystem::temp_directory_path() / "ofxvlc4_test_readtext.txt").string();
 		{
 			std::ofstream f(path);
 			f << "Hello, World!";
@@ -445,7 +446,7 @@ static void testReadTextFileIfPresent() {
 
 	// Empty file → empty string.
 	{
-		const std::string path = "/tmp/ofxvlc4_test_readtext_empty.txt";
+		const std::string path = (std::filesystem::temp_directory_path() / "ofxvlc4_test_readtext_empty.txt").string();
 		{
 			std::ofstream f(path);
 			// write nothing
@@ -457,7 +458,7 @@ static void testReadTextFileIfPresent() {
 
 	// Multiline content.
 	{
-		const std::string path = "/tmp/ofxvlc4_test_readtext_multi.txt";
+		const std::string path = (std::filesystem::temp_directory_path() / "ofxvlc4_test_readtext_multi.txt").string();
 		{
 			std::ofstream f(path);
 			f << "Line1\nLine2\nLine3";
