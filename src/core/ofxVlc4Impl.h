@@ -252,6 +252,7 @@ struct ofxVlc4::Impl {
 	struct VideoResourceRuntimeState {
 		std::shared_ptr<ofAppGLFWWindow> mainWindow;
 		std::shared_ptr<ofAppGLFWWindow> vlcWindow;
+		bool nativeWindowGeometryInitialized = false;
 		ofTexture videoTexture;
 		ofFbo exposedTextureFbo;
 		ofShader videoAdjustShader;
