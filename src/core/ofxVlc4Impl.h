@@ -17,16 +17,6 @@
 struct ofxVlc4::Impl {
 	static constexpr float kDefaultEqualizerPreampDb = 12.0f;
 
-	struct RendererItemEntry {
-		std::string id;
-		std::string name;
-		std::string type;
-		std::string iconUri;
-		bool canAudio = false;
-		bool canVideo = false;
-		libvlc_renderer_item_t * item = nullptr;
-	};
-
 	struct BookmarkState {
 		mutable std::mutex mutex;
 		std::unordered_map<std::string, std::vector<BookmarkInfo>> entries;

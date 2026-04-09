@@ -480,7 +480,7 @@ void ofxVlc4::libVlcLogStatic(void * data, int level, const libvlc_log_t * ctx, 
 	entry.objectHeader = objectHeader ? objectHeader : "";
 	entry.objectId = objectId;
 
-	player->mediaComponent->appendLibVlcLog(entry);
+	player->m_impl->subsystemRuntime.mediaComponent->appendLibVlcLog(entry);
 }
 
 
@@ -596,83 +596,83 @@ void ofxVlc4::MediaComponent::applyWatchTimeObserver() {
 
 
 void ofxVlc4::dismissAllDialogs() {
-	mediaComponent->dismissAllDialogs();
+	m_impl->subsystemRuntime.mediaComponent->dismissAllDialogs();
 }
 
 void ofxVlc4::upsertDialog(const DialogInfo & dialog) {
-	mediaComponent->upsertDialog(dialog);
+	m_impl->subsystemRuntime.mediaComponent->upsertDialog(dialog);
 }
 
 void ofxVlc4::removeDialog(std::uintptr_t token) {
-	mediaComponent->removeDialog(token);
+	m_impl->subsystemRuntime.mediaComponent->removeDialog(token);
 }
 
 std::vector<ofxVlc4::DialogInfo> ofxVlc4::getActiveDialogs() const {
-	return mediaComponent->getActiveDialogs();
+	return m_impl->subsystemRuntime.mediaComponent->getActiveDialogs();
 }
 
 ofxVlc4::DialogErrorInfo ofxVlc4::getLastDialogError() const {
-	return mediaComponent->getLastDialogError();
+	return m_impl->subsystemRuntime.mediaComponent->getLastDialogError();
 }
 
 void ofxVlc4::clearLastDialogError() {
-	mediaComponent->clearLastDialogError();
+	m_impl->subsystemRuntime.mediaComponent->clearLastDialogError();
 }
 
 bool ofxVlc4::isLibVlcLoggingEnabled() const {
-	return mediaComponent->isLibVlcLoggingEnabled();
+	return m_impl->subsystemRuntime.mediaComponent->isLibVlcLoggingEnabled();
 }
 
 void ofxVlc4::setLibVlcLoggingEnabled(bool enabled) {
-	mediaComponent->setLibVlcLoggingEnabled(enabled);
+	m_impl->subsystemRuntime.mediaComponent->setLibVlcLoggingEnabled(enabled);
 }
 
 bool ofxVlc4::isLibVlcLogFileEnabled() const {
-	return mediaComponent->isLibVlcLogFileEnabled();
+	return m_impl->subsystemRuntime.mediaComponent->isLibVlcLogFileEnabled();
 }
 
 void ofxVlc4::setLibVlcLogFileEnabled(bool enabled) {
-	mediaComponent->setLibVlcLogFileEnabled(enabled);
+	m_impl->subsystemRuntime.mediaComponent->setLibVlcLogFileEnabled(enabled);
 }
 
 std::string ofxVlc4::getLibVlcLogFilePath() const {
-	return mediaComponent->getLibVlcLogFilePath();
+	return m_impl->subsystemRuntime.mediaComponent->getLibVlcLogFilePath();
 }
 
 void ofxVlc4::setLibVlcLogFilePath(const std::string & path) {
-	mediaComponent->setLibVlcLogFilePath(path);
+	m_impl->subsystemRuntime.mediaComponent->setLibVlcLogFilePath(path);
 }
 
 std::vector<ofxVlc4::LibVlcLogEntry> ofxVlc4::getLibVlcLogEntries() const {
-	return mediaComponent->getLibVlcLogEntries();
+	return m_impl->subsystemRuntime.mediaComponent->getLibVlcLogEntries();
 }
 
 void ofxVlc4::clearLibVlcLogEntries() {
-	mediaComponent->clearLibVlcLogEntries();
+	m_impl->subsystemRuntime.mediaComponent->clearLibVlcLogEntries();
 }
 
 bool ofxVlc4::isWatchTimeEnabled() const {
-	return mediaComponent->isWatchTimeEnabled();
+	return m_impl->subsystemRuntime.mediaComponent->isWatchTimeEnabled();
 }
 
 void ofxVlc4::setWatchTimeEnabled(bool enabled) {
-	mediaComponent->setWatchTimeEnabled(enabled);
+	m_impl->subsystemRuntime.mediaComponent->setWatchTimeEnabled(enabled);
 }
 
 int64_t ofxVlc4::getWatchTimeMinPeriodUs() const {
-	return mediaComponent->getWatchTimeMinPeriodUs();
+	return m_impl->subsystemRuntime.mediaComponent->getWatchTimeMinPeriodUs();
 }
 
 void ofxVlc4::setWatchTimeMinPeriodUs(int64_t minPeriodUs) {
-	mediaComponent->setWatchTimeMinPeriodUs(minPeriodUs);
+	m_impl->subsystemRuntime.mediaComponent->setWatchTimeMinPeriodUs(minPeriodUs);
 }
 
 void ofxVlc4::clearWatchTimeState() {
-	mediaComponent->clearWatchTimeState();
+	m_impl->subsystemRuntime.mediaComponent->clearWatchTimeState();
 }
 
 ofxVlc4::WatchTimeInfo ofxVlc4::getWatchTimeInfo() const {
-	return mediaComponent->getWatchTimeInfo();
+	return m_impl->subsystemRuntime.mediaComponent->getWatchTimeInfo();
 }
 
 void ofxVlc4::setWatchTimeCallback(WatchTimeCallback callback) {
@@ -741,7 +741,7 @@ std::string ofxVlc4::formatPlaybackTimecode(int64_t timeUs, double fps) {
 }
 
 void ofxVlc4::applyWatchTimeObserver() {
-	mediaComponent->applyWatchTimeObserver();
+	m_impl->subsystemRuntime.mediaComponent->applyWatchTimeObserver();
 }
 
 void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data) {
@@ -861,15 +861,15 @@ bool ofxVlc4::postDialogLogin(
 	const std::string & username,
 	const std::string & password,
 	bool store) {
-	return mediaComponent->postDialogLogin(token, username, password, store);
+	return m_impl->subsystemRuntime.mediaComponent->postDialogLogin(token, username, password, store);
 }
 
 bool ofxVlc4::postDialogAction(std::uintptr_t token, int action) {
-	return mediaComponent->postDialogAction(token, action);
+	return m_impl->subsystemRuntime.mediaComponent->postDialogAction(token, action);
 }
 
 bool ofxVlc4::dismissDialog(std::uintptr_t token) {
-	return mediaComponent->dismissDialog(token);
+	return m_impl->subsystemRuntime.mediaComponent->dismissDialog(token);
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLoggingEnabledValue(bool enabled) {

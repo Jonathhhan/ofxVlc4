@@ -441,19 +441,19 @@ void ofxVlc4::MediaComponent::stopRendererDiscoveryInternal() {
 }
 
 void ofxVlc4::stopMediaDiscoveryInternal() {
-	mediaComponent->stopMediaDiscoveryInternal();
+	m_impl->subsystemRuntime.mediaComponent->stopMediaDiscoveryInternal();
 }
 
 void ofxVlc4::clearRendererItems() {
-	mediaComponent->clearRendererItems();
+	m_impl->subsystemRuntime.mediaComponent->clearRendererItems();
 }
 
 void ofxVlc4::stopRendererDiscoveryInternal() {
-	mediaComponent->stopRendererDiscoveryInternal();
+	m_impl->subsystemRuntime.mediaComponent->stopRendererDiscoveryInternal();
 }
 
 void ofxVlc4::refreshDiscoveredMediaItems() {
-	mediaComponent->refreshDiscoveredMediaItems();
+	m_impl->subsystemRuntime.mediaComponent->refreshDiscoveredMediaItems();
 }
 
 bool ofxVlc4::MediaComponent::applySelectedRenderer() {
@@ -495,51 +495,51 @@ bool ofxVlc4::MediaComponent::applySelectedRenderer() {
 }
 
 bool ofxVlc4::applySelectedRenderer() {
-	return mediaComponent->applySelectedRenderer();
+	return m_impl->subsystemRuntime.mediaComponent->applySelectedRenderer();
 }
 
 std::vector<ofxVlc4::MediaDiscovererInfo> ofxVlc4::getMediaDiscoverers(MediaDiscovererCategory category) const {
-	return mediaComponent->getMediaDiscoverers(category);
+	return m_impl->subsystemRuntime.mediaComponent->getMediaDiscoverers(category);
 }
 
 std::string ofxVlc4::getSelectedMediaDiscovererName() const {
-	return mediaComponent->getSelectedMediaDiscovererName();
+	return m_impl->subsystemRuntime.mediaComponent->getSelectedMediaDiscovererName();
 }
 
 ofxVlc4::MediaDiscoveryStateInfo ofxVlc4::getMediaDiscoveryState() const {
-	return mediaComponent->getMediaDiscoveryState();
+	return m_impl->subsystemRuntime.mediaComponent->getMediaDiscoveryState();
 }
 
 bool ofxVlc4::startMediaDiscovery(const std::string & discovererName) {
-	return mediaComponent->startMediaDiscovery(discovererName);
+	return m_impl->subsystemRuntime.mediaComponent->startMediaDiscovery(discovererName);
 }
 
 void ofxVlc4::stopMediaDiscovery() {
-	mediaComponent->stopMediaDiscovery();
+	m_impl->subsystemRuntime.mediaComponent->stopMediaDiscovery();
 }
 
 bool ofxVlc4::isMediaDiscoveryActive() const {
-	return mediaComponent->isMediaDiscoveryActive();
+	return m_impl->subsystemRuntime.mediaComponent->isMediaDiscoveryActive();
 }
 
 std::vector<ofxVlc4::DiscoveredMediaItemInfo> ofxVlc4::getDiscoveredMediaItems() const {
-	return mediaComponent->getDiscoveredMediaItems();
+	return m_impl->subsystemRuntime.mediaComponent->getDiscoveredMediaItems();
 }
 
 bool ofxVlc4::addDiscoveredMediaItemToPlaylist(int index) {
-	return mediaComponent->addDiscoveredMediaItemToPlaylist(index);
+	return m_impl->subsystemRuntime.mediaComponent->addDiscoveredMediaItemToPlaylist(index);
 }
 
 bool ofxVlc4::playDiscoveredMediaItem(int index) {
-	return mediaComponent->playDiscoveredMediaItem(index);
+	return m_impl->subsystemRuntime.mediaComponent->playDiscoveredMediaItem(index);
 }
 
 int ofxVlc4::addAllDiscoveredMediaItemsToPlaylist() {
-	return mediaComponent->addAllDiscoveredMediaItemsToPlaylist();
+	return m_impl->subsystemRuntime.mediaComponent->addAllDiscoveredMediaItemsToPlaylist();
 }
 
 std::vector<ofxVlc4::RendererDiscovererInfo> ofxVlc4::getRendererDiscoverers() const {
-	return mediaComponent->getRendererDiscoverers();
+	return m_impl->subsystemRuntime.mediaComponent->getRendererDiscoverers();
 }
 
 std::vector<ofxVlc4::RendererDiscovererInfo> ofxVlc4::MediaComponent::getRendererDiscoverers() const {
@@ -573,7 +573,7 @@ std::vector<ofxVlc4::RendererDiscovererInfo> ofxVlc4::MediaComponent::getRendere
 }
 
 std::string ofxVlc4::getSelectedRendererDiscovererName() const {
-	return mediaComponent->getSelectedRendererDiscovererName();
+	return m_impl->subsystemRuntime.mediaComponent->getSelectedRendererDiscovererName();
 }
 
 std::string ofxVlc4::MediaComponent::getSelectedRendererDiscovererName() const {
@@ -582,7 +582,7 @@ std::string ofxVlc4::MediaComponent::getSelectedRendererDiscovererName() const {
 }
 
 void ofxVlc4::resetRendererStateInfo() {
-	mediaComponent->resetRendererStateInfo();
+	m_impl->subsystemRuntime.mediaComponent->resetRendererStateInfo();
 }
 
 void ofxVlc4::MediaComponent::resetRendererStateInfo() {
@@ -591,7 +591,7 @@ void ofxVlc4::MediaComponent::resetRendererStateInfo() {
 }
 
 void ofxVlc4::refreshRendererStateInfo() {
-	mediaComponent->refreshRendererStateInfo();
+	m_impl->subsystemRuntime.mediaComponent->refreshRendererStateInfo();
 }
 
 ofxVlc4::MediaDiscoveryStateInfo ofxVlc4::MediaComponent::buildMediaDiscoveryStateInfoLocked() const {
@@ -733,7 +733,7 @@ void ofxVlc4::MediaComponent::refreshRendererStateInfo() {
 }
 
 ofxVlc4::RendererStateInfo ofxVlc4::getRendererStateInfo() const {
-	return mediaComponent->getRendererStateInfo();
+	return m_impl->subsystemRuntime.mediaComponent->getRendererStateInfo();
 }
 
 ofxVlc4::RendererStateInfo ofxVlc4::MediaComponent::getRendererStateInfo() const {
@@ -742,7 +742,7 @@ ofxVlc4::RendererStateInfo ofxVlc4::MediaComponent::getRendererStateInfo() const
 }
 
 bool ofxVlc4::startRendererDiscovery(const std::string & discovererName) {
-	return mediaComponent->startRendererDiscovery(discovererName);
+	return m_impl->subsystemRuntime.mediaComponent->startRendererDiscovery(discovererName);
 }
 
 bool ofxVlc4::MediaComponent::startRendererDiscovery(const std::string & discovererName) {
@@ -806,7 +806,7 @@ bool ofxVlc4::MediaComponent::startRendererDiscovery(const std::string & discove
 }
 
 void ofxVlc4::stopRendererDiscovery() {
-	mediaComponent->stopRendererDiscovery();
+	m_impl->subsystemRuntime.mediaComponent->stopRendererDiscovery();
 }
 
 void ofxVlc4::MediaComponent::stopRendererDiscovery() {
@@ -829,11 +829,11 @@ void ofxVlc4::MediaComponent::stopRendererDiscovery() {
 }
 
 bool ofxVlc4::isRendererDiscoveryActive() const {
-	return mediaComponent->isRendererDiscoveryActive();
+	return m_impl->subsystemRuntime.mediaComponent->isRendererDiscoveryActive();
 }
 
 std::vector<ofxVlc4::RendererInfo> ofxVlc4::getDiscoveredRenderers() const {
-	return mediaComponent->getDiscoveredRenderers();
+	return m_impl->subsystemRuntime.mediaComponent->getDiscoveredRenderers();
 }
 
 bool ofxVlc4::MediaComponent::isRendererDiscoveryActive() const {
@@ -979,15 +979,15 @@ void ofxVlc4::rendererDiscovererEventStatic(const libvlc_event_t * event, void *
 }
 
 void ofxVlc4::mediaDiscovererMediaListEvent(const libvlc_event_t * event) {
-	mediaComponent->mediaDiscovererMediaListEvent(event);
+	m_impl->subsystemRuntime.mediaComponent->mediaDiscovererMediaListEvent(event);
 }
 
 void ofxVlc4::rendererDiscovererEvent(const libvlc_event_t * event) {
-	mediaComponent->handleRendererDiscovererEvent(event);
+	m_impl->subsystemRuntime.mediaComponent->handleRendererDiscovererEvent(event);
 }
 
 std::string ofxVlc4::getSelectedRendererId() const {
-	return mediaComponent->getSelectedRendererId();
+	return m_impl->subsystemRuntime.mediaComponent->getSelectedRendererId();
 }
 
 std::string ofxVlc4::MediaComponent::getSelectedRendererId() const {
@@ -996,7 +996,7 @@ std::string ofxVlc4::MediaComponent::getSelectedRendererId() const {
 }
 
 bool ofxVlc4::selectRenderer(const std::string & rendererId) {
-	return mediaComponent->selectRenderer(rendererId);
+	return m_impl->subsystemRuntime.mediaComponent->selectRenderer(rendererId);
 }
 
 bool ofxVlc4::MediaComponent::selectRenderer(const std::string & rendererId) {
@@ -1036,7 +1036,7 @@ bool ofxVlc4::MediaComponent::selectRenderer(const std::string & rendererId) {
 }
 
 bool ofxVlc4::clearRenderer() {
-	return mediaComponent->clearRenderer();
+	return m_impl->subsystemRuntime.mediaComponent->clearRenderer();
 }
 
 bool ofxVlc4::MediaComponent::clearRenderer() {
