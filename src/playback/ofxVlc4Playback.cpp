@@ -1,19 +1,20 @@
 #include "ofxVlc4.h"
+#include "ofxVlc4Impl.h"
 #include "playback/PlaybackController.h"
 #include "support/ofxVlc4Utils.h"
 
 using ofxVlc4Utils::trimWhitespace;
 
 void ofxVlc4::playIndex(int index) {
-	playbackController->playIndex(index);
+	m_impl->subsystemRuntime.playbackController->playIndex(index);
 }
 
 void ofxVlc4::activatePlaylistIndex(int index, bool shouldPlay) {
-	playbackController->activatePlaylistIndex(index, shouldPlay);
+	m_impl->subsystemRuntime.playbackController->activatePlaylistIndex(index, shouldPlay);
 }
 
 void ofxVlc4::activatePlaylistIndexImmediate(int index, bool shouldPlay) {
-	playbackController->activatePlaylistIndexImmediate(index, shouldPlay);
+	m_impl->subsystemRuntime.playbackController->activatePlaylistIndexImmediate(index, shouldPlay);
 }
 
 bool ofxVlc4::activateDirectMediaImmediate(
@@ -23,7 +24,7 @@ bool ofxVlc4::activateDirectMediaImmediate(
 	bool shouldPlay,
 	bool parseAsNetwork,
 	const std::string & label) {
-	return playbackController->activateDirectMediaImmediate(
+	return m_impl->subsystemRuntime.playbackController->activateDirectMediaImmediate(
 		source, isLocation, options, shouldPlay, parseAsNetwork, label);
 }
 
@@ -34,7 +35,7 @@ bool ofxVlc4::requestDirectMediaActivation(
 	bool shouldPlay,
 	bool parseAsNetwork,
 	const std::string & label) {
-	return playbackController->requestDirectMediaActivation(
+	return m_impl->subsystemRuntime.playbackController->requestDirectMediaActivation(
 		source, isLocation, options, shouldPlay, parseAsNetwork, label);
 }
 
@@ -44,47 +45,47 @@ bool ofxVlc4::openDshowCapture(
 	int width,
 	int height,
 	float fps) {
-	return playbackController->openDshowCapture(videoDevice, audioDevice, width, height, fps);
+	return m_impl->subsystemRuntime.playbackController->openDshowCapture(videoDevice, audioDevice, width, height, fps);
 }
 
 bool ofxVlc4::openScreenCapture(int width, int height, float fps, int left, int top) {
-	return playbackController->openScreenCapture(width, height, fps, left, top);
+	return m_impl->subsystemRuntime.playbackController->openScreenCapture(width, height, fps, left, top);
 }
 
 void ofxVlc4::play() {
-	playbackController->play();
+	m_impl->subsystemRuntime.playbackController->play();
 }
 
 void ofxVlc4::pause() {
-	playbackController->pause();
+	m_impl->subsystemRuntime.playbackController->pause();
 }
 
 void ofxVlc4::stop() {
-	playbackController->stop();
+	m_impl->subsystemRuntime.playbackController->stop();
 }
 
 int ofxVlc4::getNextShuffleIndex() const {
-	return playbackController->getNextShuffleIndex();
+	return m_impl->subsystemRuntime.playbackController->getNextShuffleIndex();
 }
 
 void ofxVlc4::nextMediaListItem() {
-	playbackController->nextMediaListItem();
+	m_impl->subsystemRuntime.playbackController->nextMediaListItem();
 }
 
 void ofxVlc4::previousMediaListItem() {
-	playbackController->previousMediaListItem();
+	m_impl->subsystemRuntime.playbackController->previousMediaListItem();
 }
 
 void ofxVlc4::handlePlaybackEnded() {
-	playbackController->handlePlaybackEnded();
+	m_impl->subsystemRuntime.playbackController->handlePlaybackEnded();
 }
 
 void ofxVlc4::processDeferredPlaybackActions() {
-	playbackController->processDeferredPlaybackActions();
+	m_impl->subsystemRuntime.playbackController->processDeferredPlaybackActions();
 }
 
 void ofxVlc4::clearPendingActivationRequest() {
-	playbackController->clearPendingActivationRequest();
+	m_impl->subsystemRuntime.playbackController->clearPendingActivationRequest();
 }
 
 ofxVlc4::PlaybackMode ofxVlc4::playbackModeFromString(const std::string & mode) {
@@ -111,83 +112,83 @@ std::string ofxVlc4::playbackModeToString(PlaybackMode mode) {
 }
 
 void ofxVlc4::setPlaybackMode(PlaybackMode mode) {
-	playbackController->setPlaybackMode(mode);
+	m_impl->subsystemRuntime.playbackController->setPlaybackMode(mode);
 }
 
 void ofxVlc4::setPlaybackMode(const std::string & mode) {
-	playbackController->setPlaybackMode(mode);
+	m_impl->subsystemRuntime.playbackController->setPlaybackMode(mode);
 }
 
 std::string ofxVlc4::getPlaybackModeString() const {
-	return playbackController->getPlaybackModeString();
+	return m_impl->subsystemRuntime.playbackController->getPlaybackModeString();
 }
 
 ofxVlc4::PlaybackMode ofxVlc4::getPlaybackMode() const {
-	return playbackController->getPlaybackMode();
+	return m_impl->subsystemRuntime.playbackController->getPlaybackMode();
 }
 
 void ofxVlc4::setShuffleEnabled(bool enabled) {
-	playbackController->setShuffleEnabled(enabled);
+	m_impl->subsystemRuntime.playbackController->setShuffleEnabled(enabled);
 }
 
 bool ofxVlc4::isShuffleEnabled() const {
-	return playbackController->isShuffleEnabled();
+	return m_impl->subsystemRuntime.playbackController->isShuffleEnabled();
 }
 
 void ofxVlc4::setPosition(float pct) {
-	playbackController->setPosition(pct);
+	m_impl->subsystemRuntime.playbackController->setPosition(pct);
 }
 
 bool ofxVlc4::isPlaying() {
-	return playbackController->isPlaying();
+	return m_impl->subsystemRuntime.playbackController->isPlaying();
 }
 
 bool ofxVlc4::isStopped() const {
-	return playbackController->isStopped();
+	return m_impl->subsystemRuntime.playbackController->isStopped();
 }
 
 bool ofxVlc4::isPlaybackTransitioning() const {
-	return playbackController->isPlaybackTransitioning();
+	return m_impl->subsystemRuntime.playbackController->isPlaybackTransitioning();
 }
 
 bool ofxVlc4::isManualStopPending() const {
-	return playbackController->isManualStopPending();
+	return m_impl->subsystemRuntime.playbackController->isManualStopPending();
 }
 
 bool ofxVlc4::isPlaybackRestartPending() const {
-	return playbackController->isPlaybackRestartPending();
+	return m_impl->subsystemRuntime.playbackController->isPlaybackRestartPending();
 }
 
 bool ofxVlc4::isSeekable() const {
-	return playbackController->isSeekable();
+	return m_impl->subsystemRuntime.playbackController->isSeekable();
 }
 
 float ofxVlc4::getBufferCache() const {
-	return playbackController->getBufferCache();
+	return m_impl->subsystemRuntime.playbackController->getBufferCache();
 }
 
 bool ofxVlc4::isCorked() const {
-	return playbackController->isCorked();
+	return m_impl->subsystemRuntime.playbackController->isCorked();
 }
 
 float ofxVlc4::getPosition() const {
-	return playbackController->getPosition();
+	return m_impl->subsystemRuntime.playbackController->getPosition();
 }
 
 int ofxVlc4::getTime() const {
-	return playbackController->getTime();
+	return m_impl->subsystemRuntime.playbackController->getTime();
 }
 
 void ofxVlc4::setTime(int ms) {
-	playbackController->setTime(ms);
+	m_impl->subsystemRuntime.playbackController->setTime(ms);
 }
 
 void ofxVlc4::jumpTime(int ms) {
-	playbackController->jumpTime(ms);
+	m_impl->subsystemRuntime.playbackController->jumpTime(ms);
 }
 
 float ofxVlc4::getLength() const {
-	return playbackController->getLength();
+	return m_impl->subsystemRuntime.playbackController->getLength();
 }
 
 void ofxVlc4::vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * data) {
@@ -195,7 +196,7 @@ void ofxVlc4::vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * dat
 }
 
 void ofxVlc4::vlcMediaPlayerEvent(const libvlc_event_t * event) {
-	playbackController->handleMediaPlayerEvent(event);
+	m_impl->subsystemRuntime.playbackController->handleMediaPlayerEvent(event);
 }
 
 
