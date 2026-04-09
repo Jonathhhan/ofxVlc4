@@ -692,34 +692,30 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 
 	clearCurrentMedia();
 
-	owner.m_impl->legacyCoreMirrorRuntime.media = isLocation
+	owner.m_impl->subsystemRuntime.coreSession->setMedia(isLocation
 		? libvlc_media_new_location(source.c_str())
-		: libvlc_media_new_path(source.c_str());
-	if (!owner.m_impl->legacyCoreMirrorRuntime.media) {
+		: libvlc_media_new_path(source.c_str()));
+	if (!owner.m_impl->subsystemRuntime.coreSession->media()) {
 		owner.setError("Failed to create media source.");
 		return false;
 	}
-	owner.m_impl->subsystemRuntime.coreSession->setMedia(owner.m_impl->legacyCoreMirrorRuntime.media);
-	owner.syncLegacyStateFromCoreSession();
 
 	for (const auto & option : options) {
 		const std::string trimmedOption = trimWhitespace(option);
 		if (!trimmedOption.empty()) {
-			libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, trimmedOption.c_str());
+			libvlc_media_add_option(owner.m_impl->subsystemRuntime.coreSession->media(), trimmedOption.c_str());
 		}
 	}
 
 	if (!owner.m_impl->playerConfigRuntime.audioFilterChain.empty()) {
-		libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, (":audio-filter=" + owner.m_impl->playerConfigRuntime.audioFilterChain).c_str());
+		libvlc_media_add_option(owner.m_impl->subsystemRuntime.coreSession->media(), (":audio-filter=" + owner.m_impl->playerConfigRuntime.audioFilterChain).c_str());
 	}
 	if (!owner.m_impl->playerConfigRuntime.videoFilterChain.empty() && owner.canApplyNativeVideoFilters()) {
-		libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, (":video-filter=" + owner.m_impl->playerConfigRuntime.videoFilterChain).c_str());
+		libvlc_media_add_option(owner.m_impl->subsystemRuntime.coreSession->media(), (":video-filter=" + owner.m_impl->playerConfigRuntime.videoFilterChain).c_str());
 	}
 
-	owner.m_impl->legacyCoreMirrorRuntime.mediaEventManager = libvlc_media_event_manager(owner.m_impl->legacyCoreMirrorRuntime.media);
-	owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(owner.m_impl->legacyCoreMirrorRuntime.mediaEventManager);
-	owner.syncLegacyStateFromCoreSession();
-	if (owner.m_impl->legacyCoreMirrorRuntime.mediaEventManager && owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
+	owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(libvlc_media_event_manager(owner.m_impl->subsystemRuntime.coreSession->media()));
+	if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.coreSession->mediaEvents() && owner.m_impl->subsystemRuntime.eventRouter) {
 		owner.m_impl->subsystemRuntime.coreSession->attachMediaEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
 	}
 
@@ -729,19 +725,19 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 			parseFlags |
 			(parseAsNetwork ? libvlc_media_parse_network : libvlc_media_parse_local) |
 			libvlc_media_do_interact);
-		if (libvlc_media_parse_request(instance, owner.m_impl->legacyCoreMirrorRuntime.media, parseFlags, 1000) != 0) {
+		if (libvlc_media_parse_request(instance, owner.m_impl->subsystemRuntime.coreSession->media(), parseFlags, 1000) != 0) {
 			owner.logNotice("Media parse request failed: " + source);
 		}
 	}
 
-	libvlc_media_player_set_media(player, owner.m_impl->legacyCoreMirrorRuntime.media);
+	libvlc_media_player_set_media(player, owner.m_impl->subsystemRuntime.coreSession->media());
 	applySafeLoadedMediaPlayerSettings();
 	prepareStartupMediaResources();
 	return true;
 }
 
 bool ofxVlc4::MediaComponent::loadMediaAtIndex(int index) {
-	if (!owner.m_impl->legacyCoreMirrorRuntime.mediaPlayer) {
+	if (!owner.m_impl->subsystemRuntime.coreSession->player()) {
 		return false;
 	}
 	if (index < 0 || index >= static_cast<int>(mediaLibrary().getPlaylistSize())) {
@@ -766,21 +762,17 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 		libvlc_media_player_set_media(player, nullptr);
 	}
 
-	if (owner.m_impl->legacyCoreMirrorRuntime.mediaEventManager) {
+	if (owner.m_impl->subsystemRuntime.coreSession->mediaEvents()) {
 		if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
 			owner.m_impl->subsystemRuntime.coreSession->detachMediaEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
-			owner.syncLegacyStateFromCoreSession();
 		} else {
-			owner.m_impl->legacyCoreMirrorRuntime.mediaEventManager = nullptr;
+			owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(nullptr);
 		}
 	}
 
 	if (currentMedia) {
 		libvlc_media_release(currentMedia);
-		owner.m_impl->legacyCoreMirrorRuntime.media = nullptr;
-		if (owner.m_impl->subsystemRuntime.coreSession) {
-			owner.m_impl->subsystemRuntime.coreSession->setMedia(nullptr);
-		}
+		owner.m_impl->subsystemRuntime.coreSession->setMedia(nullptr);
 	}
 
 	{
@@ -817,7 +809,6 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 	owner.m_impl->stateCacheRuntime.cachedVideoTrackFps.store(0.0);
 	resetSubtitleStateInfo();
 	resetNavigationStateInfo();
-	owner.syncLegacyStateFromCoreSession();
 }
 
 void ofxVlc4::MediaComponent::applyNativeRecording() {
@@ -1008,7 +999,7 @@ void ofxVlc4::MediaComponent::clearLastDialogError() {
 }
 
 bool ofxVlc4::MediaComponent::isLibVlcLoggingEnabled() const {
-	return owner.m_impl->subsystemRuntime.coreSession ? owner.m_impl->subsystemRuntime.coreSession->loggingEnabled() : owner.m_impl->diagnosticsRuntime.libVlcLoggingEnabled;
+	return owner.m_impl->subsystemRuntime.coreSession->loggingEnabled();
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLoggingEnabled(bool enabled) {
@@ -1017,7 +1008,6 @@ void ofxVlc4::MediaComponent::setLibVlcLoggingEnabled(bool enabled) {
 	}
 
 	setLibVlcLoggingEnabledValue(enabled);
-	owner.syncLegacyStateFromCoreSession();
 	if (owner.sessionInstance()) {
 		applyLibVlcLogging();
 	}
@@ -1025,11 +1015,11 @@ void ofxVlc4::MediaComponent::setLibVlcLoggingEnabled(bool enabled) {
 }
 
 bool ofxVlc4::MediaComponent::isLibVlcLogFileEnabled() const {
-	return owner.m_impl->subsystemRuntime.coreSession ? owner.m_impl->subsystemRuntime.coreSession->logFileEnabled() : owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled;
+	return owner.m_impl->subsystemRuntime.coreSession->logFileEnabled();
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLogFileEnabled(bool enabled) {
-	std::string resolvedPath = owner.m_impl->subsystemRuntime.coreSession ? owner.m_impl->subsystemRuntime.coreSession->logFilePath() : owner.m_impl->diagnosticsRuntime.libVlcLogFilePath;
+	std::string resolvedPath = owner.m_impl->subsystemRuntime.coreSession->logFilePath();
 	if (enabled && !hasLibVlcLogFilePath(resolvedPath)) {
 		resolvedPath = defaultLibVlcLogFilePath();
 		setLibVlcLogFilePathValue(resolvedPath);
@@ -1046,7 +1036,6 @@ void ofxVlc4::MediaComponent::setLibVlcLogFileEnabled(bool enabled) {
 	}
 
 	setLibVlcLogFileEnabledValue(enabled);
-	owner.syncLegacyStateFromCoreSession();
 	if (owner.sessionInstance()) {
 		applyLibVlcLogging();
 	}
@@ -1057,7 +1046,7 @@ void ofxVlc4::MediaComponent::setLibVlcLogFileEnabled(bool enabled) {
 }
 
 std::string ofxVlc4::MediaComponent::getLibVlcLogFilePath() const {
-	return owner.m_impl->subsystemRuntime.coreSession ? owner.m_impl->subsystemRuntime.coreSession->logFilePath() : owner.m_impl->diagnosticsRuntime.libVlcLogFilePath;
+	return owner.m_impl->subsystemRuntime.coreSession->logFilePath();
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLogFilePath(const std::string & path) {
@@ -1068,21 +1057,16 @@ void ofxVlc4::MediaComponent::setLibVlcLogFilePath(const std::string & path) {
 
 	const bool wasFileLoggingEnabled = isLibVlcLogFileEnabled();
 	setLibVlcLogFilePathValue(normalizedPath);
-	if (owner.m_impl->diagnosticsRuntime.libVlcLogFilePath.empty()) {
+	if (owner.m_impl->subsystemRuntime.coreSession->logFilePath().empty()) {
 		setLibVlcLogFileEnabledValue(false);
 	}
-	owner.syncLegacyStateFromCoreSession();
-	if ((wasFileLoggingEnabled || owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled) && owner.sessionInstance()) {
+	if ((wasFileLoggingEnabled || owner.m_impl->subsystemRuntime.coreSession->logFileEnabled()) && owner.sessionInstance()) {
 		applyLibVlcLogging();
 	}
 }
 
 std::vector<ofxVlc4::LibVlcLogEntry> ofxVlc4::MediaComponent::getLibVlcLogEntries() const {
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.libVlcLogMutex);
-	if (!owner.m_impl->subsystemRuntime.coreSession) {
-		return owner.m_impl->diagnosticsRuntime.libVlcLogEntries;
-	}
-
 	std::vector<LibVlcLogEntry> entries;
 	entries.reserve(owner.m_impl->subsystemRuntime.coreSession->logEntries().size());
 	for (const VlcCoreLogEntry & entry : owner.m_impl->subsystemRuntime.coreSession->logEntries()) {
@@ -1093,22 +1077,10 @@ std::vector<ofxVlc4::LibVlcLogEntry> ofxVlc4::MediaComponent::getLibVlcLogEntrie
 
 void ofxVlc4::MediaComponent::clearLibVlcLogEntries() {
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.libVlcLogMutex);
-	owner.m_impl->diagnosticsRuntime.libVlcLogEntries.clear();
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->clearLogEntries();
-	}
+	owner.m_impl->subsystemRuntime.coreSession->clearLogEntries();
 }
 
 void ofxVlc4::MediaComponent::applyLibVlcLogging() {
-	if (!owner.m_impl->subsystemRuntime.coreSession) {
-		return;
-	}
-
-	setLibVlcLoggingEnabledValue(owner.m_impl->diagnosticsRuntime.libVlcLoggingEnabled);
-	setLibVlcLogFileEnabledValue(owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled);
-	setLibVlcLogFilePathValue(owner.m_impl->diagnosticsRuntime.libVlcLogFilePath);
-	owner.syncLegacyStateFromCoreSession();
-
 	if (!owner.sessionInstance()) {
 		return;
 	}
@@ -1117,12 +1089,12 @@ void ofxVlc4::MediaComponent::applyLibVlcLogging() {
 	closeLibVlcLogFile();
 
 	const auto applyBufferedLoggingFallback = [this]() {
-		if (owner.m_impl->diagnosticsRuntime.libVlcLoggingEnabled) {
+		if (owner.m_impl->subsystemRuntime.coreSession->loggingEnabled()) {
 			libvlc_log_set(owner.sessionInstance(), ofxVlc4::libVlcLogStatic, &owner);
 		}
 	};
 
-	if (owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled) {
+	if (owner.m_impl->subsystemRuntime.coreSession->logFileEnabled()) {
 		const std::string normalizedPath = normalizeOptionalPath(owner.m_impl->subsystemRuntime.coreSession->logFilePath());
 		if (normalizedPath.empty()) {
 			ofxVlc4::logWarning("libVLC file logging enabled without a log path.");
@@ -1142,22 +1114,22 @@ void ofxVlc4::MediaComponent::applyLibVlcLogging() {
 			}
 		}
 
+		FILE * logFile = nullptr;
 #ifdef _MSC_VER
-		if (fopen_s(&owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle, normalizedPath.c_str(), "ab") != 0) {
-			owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle = nullptr;
+		if (fopen_s(&logFile, normalizedPath.c_str(), "ab") != 0) {
+			logFile = nullptr;
 		}
 #else
-		owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle = std::fopen(normalizedPath.c_str(), "ab");
+		logFile = std::fopen(normalizedPath.c_str(), "ab");
 #endif
-		if (!owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle) {
+		if (!logFile) {
 			ofxVlc4::logWarning("Failed to open libVLC log file: " + normalizedPath);
 			applyBufferedLoggingFallback();
 			return;
 		}
 
-		owner.m_impl->subsystemRuntime.coreSession->setLogFileHandle(owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle);
-		owner.syncLegacyStateFromCoreSession();
-		libvlc_log_set_file(owner.sessionInstance(), owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle);
+		owner.m_impl->subsystemRuntime.coreSession->setLogFileHandle(logFile);
+		libvlc_log_set_file(owner.sessionInstance(), owner.m_impl->subsystemRuntime.coreSession->logFileHandle());
 		return;
 	}
 
@@ -1165,17 +1137,7 @@ void ofxVlc4::MediaComponent::applyLibVlcLogging() {
 }
 
 void ofxVlc4::MediaComponent::closeLibVlcLogFile() {
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->closeLogFile();
-		owner.syncLegacyStateFromCoreSession();
-		return;
-	}
-
-	if (owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle) {
-		std::fflush(owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle);
-		std::fclose(owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle);
-		owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle = nullptr;
-	}
+	owner.m_impl->subsystemRuntime.coreSession->closeLogFile();
 }
 
 void ofxVlc4::MediaComponent::appendLibVlcLog(const LibVlcLogEntry & entry) {
@@ -1186,26 +1148,16 @@ void ofxVlc4::MediaComponent::appendLibVlcLog(const LibVlcLogEntry & entry) {
 	const std::string friendlyError = mapLibVlcLogToFriendlyError(entry.message);
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.libVlcLogMutex);
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		VlcCoreLogEntry coreEntry;
-		coreEntry.level = entry.level;
-		coreEntry.module = entry.module;
-		coreEntry.file = entry.file;
-		coreEntry.line = entry.line;
-		coreEntry.objectName = entry.objectName;
-		coreEntry.objectHeader = entry.objectHeader;
-		coreEntry.objectId = entry.objectId;
-		coreEntry.message = entry.message;
-		owner.m_impl->subsystemRuntime.coreSession->appendLog(coreEntry);
-	} else {
-		if (owner.m_impl->diagnosticsRuntime.libVlcLogEntries.size() >= kLibVlcLogCapacity) {
-			const size_t overflow = owner.m_impl->diagnosticsRuntime.libVlcLogEntries.size() - kLibVlcLogCapacity + 1;
-			owner.m_impl->diagnosticsRuntime.libVlcLogEntries.erase(
-				owner.m_impl->diagnosticsRuntime.libVlcLogEntries.begin(),
-				owner.m_impl->diagnosticsRuntime.libVlcLogEntries.begin() + overflow);
-		}
-		owner.m_impl->diagnosticsRuntime.libVlcLogEntries.push_back(entry);
-	}
+	VlcCoreLogEntry coreEntry;
+	coreEntry.level = entry.level;
+	coreEntry.module = entry.module;
+	coreEntry.file = entry.file;
+	coreEntry.line = entry.line;
+	coreEntry.objectName = entry.objectName;
+	coreEntry.objectHeader = entry.objectHeader;
+	coreEntry.objectId = entry.objectId;
+	coreEntry.message = entry.message;
+	owner.m_impl->subsystemRuntime.coreSession->appendLog(coreEntry);
 
 	if (!friendlyError.empty() && owner.m_impl->diagnosticsRuntime.lastErrorMessage != friendlyError) {
 		owner.m_impl->diagnosticsRuntime.lastErrorMessage = friendlyError;
@@ -1586,49 +1538,41 @@ std::vector<ofxVlc4::DiscoveredMediaItemInfo> ofxVlc4::MediaComponent::getDiscov
 }
 
 void ofxVlc4::MediaComponent::stopMediaDiscoveryInternal() {
-	if (owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager) {
+	if (owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererListEvents()) {
 		if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
 			owner.m_impl->subsystemRuntime.coreSession->detachMediaDiscovererListEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::mediaDiscovererMediaListEventStatic);
-			owner.syncLegacyStateFromCoreSession();
 		} else {
-			owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager = nullptr;
+			owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererListEvents(nullptr);
 		}
 	}
 
-	if (owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList) {
-		libvlc_media_list_release(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList);
-		owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList = nullptr;
-		if (owner.m_impl->subsystemRuntime.coreSession) {
-			owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererList(nullptr);
-		}
+	if (owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList()) {
+		libvlc_media_list_release(owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList());
+		owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererList(nullptr);
 	}
 
-	if (owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer) {
-		libvlc_media_discoverer_stop(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer);
-		libvlc_media_discoverer_release(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer);
-		owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer = nullptr;
-		if (owner.m_impl->subsystemRuntime.coreSession) {
-			owner.m_impl->subsystemRuntime.coreSession->setMediaDiscoverer(nullptr);
-		}
+	if (owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer()) {
+		libvlc_media_discoverer_stop(owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer());
+		libvlc_media_discoverer_release(owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer());
+		owner.m_impl->subsystemRuntime.coreSession->setMediaDiscoverer(nullptr);
 	}
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.mediaDiscovererMutex);
 	clearMediaDiscoveryStateLocked();
-	owner.syncLegacyStateFromCoreSession();
 }
 
 void ofxVlc4::MediaComponent::refreshDiscoveredMediaItems() {
 	std::vector<DiscoveredMediaItemInfo> refreshedItems;
 	std::set<std::string> seenKeys;
-	if (owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList) {
-		libvlc_media_list_lock(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList);
-		const int itemCount = libvlc_media_list_count(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList);
+	if (owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList()) {
+		libvlc_media_list_lock(owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList());
+		const int itemCount = libvlc_media_list_count(owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList());
 		if (itemCount > 0) {
 			refreshedItems.reserve(static_cast<size_t>(itemCount));
 		}
 
 		for (int itemIndex = 0; itemIndex < itemCount; ++itemIndex) {
-			libvlc_media_t * item = libvlc_media_list_item_at_index(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList, itemIndex);
+			libvlc_media_t * item = libvlc_media_list_item_at_index(owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList(), itemIndex);
 			if (!item) {
 				continue;
 			}
@@ -1656,7 +1600,7 @@ void ofxVlc4::MediaComponent::refreshDiscoveredMediaItems() {
 			refreshedItems.push_back(std::move(info));
 			libvlc_media_release(item);
 		}
-		libvlc_media_list_unlock(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList);
+		libvlc_media_list_unlock(owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList());
 	}
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.mediaDiscovererMutex);
@@ -1676,37 +1620,33 @@ bool ofxVlc4::MediaComponent::startMediaDiscovery(const std::string & discoverer
 		return false;
 	}
 
-	if (owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer && owner.m_impl->mediaDiscoveryRuntime.discovererName == trimmedName) {
+	if (owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer() && owner.m_impl->mediaDiscoveryRuntime.discovererName == trimmedName) {
 		return true;
 	}
 
 	stopMediaDiscoveryInternal();
 
-	owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer = libvlc_media_discoverer_new(instance, trimmedName.c_str());
-	owner.m_impl->subsystemRuntime.coreSession->setMediaDiscoverer(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer);
-	if (!owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer) {
+	owner.m_impl->subsystemRuntime.coreSession->setMediaDiscoverer(libvlc_media_discoverer_new(instance, trimmedName.c_str()));
+	if (!owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer()) {
 		owner.setError("Media discovery could not be created.");
 		return false;
 	}
 
-	owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList = libvlc_media_discoverer_media_list(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer);
-	owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererList(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList);
-	if (!owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList) {
+	owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererList(libvlc_media_discoverer_media_list(owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer()));
+	if (!owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList()) {
 		stopMediaDiscoveryInternal();
 		owner.setError("Media discovery list is unavailable.");
 		return false;
 	}
 
-	owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager = libvlc_media_list_event_manager(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList);
-	if (owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager) {
-		owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererListEvents(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager);
+	owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererListEvents(libvlc_media_list_event_manager(owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList()));
+	if (owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererListEvents()) {
 		if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
 			owner.m_impl->subsystemRuntime.coreSession->attachMediaDiscovererListEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::mediaDiscovererMediaListEventStatic);
-			owner.syncLegacyStateFromCoreSession();
 		}
 	}
 
-	if (libvlc_media_discoverer_start(owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer) != 0) {
+	if (libvlc_media_discoverer_start(owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer()) != 0) {
 		stopMediaDiscoveryInternal();
 		owner.setError("Media discovery could not be started.");
 		return false;
@@ -1746,7 +1686,7 @@ bool ofxVlc4::MediaComponent::startMediaDiscovery(const std::string & discoverer
 }
 
 void ofxVlc4::MediaComponent::stopMediaDiscovery() {
-	if (!owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer && owner.m_impl->mediaDiscoveryRuntime.discovererName.empty()) {
+	if (!owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer() && owner.m_impl->mediaDiscoveryRuntime.discovererName.empty()) {
 		return;
 	}
 
@@ -1756,7 +1696,7 @@ void ofxVlc4::MediaComponent::stopMediaDiscovery() {
 }
 
 bool ofxVlc4::MediaComponent::isMediaDiscoveryActive() const {
-	return owner.m_impl->legacyCoreMirrorRuntime.mediaDiscoverer != nullptr;
+	return owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer() != nullptr;
 }
 
 bool ofxVlc4::MediaComponent::addDiscoveredMediaItemToPlaylist(int index) {
@@ -2332,7 +2272,6 @@ void ofxVlc4::detachEvents() {
 	if (mediaPlayerEventManager) {
 		if (coreSession && eventRouter) {
 			coreSession->detachPlayerEvents(eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
-			syncLegacyStateFromCoreSession();
 		} else {
 			mediaPlayerEventManager = nullptr;
 		}
@@ -2341,7 +2280,6 @@ void ofxVlc4::detachEvents() {
 	if (mediaEventManager) {
 		if (coreSession && eventRouter) {
 			coreSession->detachMediaEvents(eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
-			syncLegacyStateFromCoreSession();
 		} else {
 			mediaEventManager = nullptr;
 		}
@@ -2360,26 +2298,21 @@ void ofxVlc4::MediaComponent::clearRendererItems() {
 }
 
 void ofxVlc4::MediaComponent::stopRendererDiscoveryInternal() {
-	if (owner.m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager) {
+	if (owner.m_impl->subsystemRuntime.coreSession->rendererDiscovererEvents()) {
 		if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
 			owner.m_impl->subsystemRuntime.coreSession->detachRendererEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::rendererDiscovererEventStatic);
-			owner.syncLegacyStateFromCoreSession();
 		} else {
-			owner.m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager = nullptr;
+			owner.m_impl->subsystemRuntime.coreSession->setRendererDiscovererEvents(nullptr);
 		}
 	}
 
-	if (owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer) {
-		libvlc_renderer_discoverer_stop(owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer);
-		libvlc_renderer_discoverer_release(owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer);
-		owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer = nullptr;
-		if (owner.m_impl->subsystemRuntime.coreSession) {
-			owner.m_impl->subsystemRuntime.coreSession->setRendererDiscoverer(nullptr);
-		}
+	if (owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer()) {
+		libvlc_renderer_discoverer_stop(owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer());
+		libvlc_renderer_discoverer_release(owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer());
+		owner.m_impl->subsystemRuntime.coreSession->setRendererDiscoverer(nullptr);
 	}
 
 	clearRendererItems();
-	owner.syncLegacyStateFromCoreSession();
 }
 
 void ofxVlc4::stopMediaDiscoveryInternal() {
@@ -2630,24 +2563,15 @@ void ofxVlc4::MediaComponent::setDiscoveredMediaItemsLocked(std::vector<Discover
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLoggingEnabledValue(bool enabled) {
-	owner.m_impl->diagnosticsRuntime.libVlcLoggingEnabled = enabled;
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->setLoggingEnabled(enabled);
-	}
+	owner.m_impl->subsystemRuntime.coreSession->setLoggingEnabled(enabled);
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLogFileEnabledValue(bool enabled) {
-	owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled = enabled;
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->setLogFileEnabled(enabled);
-	}
+	owner.m_impl->subsystemRuntime.coreSession->setLogFileEnabled(enabled);
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLogFilePathValue(const std::string & path) {
-	owner.m_impl->diagnosticsRuntime.libVlcLogFilePath = path;
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->setLogFilePath(path);
-	}
+	owner.m_impl->subsystemRuntime.coreSession->setLogFilePath(path);
 }
 
 void ofxVlc4::MediaComponent::setNativeRecordingEnabledValue(bool enabled) {
@@ -2673,7 +2597,7 @@ const ofxVlc4::RendererItemEntry * ofxVlc4::MediaComponent::findRendererEntryByI
 
 ofxVlc4::RendererStateInfo ofxVlc4::MediaComponent::buildRendererStateInfoLocked() const {
 	RendererStateInfo info;
-	info.discoveryActive = owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer != nullptr;
+	info.discoveryActive = owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer() != nullptr;
 	info.discovererName = owner.m_impl->rendererDiscoveryRuntime.discovererName;
 	info.discoveredRendererCount = owner.m_impl->rendererDiscoveryRuntime.discoveredRenderers.size();
 	info.requestedRendererId = owner.m_impl->rendererDiscoveryRuntime.selectedRendererId;
@@ -3132,7 +3056,7 @@ bool ofxVlc4::MediaComponent::startRendererDiscovery(const std::string & discove
 		return false;
 	}
 
-	if (owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer && getSelectedRendererDiscovererName() == trimmedName) {
+	if (owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer() && getSelectedRendererDiscovererName() == trimmedName) {
 		refreshRendererStateInfo();
 		return true;
 	}
@@ -3149,23 +3073,20 @@ bool ofxVlc4::MediaComponent::startRendererDiscovery(const std::string & discove
 
 	stopRendererDiscoveryInternal();
 
-	owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer = libvlc_renderer_discoverer_new(instance, trimmedName.c_str());
-	owner.m_impl->subsystemRuntime.coreSession->setRendererDiscoverer(owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer);
-	if (!owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer) {
+	owner.m_impl->subsystemRuntime.coreSession->setRendererDiscoverer(libvlc_renderer_discoverer_new(instance, trimmedName.c_str()));
+	if (!owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer()) {
 		owner.setError("Renderer discovery could not be created.");
 		return false;
 	}
 
-	owner.m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager = libvlc_renderer_discoverer_event_manager(owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer);
-	if (owner.m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager) {
-		owner.m_impl->subsystemRuntime.coreSession->setRendererDiscovererEvents(owner.m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager);
+	owner.m_impl->subsystemRuntime.coreSession->setRendererDiscovererEvents(libvlc_renderer_discoverer_event_manager(owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer()));
+	if (owner.m_impl->subsystemRuntime.coreSession->rendererDiscovererEvents()) {
 		if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
 			owner.m_impl->subsystemRuntime.coreSession->attachRendererEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::rendererDiscovererEventStatic);
-			owner.syncLegacyStateFromCoreSession();
 		}
 	}
 
-	if (libvlc_renderer_discoverer_start(owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer) != 0) {
+	if (libvlc_renderer_discoverer_start(owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer()) != 0) {
 		stopRendererDiscoveryInternal();
 		refreshRendererStateInfo();
 		owner.setError("Renderer discovery could not be started.");
@@ -3187,7 +3108,7 @@ void ofxVlc4::stopRendererDiscovery() {
 }
 
 void ofxVlc4::MediaComponent::stopRendererDiscovery() {
-	if (!owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer && getSelectedRendererDiscovererName().empty()) {
+	if (!owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer() && getSelectedRendererDiscovererName().empty()) {
 		return;
 	}
 
@@ -3214,7 +3135,7 @@ std::vector<ofxVlc4::RendererInfo> ofxVlc4::getDiscoveredRenderers() const {
 }
 
 bool ofxVlc4::MediaComponent::isRendererDiscoveryActive() const {
-	return owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer != nullptr;
+	return owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer() != nullptr;
 }
 
 std::vector<ofxVlc4::RendererInfo> ofxVlc4::MediaComponent::getDiscoveredRenderers() const {

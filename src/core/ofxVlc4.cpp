@@ -208,58 +208,17 @@ void logMultilineNotice(const std::string & text) {
 
 }
 
-void ofxVlc4::syncCoreSessionStateFromLegacy() {
-	if (!m_impl->subsystemRuntime.coreSession) {
-		return;
-	}
-
-	m_impl->subsystemRuntime.coreSession->setInstance(m_impl->legacyCoreMirrorRuntime.libvlc);
-	m_impl->subsystemRuntime.coreSession->setMedia(m_impl->legacyCoreMirrorRuntime.media);
-	m_impl->subsystemRuntime.coreSession->setPlayer(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
-	m_impl->subsystemRuntime.coreSession->setPlayerEvents(m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager);
-	m_impl->subsystemRuntime.coreSession->setMediaEvents(m_impl->legacyCoreMirrorRuntime.mediaEventManager);
-	m_impl->subsystemRuntime.coreSession->setMediaDiscoverer(m_impl->legacyCoreMirrorRuntime.mediaDiscoverer);
-	m_impl->subsystemRuntime.coreSession->setMediaDiscovererList(m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList);
-	m_impl->subsystemRuntime.coreSession->setMediaDiscovererListEvents(m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager);
-	m_impl->subsystemRuntime.coreSession->setRendererDiscoverer(m_impl->legacyCoreMirrorRuntime.rendererDiscoverer);
-	m_impl->subsystemRuntime.coreSession->setRendererDiscovererEvents(m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager);
-	m_impl->subsystemRuntime.coreSession->setLoggingEnabled(m_impl->diagnosticsRuntime.libVlcLoggingEnabled);
-	m_impl->subsystemRuntime.coreSession->setLogFileEnabled(m_impl->diagnosticsRuntime.libVlcLogFileEnabled);
-	m_impl->subsystemRuntime.coreSession->setLogFilePath(m_impl->diagnosticsRuntime.libVlcLogFilePath);
-	m_impl->subsystemRuntime.coreSession->setLogFileHandle(m_impl->diagnosticsRuntime.libVlcLogFileHandle);
-}
-
-void ofxVlc4::syncLegacyStateFromCoreSession() {
-	if (!m_impl->subsystemRuntime.coreSession) {
-		return;
-	}
-
-	m_impl->legacyCoreMirrorRuntime.libvlc = m_impl->subsystemRuntime.coreSession->instance();
-	m_impl->legacyCoreMirrorRuntime.media = m_impl->subsystemRuntime.coreSession->media();
-	m_impl->legacyCoreMirrorRuntime.mediaPlayer = m_impl->subsystemRuntime.coreSession->player();
-	m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager = m_impl->subsystemRuntime.coreSession->playerEvents();
-	m_impl->legacyCoreMirrorRuntime.mediaEventManager = m_impl->subsystemRuntime.coreSession->mediaEvents();
-	m_impl->legacyCoreMirrorRuntime.mediaDiscoverer = m_impl->subsystemRuntime.coreSession->mediaDiscoverer();
-	m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaList = m_impl->subsystemRuntime.coreSession->mediaDiscovererList();
-	m_impl->legacyCoreMirrorRuntime.mediaDiscovererMediaListEventManager = m_impl->subsystemRuntime.coreSession->mediaDiscovererListEvents();
-	m_impl->legacyCoreMirrorRuntime.rendererDiscoverer = m_impl->subsystemRuntime.coreSession->rendererDiscoverer();
-	m_impl->legacyCoreMirrorRuntime.rendererDiscovererEventManager = m_impl->subsystemRuntime.coreSession->rendererDiscovererEvents();
-	m_impl->diagnosticsRuntime.libVlcLoggingEnabled = m_impl->subsystemRuntime.coreSession->loggingEnabled();
-	m_impl->diagnosticsRuntime.libVlcLogFileEnabled = m_impl->subsystemRuntime.coreSession->logFileEnabled();
-	m_impl->diagnosticsRuntime.libVlcLogFilePath = m_impl->subsystemRuntime.coreSession->logFilePath();
-	m_impl->diagnosticsRuntime.libVlcLogFileHandle = m_impl->subsystemRuntime.coreSession->logFileHandle();
-}
 
 libvlc_instance_t * ofxVlc4::sessionInstance() const {
-	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->instance() : m_impl->legacyCoreMirrorRuntime.libvlc;
+	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->instance() : nullptr;
 }
 
 libvlc_media_t * ofxVlc4::sessionMedia() const {
-	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->media() : m_impl->legacyCoreMirrorRuntime.media;
+	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->media() : nullptr;
 }
 
 libvlc_media_player_t * ofxVlc4::sessionPlayer() const {
-	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->player() : m_impl->legacyCoreMirrorRuntime.mediaPlayer;
+	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->player() : nullptr;
 }
 
 
@@ -302,7 +261,6 @@ ofxVlc4::ofxVlc4()
 	m_impl->subsystemRuntime.mediaLibraryController = std::make_unique<MediaLibrary>(*this);
 	m_impl->subsystemRuntime.coreSession = std::make_unique<VlcCoreSession>();
 	m_impl->subsystemRuntime.eventRouter = std::make_unique<VlcEventRouter>(*this);
-	syncLegacyStateFromCoreSession();
 	m_impl->effectsRuntime.equalizerBandAmps.assign(libvlc_audio_equalizer_get_band_count(), 0.0f);
 }
 
@@ -1003,7 +961,6 @@ std::string ofxVlc4::getDiagnosticsReport() const {
 
 void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	// Re-init starts from a clean VLC state so partial previous setup cannot leak across sessions.
-	syncCoreSessionStateFromLegacy();
 	releaseVlcResources();
 	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
 	m_impl->lifecycleRuntime.closeRequested.store(false);
@@ -1090,30 +1047,26 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	libvlc_clearerr();
-	m_impl->legacyCoreMirrorRuntime.libvlc = libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data());
-	if (!m_impl->legacyCoreMirrorRuntime.libvlc) {
+	m_impl->subsystemRuntime.coreSession->setInstance(libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data()));
+	if (!m_impl->subsystemRuntime.coreSession->instance()) {
 		const char * error = libvlc_errmsg();
 		setError(error ? error : "libvlc_new failed");
 		return;
 	}
-	m_impl->subsystemRuntime.coreSession->setInstance(m_impl->legacyCoreMirrorRuntime.libvlc);
-	syncLegacyStateFromCoreSession();
 
-	libvlc_set_user_agent(m_impl->legacyCoreMirrorRuntime.libvlc, "ofxVlc4", "ofxVlc4/libVLC");
-	libvlc_set_app_id(m_impl->legacyCoreMirrorRuntime.libvlc, "org.openframeworks.ofxVlc4", "", "");
+	libvlc_set_user_agent(m_impl->subsystemRuntime.coreSession->instance(), "ofxVlc4", "ofxVlc4/libVLC");
+	libvlc_set_app_id(m_impl->subsystemRuntime.coreSession->instance(), "org.openframeworks.ofxVlc4", "", "");
 
 	m_impl->subsystemRuntime.mediaComponent->applyLibVlcLogging();
 
 	libvlc_clearerr();
-	m_impl->legacyCoreMirrorRuntime.mediaPlayer = libvlc_media_player_new(m_impl->legacyCoreMirrorRuntime.libvlc);
-	if (!m_impl->legacyCoreMirrorRuntime.mediaPlayer) {
+	m_impl->subsystemRuntime.coreSession->setPlayer(libvlc_media_player_new(m_impl->subsystemRuntime.coreSession->instance()));
+	if (!m_impl->subsystemRuntime.coreSession->player()) {
 		const char * error = libvlc_errmsg();
 		setError(error ? error : "libvlc_media_player_new failed");
 		releaseVlcResources();
 		return;
 	}
-	m_impl->subsystemRuntime.coreSession->setPlayer(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
-	syncLegacyStateFromCoreSession();
 
 	resetAudioStateInfo();
 	resetRendererStateInfo();
@@ -1127,10 +1080,10 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	if (m_impl->playerConfigRuntime.audioCaptureEnabled) {
-		libvlc_audio_set_callbacks(m_impl->legacyCoreMirrorRuntime.mediaPlayer, audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
-		libvlc_audio_set_volume_callback(m_impl->legacyCoreMirrorRuntime.mediaPlayer, audioSetVolume);
+		libvlc_audio_set_callbacks(m_impl->subsystemRuntime.coreSession->player(), audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
+		libvlc_audio_set_volume_callback(m_impl->subsystemRuntime.coreSession->player(), audioSetVolume);
 		libvlc_audio_set_format(
-			m_impl->legacyCoreMirrorRuntime.mediaPlayer,
+			m_impl->subsystemRuntime.coreSession->player(),
 			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureSampleFormatCode(),
 			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureSampleRate(),
 			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureChannelCount());
@@ -1139,10 +1092,8 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		resetAudioBuffer();
 	}
 
-	m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager = libvlc_media_player_event_manager(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
-	m_impl->subsystemRuntime.coreSession->setPlayerEvents(m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager);
-	syncLegacyStateFromCoreSession();
-	if (m_impl->legacyCoreMirrorRuntime.mediaPlayerEventManager && m_impl->subsystemRuntime.coreSession && m_impl->subsystemRuntime.eventRouter) {
+	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
+	if (m_impl->subsystemRuntime.coreSession->playerEvents() && m_impl->subsystemRuntime.eventRouter) {
 		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
 	}
 
@@ -1153,8 +1104,8 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		VlcEventRouter::dialogCancelStatic,
 		VlcEventRouter::dialogUpdateProgressStatic
 	};
-	libvlc_dialog_set_callbacks(m_impl->legacyCoreMirrorRuntime.libvlc, &dialogCallbacks, m_impl->subsystemRuntime.eventRouter.get());
-	libvlc_dialog_set_error_callback(m_impl->legacyCoreMirrorRuntime.libvlc, VlcEventRouter::dialogErrorStatic, m_impl->subsystemRuntime.eventRouter.get());
+	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, m_impl->subsystemRuntime.eventRouter.get());
+	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), VlcEventRouter::dialogErrorStatic, m_impl->subsystemRuntime.eventRouter.get());
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
 		startRendererDiscovery(m_impl->rendererDiscoveryRuntime.discovererName);
@@ -1800,7 +1751,6 @@ void ofxVlc4::clearWindowCaptureState(const std::shared_ptr<ofAppGLFWWindow> & c
 }
 
 void ofxVlc4::releaseVlcResources() {
-	syncCoreSessionStateFromLegacy();
 	finalizeRecordingMuxThread();
 	cancelPendingRecordingMux();
 	detachEvents();
@@ -1816,18 +1766,15 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->windowCaptureRuntime.captureFbo.isAllocated() ||
 		recorderNeedsCleanup;
 
-	if (m_impl->legacyCoreMirrorRuntime.mediaPlayer) {
+	if (m_impl->subsystemRuntime.coreSession->player()) {
 		if (m_impl->watchTimeRuntime.registered) {
-			libvlc_media_player_unwatch_time(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
+			libvlc_media_player_unwatch_time(m_impl->subsystemRuntime.coreSession->player());
 			m_impl->watchTimeRuntime.registered = false;
 		}
-		libvlc_video_set_adjust_int(m_impl->legacyCoreMirrorRuntime.mediaPlayer, libvlc_adjust_Enable, 0);
-		libvlc_media_player_release(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
-		m_impl->legacyCoreMirrorRuntime.mediaPlayer = nullptr;
-		if (m_impl->subsystemRuntime.coreSession) {
-			m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
-			m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
-		}
+		libvlc_video_set_adjust_int(m_impl->subsystemRuntime.coreSession->player(), libvlc_adjust_Enable, 0);
+		libvlc_media_player_release(m_impl->subsystemRuntime.coreSession->player());
+		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
+		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 	}
 
 	clearCurrentMedia(false);
@@ -1859,16 +1806,13 @@ void ofxVlc4::releaseVlcResources() {
 	m_impl->videoGeometryRuntime.allocatedVideoWidth = 1;
 	m_impl->videoGeometryRuntime.allocatedVideoHeight = 1;
 
-	if (m_impl->legacyCoreMirrorRuntime.libvlc) {
-		libvlc_log_unset(m_impl->legacyCoreMirrorRuntime.libvlc);
+	if (m_impl->subsystemRuntime.coreSession->instance()) {
+		libvlc_log_unset(m_impl->subsystemRuntime.coreSession->instance());
 		m_impl->subsystemRuntime.mediaComponent->closeLibVlcLogFile();
-		libvlc_dialog_set_error_callback(m_impl->legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
-		libvlc_dialog_set_callbacks(m_impl->legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
-		libvlc_release(m_impl->legacyCoreMirrorRuntime.libvlc);
-		m_impl->legacyCoreMirrorRuntime.libvlc = nullptr;
-		if (m_impl->subsystemRuntime.coreSession) {
-			m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
-		}
+		libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
+		libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
+		libvlc_release(m_impl->subsystemRuntime.coreSession->instance());
+		m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
 	}
 	processDeferredRecordingMuxCleanup(true);
 
@@ -1882,7 +1826,6 @@ void ofxVlc4::releaseVlcResources() {
 
 	m_impl->videoPresentationRuntime.activeVideoOutputBackend = m_impl->videoPresentationRuntime.videoOutputBackend;
 	m_impl->effectsRuntime.activeVideoAdjustmentEngine = m_impl->effectsRuntime.videoAdjustmentEngine;
-	syncLegacyStateFromCoreSession();
 }
 
 void ofxVlc4::close() {

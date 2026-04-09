@@ -853,8 +853,6 @@ private:
 	void dismissAllDialogs();
 	void upsertDialog(const DialogInfo & dialog);
 	void removeDialog(std::uintptr_t token);
-	void syncCoreSessionStateFromLegacy();
-	void syncLegacyStateFromCoreSession();
 	libvlc_instance_t * sessionInstance() const;
 	libvlc_media_t * sessionMedia() const;
 	libvlc_media_player_t * sessionPlayer() const;
