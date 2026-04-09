@@ -182,7 +182,7 @@ size_t ofxVlc4RingBuffer::read(float * dst, size_t wanted, float gain) {
 	const size_t filled = read(dst, wanted);
 
 	if (gain != 1.0f) {
-		for (size_t i = 0; i < wanted; ++i) {
+		for (size_t i = 0; i < filled; ++i) {
 			dst[i] *= gain;
 		}
 	}
@@ -220,8 +220,12 @@ size_t ofxVlc4RingBuffer::peekLatest(float * dst, size_t wanted) const {
 
 size_t ofxVlc4RingBuffer::peekLatest(float * dst, size_t wanted, float gain) const {
 	const size_t copied = peekLatest(dst, wanted);
-	if (gain != 1.0f) {
-		for (size_t i = 0; i < wanted; ++i) {
+	if (gain != 1.0f && copied > 0) {
+		// Only apply gain to the samples that were actually copied; the
+		// leading zero-pad written by peekLatest is already zero and needs
+		// no scaling.
+		const size_t zeroPad = wanted - copied;
+		for (size_t i = zeroPad; i < wanted; ++i) {
 			dst[i] *= gain;
 		}
 	}

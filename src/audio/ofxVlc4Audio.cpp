@@ -514,8 +514,8 @@ void ofxVlc4::AudioComponent::applyEqualizerSettings() {
 	owner.logVerbose(
 		"Applying equalizer: preamp=" + ofToString(owner.m_impl->effectsRuntime.equalizerPreamp, 2) +
 		" bands=" + ofToString(owner.m_impl->effectsRuntime.equalizerBandAmps.size()) + ".");
-	for (unsigned index = 0; index < owner.m_impl->effectsRuntime.equalizerBandAmps.size(); ++index) {
-		libvlc_audio_equalizer_set_amp_at_index(equalizer, owner.m_impl->effectsRuntime.equalizerBandAmps[index], index);
+	for (size_t index = 0; index < owner.m_impl->effectsRuntime.equalizerBandAmps.size(); ++index) {
+		libvlc_audio_equalizer_set_amp_at_index(equalizer, owner.m_impl->effectsRuntime.equalizerBandAmps[index], static_cast<unsigned>(index));
 	}
 	libvlc_audio_equalizer_set_preamp(equalizer, owner.m_impl->effectsRuntime.equalizerPreamp);
 	libvlc_media_player_set_equalizer(player, equalizer);
