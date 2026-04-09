@@ -162,16 +162,6 @@ inline std::string percentDecode(const std::string & input) {
 }
 
 // ---------------------------------------------------------------------------
-// Normalise a playlist entry to a location string suitable for the format.
-// If the entry is already a URI it is returned unchanged; otherwise it is
-// emitted as-is (a local path).  This mirrors how VLC stores playlist items.
-// ---------------------------------------------------------------------------
-
-inline std::string entryToLocation(const std::string & entry) {
-	return entry; // Paths and URIs are both stored as-is
-}
-
-// ---------------------------------------------------------------------------
 // M3U serialisation
 // ---------------------------------------------------------------------------
 
