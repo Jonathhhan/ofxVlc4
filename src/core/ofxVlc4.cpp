@@ -1127,6 +1127,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	if (m_impl->playerConfigRuntime.audioCaptureEnabled) {
+		libvlc_clearerr();
 		libvlc_audio_set_callbacks(m_impl->legacyCoreMirrorRuntime.mediaPlayer, audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
 		libvlc_audio_set_volume_callback(m_impl->legacyCoreMirrorRuntime.mediaPlayer, audioSetVolume);
 		libvlc_audio_set_format(
@@ -1134,6 +1135,10 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureSampleFormatCode(),
 			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureSampleRate(),
 			m_impl->subsystemRuntime.audioComponent->getStartupAudioCaptureChannelCount());
+		const char * audioSetupError = libvlc_errmsg();
+		if (audioSetupError) {
+			logWarning(std::string("Audio output setup (callbacks/volume/format) may have failed: ") + audioSetupError);
+		}
 	} else {
 		m_impl->audioRuntime.ready.store(false);
 		resetAudioBuffer();
