@@ -60,6 +60,9 @@ void ofApp::setup() {
 	player->setMidiSyncToWatchTimeEnabled(false);
 
 	installMidiDispatchCallback();
+	player->setMidiFinishedCallback([this]() {
+		sendMidiPanic();
+	});
 	refreshMidiOutputs();
 
 	gui.setup(nullptr, true, ImGuiConfigFlags_None, true);
@@ -180,7 +183,7 @@ void ofApp::drawControlPanel() {
 	ImGui::TextWrapped("%s", currentMediaLabel().c_str());
 	ImGui::Text("State: %s", playbackLabel().c_str());
 	if (midiMode) {
-		ImGui::Text("Position: %.2f / %.2f s", midiInfo.positionSeconds, midiInfo.durationSeconds);
+		ImGui::Text("Position: %.2f / %.2f s (%.1f%%)", midiInfo.positionSeconds, midiInfo.durationSeconds, midiInfo.positionFraction * 100.0);
 	} else {
 		ImGui::Text("Playback timecode: %s", player->formatCurrentPlaybackTimecode().c_str());
 	}
@@ -432,6 +435,7 @@ void ofApp::shutdownPlayer() {
 	closeMidiOutput();
 	if (player) {
 		player->clearMidiMessageCallback();
+		player->clearMidiFinishedCallback();
 		player->close();
 		player.reset();
 	}

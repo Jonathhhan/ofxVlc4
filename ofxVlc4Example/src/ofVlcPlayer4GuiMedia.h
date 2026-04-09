@@ -73,6 +73,10 @@ private:
 	bool metadataLoadedFromPlayer = false;
 	std::string libVlcLogFilePath;
 	bool libVlcLogFilePathLoaded = false;
+	int thumbnailImageTypeIndex = 0;
+	int thumbnailSeekSpeedIndex = 0;
+	int thumbnailWidth = 0;
+	int thumbnailHeight = 0;
 	std::function<bool(const std::string &)> loadCustomSubtitleCallback;
 	std::function<void()> clearCustomSubtitleCallback;
 	std::function<std::string()> customSubtitleStatusCallback;
