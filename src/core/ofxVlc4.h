@@ -1018,6 +1018,11 @@ public:
 	static void logError(const std::string & message);
 	static void logWarning(const std::string & message);
 	static void logNotice(const std::string & message);
+
+	static const char * getLibVlcVersion();
+	static const char * getLibVlcCompiler();
+	static const char * getLibVlcChangeset();
+	static int getLibVlcAbiVersion();
 	static const char * recordingAudioSourceLabel(ofxVlc4RecordingAudioSource source);
 	static const char * recordingSessionStateLabel(ofxVlc4RecordingSessionState state);
 	static std::string recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPreset preset);
@@ -1588,6 +1593,7 @@ public:
 	float getPosition() const;
 	int getTime() const;
 	void setTime(int ms);
+	void jumpTime(int ms);
 	float getLength() const;
 	int getVolume() const;
 	void setVolume(int volume);

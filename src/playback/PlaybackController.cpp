@@ -1150,6 +1150,19 @@ void PlaybackController::setTime(int ms) {
 	}
 }
 
+void PlaybackController::jumpTime(int ms) {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	if (!player || !owner.sessionMedia() || isPlaybackLocallyStopped()) {
+		return;
+	}
+	if (!libvlc_media_player_is_seekable(player)) {
+		return;
+	}
+
+	resetAudioBuffer();
+	libvlc_media_player_jump_time(player, ms);
+}
+
 float PlaybackController::getLength() const {
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	return (player && owner.sessionMedia()) ? static_cast<float>(libvlc_media_player_get_length(player)) : 0.f;
