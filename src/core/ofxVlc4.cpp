@@ -51,11 +51,10 @@ void configureMacLibVlcEnvironment() {
 void configureWindowsLibVlcEnvironment() {
 	wchar_t exePathBuf[MAX_PATH];
 	const DWORD len = GetModuleFileNameW(nullptr, exePathBuf, MAX_PATH);
-	if (len == 0 || len >= MAX_PATH) return;
+	if (len == 0 || len == MAX_PATH) return;
 
 	const std::filesystem::path exeDir = std::filesystem::path(exePathBuf).parent_path();
-	std::error_code ec;
-	if (std::filesystem::is_directory(exeDir / L"lua", ec)) {
+	if (std::error_code ec; std::filesystem::is_directory(exeDir / L"lua", ec)) {
 		const std::string dirStr = exeDir.string();
 		_putenv_s("VLC_DATA_PATH", dirStr.c_str());
 	}
