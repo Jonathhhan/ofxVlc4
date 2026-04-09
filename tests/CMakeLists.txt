@@ -167,3 +167,20 @@ target_include_directories(test_types PRIVATE
 )
 
 add_test(NAME types COMMAND test_types)
+
+# ---------------------------------------------------------------------------
+# test_midi_report
+# Tests the MidiJsonWriter, MidiTextWriter, MidiReportExporter, and the
+# toJson()/toTextReport() wrappers.  Depends on the MIDI analysis source file.
+# ---------------------------------------------------------------------------
+
+add_executable(test_midi_report
+    test_midi_report.cpp
+    "${SRC_DIR}/midi/ofxVlc4MidiAnalysis.cpp"
+)
+
+target_include_directories(test_midi_report PRIVATE
+    "${SRC_DIR}/midi"
+)
+
+add_test(NAME midi_report COMMAND test_midi_report)

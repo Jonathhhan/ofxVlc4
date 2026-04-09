@@ -556,6 +556,214 @@ static void testCursorSize() {
 }
 
 // ---------------------------------------------------------------------------
+// MidiBridge::describe — more message types
+// ---------------------------------------------------------------------------
+
+static void testDescribeControlChange() {
+	beginSuite("describe: Control Change");
+
+	MidiChannelMessage m;
+	m.type = MidiMessageType::ChannelVoice;
+	m.kind = "control_change";
+	m.channel = 2;
+	m.status = 0xB2;
+	m.data1 = 7;
+	m.data2 = 100;
+	m.seconds = 0.5;
+
+	const std::string description = MidiBridge::describe(m);
+	CHECK(!description.empty());
+	CHECK(description.find("control_change") != std::string::npos);
+}
+
+static void testDescribePitchBend() {
+	beginSuite("describe: Pitch Bend");
+
+	MidiChannelMessage m;
+	m.type = MidiMessageType::ChannelVoice;
+	m.kind = "pitch_bend";
+	m.channel = 0;
+	m.status = 0xE0;
+	m.data1 = 0;
+	m.data2 = 64;
+
+	const std::string description = MidiBridge::describe(m);
+	CHECK(!description.empty());
+	CHECK(description.find("pitch_bend") != std::string::npos);
+}
+
+static void testDescribeUnknownType() {
+	beginSuite("describe: Unknown type");
+
+	MidiChannelMessage m;
+	m.type = MidiMessageType::Unknown;
+	m.kind = "unknown";
+	m.channel = -1;
+	m.status = -1;
+
+	const std::string description = MidiBridge::describe(m);
+	CHECK(!description.empty());
+}
+
+// ---------------------------------------------------------------------------
+// MidiBridge::toChannelMessages — empty report
+// ---------------------------------------------------------------------------
+
+static void testToChannelMessagesEmptyReport() {
+	beginSuite("toChannelMessages: empty report");
+
+	MidiAnalysisReport report;
+	report.valid = true;
+	// No events.
+
+	const auto messages = MidiBridge::toChannelMessages(report);
+	CHECK(messages.empty());
+}
+
+static void testToMessagesEmptyReport() {
+	beginSuite("toMessages: empty report");
+
+	MidiAnalysisReport report;
+	report.valid = true;
+
+	const auto messages = MidiBridge::toMessages(report);
+	CHECK(messages.empty());
+}
+
+// ---------------------------------------------------------------------------
+// MidiBridge::filterByChannel — empty input
+// ---------------------------------------------------------------------------
+
+static void testFilterByChannelEmptyInput() {
+	beginSuite("filterByChannel: empty input");
+
+	std::vector<MidiChannelMessage> messages;
+	const auto result = MidiBridge::filterByChannel(messages, 0);
+	CHECK(result.empty());
+}
+
+// ---------------------------------------------------------------------------
+// MidiTimelineCursor: advanceUntil past end then rewind
+// ---------------------------------------------------------------------------
+
+static void testCursorAdvancePastEndThenRewind() {
+	beginSuite("MidiTimelineCursor: advance past end then rewind");
+
+	std::vector<MidiChannelMessage> messages(3);
+	for (int i = 0; i < 3; ++i) {
+		messages[i].seconds = static_cast<double>(i);
+	}
+
+	MidiTimelineCursor cursor;
+	cursor.reset(&messages);
+
+	// Advance past all messages.
+	cursor.advanceUntil(100.0);
+	CHECK_EQ(cursor.position(), messages.size());
+
+	// Rewind and advance again.
+	cursor.rewind();
+	CHECK_EQ(cursor.position(), 0u);
+
+	cursor.advanceUntil(1.0);
+	CHECK_EQ(cursor.position(), 2u); // messages at 0.0 and 1.0
+}
+
+// ---------------------------------------------------------------------------
+// MidiTimelineCursor: seekSeconds to negative time
+// ---------------------------------------------------------------------------
+
+static void testCursorSeekNegativeTime() {
+	beginSuite("MidiTimelineCursor: seekSeconds negative time");
+
+	std::vector<MidiChannelMessage> messages(3);
+	for (int i = 0; i < 3; ++i) {
+		messages[i].seconds = static_cast<double>(i);
+	}
+
+	MidiTimelineCursor cursor;
+	cursor.reset(&messages);
+
+	// Advance first.
+	cursor.advanceUntil(2.0);
+	CHECK(cursor.position() > 0u);
+
+	// Seek to negative → should go to beginning.
+	cursor.seekSeconds(-1.0);
+	CHECK_EQ(cursor.position(), 0u);
+}
+
+// ---------------------------------------------------------------------------
+// MidiTimelineCursor: empty source
+// ---------------------------------------------------------------------------
+
+static void testCursorEmptySource() {
+	beginSuite("MidiTimelineCursor: empty source");
+
+	std::vector<MidiChannelMessage> messages;
+	MidiTimelineCursor cursor;
+	cursor.reset(&messages);
+
+	CHECK_EQ(cursor.size(), 0u);
+	CHECK_EQ(cursor.position(), 0u);
+
+	cursor.advanceUntil(1.0);
+	CHECK_EQ(cursor.position(), 0u);
+
+	cursor.seekSeconds(0.0);
+	CHECK_EQ(cursor.position(), 0u);
+}
+
+// ---------------------------------------------------------------------------
+// MidiBridge struct defaults
+// ---------------------------------------------------------------------------
+
+static void testMidiChannelMessageDefaults() {
+	beginSuite("MidiChannelMessage: default values");
+
+	MidiChannelMessage m;
+	CHECK_EQ(m.trackIndex, 0u);
+	CHECK_EQ(m.tick, 0u);
+	CHECK_EQ(m.seconds, 0.0);
+	CHECK(m.kind.empty());
+	CHECK_EQ(m.type, MidiMessageType::Unknown);
+	CHECK_EQ(m.channel, -1);
+	CHECK_EQ(m.status, -1);
+	CHECK_EQ(m.data1, -1);
+	CHECK_EQ(m.data2, -1);
+	CHECK(m.bytes.empty());
+}
+
+static void testMidiSyncSettingsDefaults() {
+	beginSuite("MidiSyncSettings: default values");
+
+	MidiSyncSettings s;
+	CHECK_EQ(s.mode, MidiSyncMode::None);
+	CHECK_EQ(s.timecodeFps, 30.0);
+	CHECK(s.sendTransportMessages);
+	CHECK(s.sendSongPositionOnSeek);
+}
+
+static void testMidiMessageTypeEnum() {
+	beginSuite("MidiMessageType enum values");
+
+	CHECK(static_cast<int>(MidiMessageType::ChannelVoice) == 0);
+	CHECK(static_cast<int>(MidiMessageType::SysEx) != static_cast<int>(MidiMessageType::ChannelVoice));
+	CHECK(static_cast<int>(MidiMessageType::SystemCommon) != static_cast<int>(MidiMessageType::SysEx));
+	CHECK(static_cast<int>(MidiMessageType::SystemRealTime) != static_cast<int>(MidiMessageType::SystemCommon));
+	CHECK(static_cast<int>(MidiMessageType::Meta) != static_cast<int>(MidiMessageType::SystemRealTime));
+	CHECK(static_cast<int>(MidiMessageType::Unknown) != static_cast<int>(MidiMessageType::Meta));
+}
+
+static void testMidiSyncModeEnum() {
+	beginSuite("MidiSyncMode enum values");
+
+	CHECK(static_cast<int>(MidiSyncMode::None) == 0);
+	CHECK(static_cast<int>(MidiSyncMode::MidiClock) != static_cast<int>(MidiSyncMode::None));
+	CHECK(static_cast<int>(MidiSyncMode::MidiTimecodeQuarterFrame) != static_cast<int>(MidiSyncMode::MidiClock));
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -586,6 +794,19 @@ int main() {
 	testCursorAdvanceUntil();
 	testCursorSeekSeconds();
 	testCursorSize();
+	testDescribeControlChange();
+	testDescribePitchBend();
+	testDescribeUnknownType();
+	testToChannelMessagesEmptyReport();
+	testToMessagesEmptyReport();
+	testFilterByChannelEmptyInput();
+	testCursorAdvancePastEndThenRewind();
+	testCursorSeekNegativeTime();
+	testCursorEmptySource();
+	testMidiChannelMessageDefaults();
+	testMidiSyncSettingsDefaults();
+	testMidiMessageTypeEnum();
+	testMidiSyncModeEnum();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

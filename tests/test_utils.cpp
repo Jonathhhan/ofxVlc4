@@ -598,6 +598,99 @@ static void testFormatAdjustmentValueEdgeCases() {
 }
 
 // ---------------------------------------------------------------------------
+// isUri: file:// scheme
+// ---------------------------------------------------------------------------
+
+static void testIsUriFileScheme() {
+	beginSuite("isUri: file:// scheme");
+
+	using ofxVlc4Utils::isUri;
+
+	CHECK(isUri("file:///home/user/video.mp4"));
+	CHECK(isUri("file:///tmp/test.ts"));
+	CHECK(isUri("file:///C:/Users/video.mp4"));
+}
+
+// ---------------------------------------------------------------------------
+// nearlyEqual: special float values
+// ---------------------------------------------------------------------------
+
+static void testNearlyEqualSpecialValues() {
+	beginSuite("nearlyEqual: special float values");
+
+	using ofxVlc4Utils::nearlyEqual;
+
+	// Both zero.
+	CHECK(nearlyEqual(0.0f, 0.0f));
+
+	// Positive and negative zero.
+	CHECK(nearlyEqual(0.0f, -0.0f));
+
+	// Very small positive values.
+	CHECK(nearlyEqual(0.00001f, 0.00002f, 0.0001f));
+
+	// Very large values that differ by a small absolute amount.
+	CHECK(nearlyEqual(1e6f, 1e6f + 0.00001f));
+}
+
+// ---------------------------------------------------------------------------
+// formatAdjustmentValue: very large and very small values
+// ---------------------------------------------------------------------------
+
+static void testFormatAdjustmentValueLargeValues() {
+	beginSuite("formatAdjustmentValue: large/small values");
+
+	using ofxVlc4Utils::formatAdjustmentValue;
+
+	// Very large value.
+	const std::string large = formatAdjustmentValue(99999.0f, 0);
+	CHECK_EQ(large, "99999");
+
+	// Very small value.
+	const std::string small = formatAdjustmentValue(0.001f, 3);
+	CHECK_EQ(small, "0.001");
+}
+
+// ---------------------------------------------------------------------------
+// readTextFileIfPresent: binary content
+// ---------------------------------------------------------------------------
+
+static void testReadTextFileIfPresentBinaryContent() {
+	beginSuite("readTextFileIfPresent: binary content");
+
+	using ofxVlc4Utils::readTextFileIfPresent;
+
+	const std::string path = (std::filesystem::temp_directory_path() / "ofxvlc4_test_binary.bin").string();
+	{
+		std::ofstream f(path, std::ios::binary);
+		char data[] = { 'A', 'B', '\0', 'C', 'D' };
+		f.write(data, sizeof(data));
+	}
+	const std::string content = readTextFileIfPresent(path);
+	// Binary read should at least return something non-empty.
+	CHECK(!content.empty());
+	// First two characters should be 'A' and 'B'.
+	CHECK(content.size() >= 2);
+	CHECK_EQ(content[0], 'A');
+	CHECK_EQ(content[1], 'B');
+	std::remove(path.c_str());
+}
+
+// ---------------------------------------------------------------------------
+// joinFilterChainEntries: single entry
+// ---------------------------------------------------------------------------
+
+static void testJoinFilterChainEntriesSingle() {
+	beginSuite("joinFilterChainEntries: single entry");
+
+	using ofxVlc4Utils::joinFilterChainEntries;
+
+	const std::vector<std::string> v = { "equalizer" };
+	const std::string joined = joinFilterChainEntries(v);
+	CHECK_EQ(joined, "equalizer");
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -622,6 +715,13 @@ int main() {
 	testSanitizeFileStemEdgeCases();
 	testNearlyEqualCustomEpsilon();
 	testFormatAdjustmentValueEdgeCases();
+
+	// Additional edge case tests.
+	testIsUriFileScheme();
+	testNearlyEqualSpecialValues();
+	testFormatAdjustmentValueLargeValues();
+	testReadTextFileIfPresentBinaryContent();
+	testJoinFilterChainEntriesSingle();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

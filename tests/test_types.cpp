@@ -227,6 +227,240 @@ static void testSubtitleTextRendererEnum() {
 }
 
 // ---------------------------------------------------------------------------
+// ofxVlc4RecorderPerformanceInfo defaults
+// ---------------------------------------------------------------------------
+
+static void testRecorderPerformanceInfoDefaults() {
+	beginSuite("ofxVlc4RecorderPerformanceInfo defaults");
+
+	ofxVlc4RecorderPerformanceInfo info;
+	CHECK(!info.asyncVideoReadbackEnabled);
+	CHECK(!info.asyncVideoReadbackPrimed);
+	CHECK_EQ(info.readbackPolicy, ofxVlc4VideoReadbackPolicy::DropLateFrames);
+	CHECK_EQ(info.readbackBufferCount, 0u);
+	CHECK_EQ(info.captureStartTimeUs, 0u);
+	CHECK_EQ(info.submittedFrameCount, 0u);
+	CHECK_EQ(info.readyFrameCount, 0u);
+	CHECK_EQ(info.synchronousFrameCount, 0u);
+	CHECK_EQ(info.fallbackFrameCount, 0u);
+	CHECK_EQ(info.droppedFrameCount, 0u);
+	CHECK_EQ(info.policyDroppedFrameCount, 0u);
+	CHECK_EQ(info.mapFailureCount, 0u);
+	CHECK_EQ(info.pendingFrameCount, 0u);
+	CHECK_EQ(info.maxPendingFrameCount, 0u);
+	CHECK_EQ(info.lastCaptureMicros, 0u);
+	CHECK_EQ(info.averageCaptureMicros, 0u);
+	CHECK_EQ(info.maxCaptureMicros, 0u);
+	CHECK_EQ(info.lastReadbackLatencyMicros, 0u);
+	CHECK_EQ(info.averageReadbackLatencyMicros, 0u);
+	CHECK_EQ(info.maxReadbackLatencyMicros, 0u);
+	CHECK_EQ(info.waitCount, 0u);
+	CHECK_EQ(info.averageWaitMicros, 0u);
+	CHECK_EQ(info.maxWaitMicros, 0u);
+	CHECK_EQ(info.submittedFramesPerSecond, 0.0);
+	CHECK_EQ(info.readyFramesPerSecond, 0.0);
+}
+
+// ---------------------------------------------------------------------------
+// Recording source enum
+// ---------------------------------------------------------------------------
+
+static void testRecordingSourceEnum() {
+	beginSuite("ofxVlc4RecordingSource enum values");
+
+	CHECK(static_cast<int>(ofxVlc4RecordingSource::Texture) == 0);
+	CHECK(static_cast<int>(ofxVlc4RecordingSource::Window) != static_cast<int>(ofxVlc4RecordingSource::Texture));
+}
+
+// ---------------------------------------------------------------------------
+// Recording audio source enum
+// ---------------------------------------------------------------------------
+
+static void testRecordingAudioSourceEnum() {
+	beginSuite("ofxVlc4RecordingAudioSource enum values");
+
+	CHECK(static_cast<int>(ofxVlc4RecordingAudioSource::None) == 0);
+	CHECK(static_cast<int>(ofxVlc4RecordingAudioSource::VlcCaptured) != static_cast<int>(ofxVlc4RecordingAudioSource::None));
+	CHECK(static_cast<int>(ofxVlc4RecordingAudioSource::ExternalSubmitted) != static_cast<int>(ofxVlc4RecordingAudioSource::VlcCaptured));
+}
+
+// ---------------------------------------------------------------------------
+// MIDI sync source enum
+// ---------------------------------------------------------------------------
+
+static void testMidiSyncSourceEnum() {
+	beginSuite("ofxVlc4MidiSyncSource enum values");
+
+	CHECK(static_cast<int>(ofxVlc4MidiSyncSource::Internal) == 0);
+	CHECK(static_cast<int>(ofxVlc4MidiSyncSource::WatchTime) != static_cast<int>(ofxVlc4MidiSyncSource::Internal));
+}
+
+// ---------------------------------------------------------------------------
+// Audio visualizer effect enum
+// ---------------------------------------------------------------------------
+
+static void testAudioVisualizerEffectEnum() {
+	beginSuite("ofxVlc4AudioVisualizerEffect enum values");
+
+	CHECK(static_cast<int>(ofxVlc4AudioVisualizerEffect::Spectrum) == 0);
+	CHECK(static_cast<int>(ofxVlc4AudioVisualizerEffect::Scope) != static_cast<int>(ofxVlc4AudioVisualizerEffect::Spectrum));
+	CHECK(static_cast<int>(ofxVlc4AudioVisualizerEffect::Spectrometer) != static_cast<int>(ofxVlc4AudioVisualizerEffect::Scope));
+	CHECK(static_cast<int>(ofxVlc4AudioVisualizerEffect::VuMeter) != static_cast<int>(ofxVlc4AudioVisualizerEffect::Spectrometer));
+}
+
+// ---------------------------------------------------------------------------
+// All video codec presets are distinct
+// ---------------------------------------------------------------------------
+
+static void testAllVideoCodecPresetsDistinct() {
+	beginSuite("ofxVlc4RecordingVideoCodecPreset: all values distinct");
+
+	const int h264 = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::H264);
+	const int h265 = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::H265);
+	const int mp4v = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::Mp4v);
+	const int mjpg = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::Mjpg);
+	const int hap = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::Hap);
+	const int hapA = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::HapAlpha);
+	const int hapQ = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::HapQ);
+	const int vp8 = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::VP8);
+	const int vp9 = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::VP9);
+	const int theora = static_cast<int>(ofxVlc4RecordingVideoCodecPreset::Theora);
+
+	// All 10 values must be distinct.
+	int vals[] = { h264, h265, mp4v, mjpg, hap, hapA, hapQ, vp8, vp9, theora };
+	for (int i = 0; i < 10; ++i) {
+		for (int j = i + 1; j < 10; ++j) {
+			CHECK(vals[i] != vals[j]);
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// All mux profiles are distinct
+// ---------------------------------------------------------------------------
+
+static void testAllMuxProfilesDistinct() {
+	beginSuite("ofxVlc4RecordingMuxProfile: all values distinct");
+
+	int vals[] = {
+		static_cast<int>(ofxVlc4RecordingMuxProfile::Mp4Aac),
+		static_cast<int>(ofxVlc4RecordingMuxProfile::MkvOpus),
+		static_cast<int>(ofxVlc4RecordingMuxProfile::MkvFlac),
+		static_cast<int>(ofxVlc4RecordingMuxProfile::MkvLpcm),
+		static_cast<int>(ofxVlc4RecordingMuxProfile::OggVorbis),
+		static_cast<int>(ofxVlc4RecordingMuxProfile::MovAac),
+		static_cast<int>(ofxVlc4RecordingMuxProfile::WebmOpus),
+		static_cast<int>(ofxVlc4RecordingMuxProfile::MkvAac),
+	};
+	for (int i = 0; i < 8; ++i) {
+		for (int j = i + 1; j < 8; ++j) {
+			CHECK(vals[i] != vals[j]);
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// All subtitle text renderers are distinct
+// ---------------------------------------------------------------------------
+
+static void testAllSubtitleRenderersDistinct() {
+	beginSuite("ofxVlc4SubtitleTextRenderer: all values distinct");
+
+	int vals[] = {
+		static_cast<int>(ofxVlc4SubtitleTextRenderer::Auto),
+		static_cast<int>(ofxVlc4SubtitleTextRenderer::Freetype),
+		static_cast<int>(ofxVlc4SubtitleTextRenderer::Sapi),
+		static_cast<int>(ofxVlc4SubtitleTextRenderer::Dummy),
+		static_cast<int>(ofxVlc4SubtitleTextRenderer::None),
+	};
+	for (int i = 0; i < 5; ++i) {
+		for (int j = i + 1; j < 5; ++j) {
+			CHECK(vals[i] != vals[j]);
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// RecordingSessionConfig copy semantics
+// ---------------------------------------------------------------------------
+
+static void testRecordingSessionConfigCopy() {
+	beginSuite("ofxVlc4RecordingSessionConfig: copy semantics");
+
+	ofxVlc4RecordingSessionConfig original;
+	original.outputBasePath = "/tmp/output";
+	original.source = ofxVlc4RecordingSource::Window;
+	original.audioSource = ofxVlc4RecordingAudioSource::VlcCaptured;
+	original.targetWidth = 1920;
+	original.targetHeight = 1080;
+	original.muxOnStop = true;
+	original.muxOutputPath = "/tmp/final.mp4";
+
+	ofxVlc4RecordingSessionConfig copy = original;
+	CHECK_EQ(copy.outputBasePath, "/tmp/output");
+	CHECK_EQ(copy.source, ofxVlc4RecordingSource::Window);
+	CHECK_EQ(copy.audioSource, ofxVlc4RecordingAudioSource::VlcCaptured);
+	CHECK_EQ(copy.targetWidth, 1920);
+	CHECK_EQ(copy.targetHeight, 1080);
+	CHECK(copy.muxOnStop);
+	CHECK_EQ(copy.muxOutputPath, "/tmp/final.mp4");
+
+	// Modify copy → original unchanged.
+	copy.outputBasePath = "/tmp/other";
+	CHECK_EQ(original.outputBasePath, "/tmp/output");
+}
+
+// ---------------------------------------------------------------------------
+// RecorderSettingsInfo copy semantics
+// ---------------------------------------------------------------------------
+
+static void testRecorderSettingsInfoCopy() {
+	beginSuite("ofxVlc4RecorderSettingsInfo: copy semantics");
+
+	ofxVlc4RecorderSettingsInfo original;
+	original.sessionState = ofxVlc4RecordingSessionState::Capturing;
+	original.muxPending = true;
+	original.lastMuxedPath = "/tmp/muxed.mp4";
+
+	ofxVlc4RecorderSettingsInfo copy = original;
+	CHECK_EQ(copy.sessionState, ofxVlc4RecordingSessionState::Capturing);
+	CHECK(copy.muxPending);
+	CHECK_EQ(copy.lastMuxedPath, "/tmp/muxed.mp4");
+
+	copy.sessionState = ofxVlc4RecordingSessionState::Done;
+	CHECK_EQ(original.sessionState, ofxVlc4RecordingSessionState::Capturing);
+}
+
+// ---------------------------------------------------------------------------
+// AudioVisualizerSettings copy semantics
+// ---------------------------------------------------------------------------
+
+static void testAudioVisualizerSettingsCopy() {
+	beginSuite("ofxVlc4AudioVisualizerSettings: copy semantics");
+
+	ofxVlc4AudioVisualizerSettings original;
+	original.module = ofxVlc4AudioVisualizerModule::ProjectM;
+	original.visualEffect = ofxVlc4AudioVisualizerEffect::VuMeter;
+	original.width = 800;
+	original.height = 600;
+	original.goomSpeed = 10;
+	original.projectMPresetPath = "/presets";
+	original.projectMTextureSize = 1024;
+
+	ofxVlc4AudioVisualizerSettings copy = original;
+	CHECK_EQ(copy.module, ofxVlc4AudioVisualizerModule::ProjectM);
+	CHECK_EQ(copy.visualEffect, ofxVlc4AudioVisualizerEffect::VuMeter);
+	CHECK_EQ(copy.width, 800);
+	CHECK_EQ(copy.height, 600);
+	CHECK_EQ(copy.goomSpeed, 10);
+	CHECK_EQ(copy.projectMPresetPath, "/presets");
+	CHECK_EQ(copy.projectMTextureSize, 1024);
+
+	copy.module = ofxVlc4AudioVisualizerModule::Goom;
+	CHECK_EQ(original.module, ofxVlc4AudioVisualizerModule::ProjectM);
+}
+
+// ---------------------------------------------------------------------------
 // Copy / assign semantics of POD types
 // ---------------------------------------------------------------------------
 
@@ -285,6 +519,17 @@ int main() {
 	testAudioVisualizerModuleEnum();
 	testVlcHelpModeEnum();
 	testSubtitleTextRendererEnum();
+	testRecorderPerformanceInfoDefaults();
+	testRecordingSourceEnum();
+	testRecordingAudioSourceEnum();
+	testMidiSyncSourceEnum();
+	testAudioVisualizerEffectEnum();
+	testAllVideoCodecPresetsDistinct();
+	testAllMuxProfilesDistinct();
+	testAllSubtitleRenderersDistinct();
+	testRecordingSessionConfigCopy();
+	testRecorderSettingsInfoCopy();
+	testAudioVisualizerSettingsCopy();
 	testMuxOptionsCopy();
 	testRecordingPresetCopy();
 
