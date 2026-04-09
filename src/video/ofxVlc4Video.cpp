@@ -3,6 +3,7 @@
 #include "ofxVlc4Video.h"
 #include "media/ofxVlc4Media.h"
 #include "playback/PlaybackController.h"
+#include "support/ofxVlc4GlOps.h"
 #include "support/ofxVlc4Utils.h"
 
 #ifdef TARGET_WIN32
@@ -31,6 +32,17 @@ using ofxVlc4Utils::parseFilterChainEntries;
 using ofxVlc4Utils::readTextFileIfPresent;
 using ofxVlc4Utils::setInputHandlingEnabled;
 using ofxVlc4Utils::trimWhitespace;
+
+using ofxVlc4GlOps::bindFbo;
+using ofxVlc4GlOps::clientWaitFenceSync;
+using ofxVlc4GlOps::deleteFbo;
+using ofxVlc4GlOps::deleteFenceSync;
+using ofxVlc4GlOps::flushCommands;
+using ofxVlc4GlOps::gpuWaitFenceSync;
+using ofxVlc4GlOps::insertFenceSync;
+using ofxVlc4GlOps::setTextureLinearFiltering;
+using ofxVlc4GlOps::setupFboWithTexture;
+using ofxVlc4GlOps::unbindFbo;
 
 namespace {
 libvlc_video_projection_t toLibvlcProjectionMode(ofxVlc4::VideoProjectionMode mode) {
@@ -409,10 +421,7 @@ ofxVlc4::VideoComponent::VideoComponent(ofxVlc4 & owner)
 	: owner(owner) {}
 
 void ofxVlc4::VideoComponent::clearPublishedFrameFenceLocked() {
-	if (owner.m_impl->videoFrameRuntime.publishedVideoFrameFence) {
-		glDeleteSync(owner.m_impl->videoFrameRuntime.publishedVideoFrameFence);
-		owner.m_impl->videoFrameRuntime.publishedVideoFrameFence = nullptr;
-	}
+	deleteFenceSync(owner.m_impl->videoFrameRuntime.publishedVideoFrameFence);
 }
 
 void ofxVlc4::VideoComponent::waitForPublishedFrameFenceLocked() {
@@ -422,7 +431,7 @@ void ofxVlc4::VideoComponent::waitForPublishedFrameFenceLocked() {
 	}
 
 	owner.m_impl->videoFrameRuntime.publishedVideoFrameFence = nullptr;
-	const GLenum waitResult = glClientWaitSync(
+	const GLenum waitResult = clientWaitFenceSync(
 		publishedFence,
 		GL_SYNC_FLUSH_COMMANDS_BIT,
 		1000000000ULL);
@@ -433,9 +442,9 @@ void ofxVlc4::VideoComponent::waitForPublishedFrameFenceLocked() {
 		// subsequent draw commands on this context are still ordered after the
 		// fence, then continue.
 		owner.logWarning("GL sync wait timed out; handing fence to GPU pipeline.");
-		glWaitSync(publishedFence, 0, GL_TIMEOUT_IGNORED);
+		gpuWaitFenceSync(publishedFence);
 	}
-	glDeleteSync(publishedFence);
+	deleteFenceSync(publishedFence);
 }
 
 void ofxVlc4::VideoComponent::clearPublishedFrameFence() {
@@ -966,27 +975,13 @@ void ofxVlc4::VideoComponent::ensureVideoRenderTargetCapacity(unsigned requiredW
 		owner.m_impl->videoResourceRuntime.videoTexture.clear();
 		owner.m_impl->videoResourceRuntime.videoTexture.allocate(owner.m_impl->videoGeometryRuntime.allocatedVideoWidth, owner.m_impl->videoGeometryRuntime.allocatedVideoHeight, owner.m_impl->videoGeometryRuntime.allocatedGlPixelFormat);
 		owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().bFlipTexture = true;
-		{
-			const GLenum texTarget = owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureTarget;
-			const GLuint texId = owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID;
-			glBindTexture(texTarget, texId);
-			glTexParameteri(texTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(texTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glBindTexture(texTarget, 0);
-		}
-		if (owner.m_impl->videoResourceRuntime.vlcFramebufferId == 0) {
-			glGenFramebuffers(1, &owner.m_impl->videoResourceRuntime.vlcFramebufferId);
-		}
-		glBindFramebuffer(GL_FRAMEBUFFER, owner.m_impl->videoResourceRuntime.vlcFramebufferId);
-		glFramebufferTexture2D(
-			GL_FRAMEBUFFER,
-			GL_COLOR_ATTACHMENT0,
+		setTextureLinearFiltering(
 			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureTarget,
-			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID,
-			0);
-		glDrawBuffer(GL_COLOR_ATTACHMENT0);
-		ofClear(0, 0, 0, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID);
+		setupFboWithTexture(
+			owner.m_impl->videoResourceRuntime.vlcFramebufferId,
+			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureTarget,
+			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID);
 		owner.m_impl->videoFrameRuntime.vlcFramebufferAttachmentDirty.store(true);
 	}
 }
@@ -1296,7 +1291,7 @@ void ofxVlc4::VideoComponent::unbindVlcRenderTarget() {
 		return;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	unbindFbo();
 	owner.m_impl->videoFrameRuntime.vlcFboBound = false;
 }
 
@@ -1318,7 +1313,7 @@ void ofxVlc4::VideoComponent::videoSwap() {
 	}
 
 	clearPublishedFrameFenceLocked();
-	owner.m_impl->videoFrameRuntime.publishedVideoFrameFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+	owner.m_impl->videoFrameRuntime.publishedVideoFrameFence = insertFenceSync();
 	// The producer context is flushed in makeCurrent(false) after this call
 	// returns, which ensures the fence is visible to other contexts before
 	// the consumer attempts to wait on it.
@@ -1375,7 +1370,7 @@ bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
 		// context may stall because the producer-side commands haven't been
 		// sent yet (GL_SYNC_FLUSH_COMMANDS_BIT only flushes the waiting
 		// context, not the producer context).
-		glFlush();
+		flushCommands();
 		glfwMakeContextCurrent(nullptr);
 	}
 
