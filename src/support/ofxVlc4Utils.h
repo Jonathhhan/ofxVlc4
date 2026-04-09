@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <sstream>
@@ -206,5 +207,16 @@ inline std::string joinFilterChainEntries(const std::vector<std::string> & filte
 		first = false;
 	}
 	return stream.str();
+}
+
+inline std::string readTextFileIfPresent(const std::string & path) {
+	std::ifstream input(path, std::ios::in | std::ios::binary);
+	if (!input.is_open()) {
+		return "";
+	}
+
+	std::ostringstream contents;
+	contents << input.rdbuf();
+	return contents.str();
 }
 } // namespace ofxVlc4Utils

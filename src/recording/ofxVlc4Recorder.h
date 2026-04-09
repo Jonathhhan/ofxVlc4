@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/ofxVlc4Types.h"
 #include "ofMain.h"
 #include "support/ofxVlc4RingBuffer.h"
 #include "vlc/vlc.h"
@@ -14,11 +15,6 @@
 #include <vector>
 
 class ofxVlc4;
-
-enum class ofxVlc4VideoReadbackPolicy {
-	DropLateFrames,
-	BlockForFreshestFrame
-};
 
 struct ofxVlc4RecorderPerformanceInfo {
 	bool asyncVideoReadbackEnabled = false;
