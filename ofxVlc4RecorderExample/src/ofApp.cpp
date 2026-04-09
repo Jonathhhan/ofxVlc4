@@ -1144,6 +1144,29 @@ void ofApp::drawControlPanel() {
 		ImGui::SeparatorText("Status");
 		ImGui::TextWrapped("%s", overlayStatusLine().c_str());
 		ImGui::TextWrapped("Keyboard fallback: V benchmark, W window, S stop.");
+
+		if (benchmarkActive || player->isVideoRecording()) {
+			ImGui::SeparatorText("Performance");
+			const ofxVlc4RecorderPerformanceInfo perf = player->getRecorderPerformanceInfo();
+			ImGui::Text("Readback: %s, buffers: %zu",
+				perf.asyncVideoReadbackEnabled ? "async" : "sync",
+				perf.readbackBufferCount);
+			ImGui::Text("Submitted: %llu  Ready: %llu",
+				static_cast<unsigned long long>(perf.submittedFrameCount),
+				static_cast<unsigned long long>(perf.readyFrameCount));
+			ImGui::Text("Dropped: %llu  Policy dropped: %llu",
+				static_cast<unsigned long long>(perf.droppedFrameCount),
+				static_cast<unsigned long long>(perf.policyDroppedFrameCount));
+			ImGui::Text("FPS: submit %.1f  ready %.1f",
+				perf.submittedFramesPerSecond,
+				perf.readyFramesPerSecond);
+			ImGui::Text("Capture: %llu us (avg %llu us)",
+				static_cast<unsigned long long>(perf.lastCaptureMicros),
+				static_cast<unsigned long long>(perf.averageCaptureMicros));
+			ImGui::Text("Readback latency: %llu us (avg %llu us)",
+				static_cast<unsigned long long>(perf.lastReadbackLatencyMicros),
+				static_cast<unsigned long long>(perf.averageReadbackLatencyMicros));
+		}
 	}
 	ImGui::End();
 }

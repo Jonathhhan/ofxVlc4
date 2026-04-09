@@ -73,13 +73,19 @@ std::string metadataSizeSuffix(bool available, uint64_t bytes) {
 	return "   " + ofToString(bytes) + " B";
 }
 
-ofFloatColor subtitleColorToFloatColor(int value) {
-	return ofFloatColor::fromHex(static_cast<unsigned int>(ofClamp(value, 0, 0xFFFFFF)));
+void subtitleColorToFloat3(int color, float rgb[3]) {
+	const ofColor converted = ofColor::fromHex(static_cast<unsigned int>(ofClamp(color, 0x000000, 0xFFFFFF)));
+	rgb[0] = converted.r / 255.0f;
+	rgb[1] = converted.g / 255.0f;
+	rgb[2] = converted.b / 255.0f;
 }
 
-int subtitleColorFromFloatColor(const ofFloatColor & color) {
-	ofColor converted = color;
-	return static_cast<int>(converted.getHex() & 0xFFFFFFu);
+int subtitleColorFromFloat3(const float rgb[3]) {
+	const ofColor converted(
+		static_cast<unsigned char>(ofClamp(rgb[0], 0.0f, 1.0f) * 255.0f),
+		static_cast<unsigned char>(ofClamp(rgb[1], 0.0f, 1.0f) * 255.0f),
+		static_cast<unsigned char>(ofClamp(rgb[2], 0.0f, 1.0f) * 255.0f));
+	return static_cast<int>(converted.getHex());
 }
 
 std::string formatMediaTrackLabel(const ofxVlc4::MediaTrackInfo & track) {
@@ -721,6 +727,43 @@ void drawNavigationButtonRow(
 		}
 	}
 }
+
+void drawSubtitleStylingControls(ofxVlc4 & player, float compactControlWidth) {
+	static const char * subtitleRenderers[] = { "Auto", "Freetype", "Sapi", "Dummy", "None" };
+	int rendererIndex = static_cast<int>(player.getSubtitleTextRenderer());
+	if (ofVlcPlayer4GuiControls::drawComboWithWheel("Renderer", rendererIndex, subtitleRenderers, IM_ARRAYSIZE(subtitleRenderers))) {
+		player.setSubtitleTextRenderer(static_cast<ofxVlc4SubtitleTextRenderer>(rendererIndex));
+	}
+
+	bool subtitleBold = player.isSubtitleBold();
+	if (ImGui::Checkbox("Bold", &subtitleBold)) {
+		player.setSubtitleBold(subtitleBold);
+	}
+
+	int subtitleOpacity = player.getSubtitleTextOpacity();
+	ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(compactControlWidth));
+	if (ImGui::SliderInt("Subtitle Opacity", &subtitleOpacity, 0, 255)) {
+		player.setSubtitleTextOpacity(subtitleOpacity);
+	}
+	if (ofVlcPlayer4GuiControls::applyHoveredWheelStep(subtitleOpacity, 0, 255, 5, 1)) {
+		player.setSubtitleTextOpacity(subtitleOpacity);
+	}
+
+	float subtitleColorRgb[3];
+	subtitleColorToFloat3(player.getSubtitleTextColor(), subtitleColorRgb);
+	if (ImGui::ColorEdit3("Subtitle Color", subtitleColorRgb, ImGuiColorEditFlags_NoAlpha)) {
+		player.setSubtitleTextColor(subtitleColorFromFloat3(subtitleColorRgb));
+	}
+}
+
+const char * thumbnailImageTypeLabel(ofxVlc4::ThumbnailImageType type) {
+	switch (type) {
+		case ofxVlc4::ThumbnailImageType::Png: return "PNG";
+		case ofxVlc4::ThumbnailImageType::Jpg: return "JPG";
+		case ofxVlc4::ThumbnailImageType::WebP: return "WebP";
+		default: return "PNG";
+	}
+}
 }
 
 bool ofVlcPlayer4GuiMedia::hasDetachedDiagnosticsWindow() const {
@@ -816,6 +859,63 @@ void ofVlcPlayer4GuiMedia::drawContent(
 		if (!playbackState.nativeRecording.lastEventMessage.empty()) {
 			ImGui::TextDisabled("%s", playbackState.nativeRecording.lastEventMessage.c_str());
 		}
+
+		ImGui::Separator();
+		ImGui::TextDisabled("Thumbnail");
+
+		static const char * thumbnailImageTypes[] = { "PNG", "JPG", "WebP" };
+		static const char * thumbnailSeekSpeeds[] = { "Precise", "Fast" };
+
+		ofVlcPlayer4GuiControls::drawComboWithWheel("Image Type", thumbnailImageTypeIndex, thumbnailImageTypes, IM_ARRAYSIZE(thumbnailImageTypes));
+		ofVlcPlayer4GuiControls::drawComboWithWheel("Seek Speed", thumbnailSeekSpeedIndex, thumbnailSeekSpeeds, IM_ARRAYSIZE(thumbnailSeekSpeeds));
+
+		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(compactControlWidth));
+		ImGui::SliderInt("Width##Thumb", &thumbnailWidth, 0, 1920, thumbnailWidth == 0 ? "auto" : "%d");
+		ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(compactControlWidth));
+		ImGui::SliderInt("Height##Thumb", &thumbnailHeight, 0, 1080, thumbnailHeight == 0 ? "auto" : "%d");
+
+		const ofxVlc4::ThumbnailInfo thumbInfo = player.getLastGeneratedThumbnail();
+
+		const float thumbButtonWidth =
+			(ImGui::GetContentRegionAvail().x - (buttonSpacing * 2.0f)) / 3.0f;
+
+		ImGui::BeginDisabled(thumbInfo.requestActive);
+		if (ImGui::Button("By Time", ImVec2(thumbButtonWidth, 0.0f))) {
+			const int64_t timeMs = player.getTime();
+			player.requestThumbnailByTime(
+				static_cast<int>(timeMs),
+				static_cast<unsigned>(thumbnailWidth),
+				static_cast<unsigned>(thumbnailHeight),
+				false,
+				static_cast<ofxVlc4::ThumbnailImageType>(thumbnailImageTypeIndex),
+				static_cast<ofxVlc4::ThumbnailSeekSpeed>(thumbnailSeekSpeedIndex));
+		}
+		ImGui::SameLine(0.0f, buttonSpacing);
+		if (ImGui::Button("By Position", ImVec2(thumbButtonWidth, 0.0f))) {
+			const float position = player.getPosition();
+			player.requestThumbnailByPosition(
+				position,
+				static_cast<unsigned>(thumbnailWidth),
+				static_cast<unsigned>(thumbnailHeight),
+				false,
+				static_cast<ofxVlc4::ThumbnailImageType>(thumbnailImageTypeIndex),
+				static_cast<ofxVlc4::ThumbnailSeekSpeed>(thumbnailSeekSpeedIndex));
+		}
+		ImGui::EndDisabled();
+		ImGui::SameLine(0.0f, buttonSpacing);
+		ImGui::BeginDisabled(!thumbInfo.requestActive);
+		if (ImGui::Button("Cancel", ImVec2(thumbButtonWidth, 0.0f))) {
+			player.cancelThumbnailRequest();
+		}
+		ImGui::EndDisabled();
+
+		if (thumbInfo.requestActive) {
+			ImGui::TextDisabled("Thumbnail: generating...");
+		} else if (thumbInfo.available) {
+			ImGui::TextDisabled("Thumbnail: %s", thumbInfo.path.c_str());
+			ImGui::TextDisabled("   %ux%u at %lld ms", thumbInfo.width, thumbInfo.height, static_cast<long long>(thumbInfo.timeMs));
+		}
+
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
@@ -991,6 +1091,8 @@ void ofVlcPlayer4GuiMedia::drawContent(
 			if (ofVlcPlayer4GuiControls::applyHoveredWheelStep(subtitleTextScale, 0.5f, 3.0f, 0.1f, 0.05f)) {
 				player.setSubtitleTextScale(subtitleTextScale);
 			}
+
+			drawSubtitleStylingControls(player, compactControlWidth);
 		} else {
 			const std::vector<ofxVlc4::MediaTrackInfo> videoTracks = player.getVideoTracks();
 			const std::vector<ofxVlc4::MediaTrackInfo> audioTracks = player.getAudioTracks();
@@ -1041,6 +1143,9 @@ void ofVlcPlayer4GuiMedia::drawContent(
 			if (ofVlcPlayer4GuiControls::applyHoveredWheelStep(subtitleTextScale, 0.5f, 3.0f, 0.1f, 0.05f)) {
 				player.setSubtitleTextScale(subtitleTextScale);
 			}
+
+			drawSubtitleStylingControls(player, compactControlWidth);
+
 			drawTrackDetailsBlock("Video Details", videoTracks, "Video");
 			drawTrackDetailsBlock("Audio Details", audioTracks, "Audio");
 			drawTrackDetailsBlock("Subtitle Details", subtitleTracks, "Subtitle");
