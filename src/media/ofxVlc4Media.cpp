@@ -705,30 +705,15 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 	for (const auto & option : options) {
 		const std::string trimmedOption = trimWhitespace(option);
 		if (!trimmedOption.empty()) {
-			libvlc_clearerr();
 			libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, trimmedOption.c_str());
-			const char * optionError = libvlc_errmsg();
-			if (optionError) {
-				owner.logWarning("libvlc_media_add_option may have failed for \"" + trimmedOption + "\": " + optionError);
-			}
 		}
 	}
 
 	if (!owner.m_impl->playerConfigRuntime.audioFilterChain.empty()) {
-		libvlc_clearerr();
 		libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, (":audio-filter=" + owner.m_impl->playerConfigRuntime.audioFilterChain).c_str());
-		const char * filterError = libvlc_errmsg();
-		if (filterError) {
-			owner.logWarning(std::string("libvlc_media_add_option may have failed for audio-filter: ") + filterError);
-		}
 	}
 	if (!owner.m_impl->playerConfigRuntime.videoFilterChain.empty() && owner.canApplyNativeVideoFilters()) {
-		libvlc_clearerr();
 		libvlc_media_add_option(owner.m_impl->legacyCoreMirrorRuntime.media, (":video-filter=" + owner.m_impl->playerConfigRuntime.videoFilterChain).c_str());
-		const char * filterError = libvlc_errmsg();
-		if (filterError) {
-			owner.logWarning(std::string("libvlc_media_add_option may have failed for video-filter: ") + filterError);
-		}
 	}
 
 	owner.m_impl->legacyCoreMirrorRuntime.mediaEventManager = libvlc_media_event_manager(owner.m_impl->legacyCoreMirrorRuntime.media);

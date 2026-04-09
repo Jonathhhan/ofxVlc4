@@ -160,12 +160,7 @@ bool ofxVlc4::muxRecordingFilesInternal(
 	const std::string streamSpec =
 		"sout=#transcode{" + transcodeSpec + "}:standard{access=file,mux=" + normalizedMux + ",dst='" +
 		normalizeSoutPath(outputPath) + "'}";
-	libvlc_clearerr();
 	libvlc_media_add_option(media, streamSpec.c_str());
-	const char * optionError = libvlc_errmsg();
-	if (optionError) {
-		ofLogWarning("ofxVlc4") << "libvlc_media_add_option may have failed for mux stream spec: " << optionError;
-	}
 
 	libvlc_media_player_t * muxPlayer = libvlc_media_player_new_from_media(muxInstance, media);
 	if (!muxPlayer) {
@@ -1215,7 +1210,6 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 	}
 	streamSpec += "}:standard{access=file,dst='" + normalizeSoutPath(videoPath) + "'}";
 
-	libvlc_clearerr();
 	libvlc_media_add_option(recordingMedia, "demux=rawvid");
 	libvlc_media_add_option(recordingMedia, width.c_str());
 	libvlc_media_add_option(recordingMedia, height.c_str());
@@ -1223,10 +1217,6 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 	libvlc_media_add_option(recordingMedia, rawFrameRate.c_str());
 	libvlc_media_add_option(recordingMedia, bufferSize.c_str());
 	libvlc_media_add_option(recordingMedia, streamSpec.c_str());
-	const char * optionError = libvlc_errmsg();
-	if (optionError) {
-		ofLogWarning("ofxVlc4") << "One or more libvlc_media_add_option calls may have failed for video recording: " << optionError;
-	}
 	videoRecordingActive.store(true);
 	return recordingMedia;
 }
