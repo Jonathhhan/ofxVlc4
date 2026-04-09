@@ -715,7 +715,7 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 	}
 
 	owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(libvlc_media_event_manager(owner.m_impl->subsystemRuntime.coreSession->media()));
-	if (owner.m_impl->subsystemRuntime.coreSession->mediaEvents() && owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
+	if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.coreSession->mediaEvents() && owner.m_impl->subsystemRuntime.eventRouter) {
 		owner.m_impl->subsystemRuntime.coreSession->attachMediaEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
 	}
 
