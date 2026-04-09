@@ -39,7 +39,7 @@ typedef unsigned int GLbitfield;
 typedef unsigned int GLuint;
 typedef int GLint;
 typedef int GLsizei;
-typedef long long GLsizeiptr;
+typedef long long GLsizeiptr; // Simplified for test stubs; real GL uses ptrdiff_t.
 typedef unsigned long long GLuint64;
 typedef unsigned char GLboolean;
 typedef void * GLsync;

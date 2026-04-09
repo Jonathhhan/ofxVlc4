@@ -33,7 +33,15 @@ inline GLsync insertFenceSync() {
 	return glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
 
-// CPU-wait on a fence.  Returns the raw GLenum result from glClientWaitSync.
+// CPU-wait on a fence.  Returns the raw GLenum result from glClientWaitSync:
+//   GL_ALREADY_SIGNALED   – the fence was already complete.
+//   GL_CONDITION_SATISFIED – the fence completed within the timeout.
+//   GL_TIMEOUT_EXPIRED     – the timeout elapsed before the fence completed;
+//                            the caller may hand the fence to the GPU pipeline
+//                            via gpuWaitFenceSync() and then delete it.
+//   GL_WAIT_FAILED         – an error occurred; the caller still owns the
+//                            fence and should clean up with deleteFenceSync().
+//
 // Does NOT delete the fence – the caller decides what to do based on the
 // result.  This matches the recording path where the fence lifetime is
 // managed separately.
@@ -159,9 +167,10 @@ inline void destroyPixelPackBuffers(std::vector<GLuint> & pbos, std::vector<GLsy
 	fences.clear();
 }
 
-// Submit a texture-readback into a PBO.  The texture data is copied
-// asynchronously; a fence sync is inserted and returned so the caller can
-// later wait for completion.
+// Submit a texture-readback into a PBO.  Reads RGB / GL_UNSIGNED_BYTE,
+// which matches the recording pipeline's pixel format.  The texture data
+// is copied asynchronously; a fence sync is inserted and returned so the
+// caller can later wait for completion.
 inline GLsync submitTextureReadback(GLuint pbo, GLenum texTarget, GLuint texId) {
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
 	glBindTexture(texTarget, texId);
