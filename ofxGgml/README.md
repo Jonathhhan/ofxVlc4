@@ -105,6 +105,41 @@ auto r = ggml.compute(graph);
 
 - **ofxGgmlExample** — Matrix multiplication with console output.
 - **ofxGgmlNeuralExample** — Simple feedforward neural network visualized in the OF window.
+- **ofxGgmlGuiExample** — Full ImGui-based AI Studio with tabs for Chat, Scripting, Summarize, Writing, and Custom prompts.  Uses ofxImGui for the GUI and demonstrates the complete ofxGgml compute pipeline in each mode.
+
+## Build Scripts
+
+Two helper scripts are provided in the repository's `scripts/` directory:
+
+### `scripts/build-ggml.sh`
+
+Clone, compile, and install the ggml library from source:
+
+```bash
+# Basic CPU-only build
+./scripts/build-ggml.sh
+
+# With CUDA support
+./scripts/build-ggml.sh --gpu
+
+# Custom install prefix
+./scripts/build-ggml.sh --prefix $HOME/.local --jobs 8
+```
+
+### `scripts/download-model.sh`
+
+Download a GGUF model file for inference:
+
+```bash
+# Download default model (TinyLlama 1.1B Chat Q4_0, ~600 MB)
+./scripts/download-model.sh
+
+# List recommended models
+./scripts/download-model.sh --list
+
+# Download a specific model
+./scripts/download-model.sh --model https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_0.gguf
+```
 
 ## License
 
