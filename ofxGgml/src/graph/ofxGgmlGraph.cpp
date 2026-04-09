@@ -183,6 +183,9 @@ ofxGgmlTensor ofxGgmlGraph::rmsNorm(ofxGgmlTensor a, float eps) {
 }
 
 ofxGgmlTensor ofxGgmlGraph::layerNorm(ofxGgmlTensor a, float eps) {
+	// Layer normalization is equivalent to ggml_norm (mean-subtracted,
+	// variance-normalized).  Callers should apply learned scale/bias
+	// with add() and mul() on the result when needed.
 	return ofxGgmlTensor(ggml_norm(m_ctx, a.raw(), eps));
 }
 
@@ -219,9 +222,19 @@ ofxGgmlTensor ofxGgmlGraph::softmax(ofxGgmlTensor a) {
 // --------------------------------------------------------------------------
 
 ofxGgmlTensor ofxGgmlGraph::flashAttn(ofxGgmlTensor q, ofxGgmlTensor k, ofxGgmlTensor v, bool masked) {
+	struct ggml_tensor * mask = nullptr;
+	if (masked) {
+		// Build a causal (lower-triangular) mask filled with -INFINITY for
+		// future positions.  Shape: [kv_len, q_len] with F32 type.
+		const int64_t qLen  = q.raw()->ne[1];
+		const int64_t kvLen = k.raw()->ne[1];
+		mask = ggml_new_tensor_2d(m_ctx, GGML_TYPE_F32, kvLen, qLen);
+		ggml_set_name(mask, "causal_mask");
+		ggml_set_input(mask);
+	}
 	float scale = 1.0f;
 	return ofxGgmlTensor(ggml_flash_attn_ext(m_ctx, q.raw(), k.raw(), v.raw(),
-		nullptr /* mask */, scale, 0.0f, 0.0f));
+		mask, scale, 0.0f, 0.0f));
 }
 
 ofxGgmlTensor ofxGgmlGraph::rope(ofxGgmlTensor a, ofxGgmlTensor positions, int nDims, int mode) {
@@ -233,6 +246,11 @@ ofxGgmlTensor ofxGgmlGraph::rope(ofxGgmlTensor a, ofxGgmlTensor positions, int n
 // --------------------------------------------------------------------------
 
 ofxGgmlTensor ofxGgmlGraph::conv1d(ofxGgmlTensor a, ofxGgmlTensor kernel, int stride, int padding, int dilation) {
+	// Note: ggml provides ggml_conv_transpose_1d for transposed (deconv) 1-D
+	// convolution.  For a standard 1-D convolution the caller can use the
+	// im2col + matMul pattern.  This wrapper exposes the transposed variant
+	// directly since it is the primitive available in ggml.
+	(void)dilation; // dilation is not directly supported by ggml_conv_transpose_1d
 	return ofxGgmlTensor(ggml_conv_transpose_1d(m_ctx, kernel.raw(), a.raw(), stride, padding, dilation));
 }
 

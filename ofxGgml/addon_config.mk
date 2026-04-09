@@ -12,7 +12,7 @@ meta:
 	ADDON_DESCRIPTION = openFrameworks addon wrapping the ggml tensor library for machine-learning computation
 	ADDON_AUTHOR = Jonathan Frank
 	ADDON_TAGS = "ml,tensor,ggml,machine-learning,neural-network,compute"
-	ADDON_URL = https://github.com/Jonathhhan/ofxVlc4
+	ADDON_URL = https://github.com/Jonathhhan/ofxGgml
 	ADDON_LICENSE = MIT
 
 common:
