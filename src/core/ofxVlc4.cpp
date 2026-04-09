@@ -425,6 +425,15 @@ const char * ofxVlc4::recordingSessionStateLabel(ofxVlc4RecordingSessionState st
 	return "Idle";
 }
 
+static bool isH265Preset(ofxVlc4RecordingVideoCodecPreset preset) {
+	return preset == ofxVlc4RecordingVideoCodecPreset::H265 ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_NVENC ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_QSV ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_VAAPI ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_AMF ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_MFT;
+}
+
 std::string ofxVlc4::recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPreset preset) {
 	switch (preset) {
 	case ofxVlc4RecordingVideoCodecPreset::H264:
@@ -608,12 +617,7 @@ bool ofxVlc4::recordingMuxProfileSupportsVideoCodec(
 			profile == ofxVlc4RecordingMuxProfile::OggVorbis ||
 			profile == ofxVlc4RecordingMuxProfile::WebmOpus;
 	}
-	if (preset == ofxVlc4RecordingVideoCodecPreset::H265 ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_NVENC ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_QSV ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_VAAPI ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_AMF ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_MFT) {
+	if (isH265Preset(preset)) {
 		return profile == ofxVlc4RecordingMuxProfile::MkvOpus ||
 			profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
 			profile == ofxVlc4RecordingMuxProfile::MkvLpcm ||
@@ -643,12 +647,7 @@ std::string ofxVlc4::recordingMuxProfileCompatibilityMessage(
 	if (isOpenCodec) {
 		return "VP8, VP9, and Theora recording require an MKV, OGG, or WebM mux profile.";
 	}
-	if (preset == ofxVlc4RecordingVideoCodecPreset::H265 ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_NVENC ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_QSV ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_VAAPI ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_AMF ||
-		preset == ofxVlc4RecordingVideoCodecPreset::H265_MFT) {
+	if (isH265Preset(preset)) {
 		return "H265 / HEVC recording currently requires an MKV mux profile.";
 	}
 	return "Selected recording codec and mux profile are not compatible.";

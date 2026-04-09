@@ -649,12 +649,8 @@ void ofApp::cycleBenchmarkMuxProfile() {
 
 	const ofxVlc4RecordingVideoCodecPreset codecPreset = player->getVideoRecordingCodecPreset();
 	const ofxVlc4RecordingMuxProfile muxProfile = player->getRecordingMuxProfile();
-	if (codecPreset == ofxVlc4RecordingVideoCodecPreset::H265 ||
-		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_NVENC ||
-		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_QSV ||
-		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_VAAPI ||
-		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_AMF ||
-		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_MFT) {
+	const bool isH265 = ofxVlc4::recordingVideoCodecForPreset(codecPreset) == "X265";
+	if (isH265) {
 		player->setRecordingMuxProfile(
 			muxProfile == ofxVlc4RecordingMuxProfile::MkvOpus
 				? ofxVlc4RecordingMuxProfile::MkvFlac
