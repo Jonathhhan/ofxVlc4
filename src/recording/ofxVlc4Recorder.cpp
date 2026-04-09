@@ -86,6 +86,14 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		}
 		return false;
 	}
+	for (const char c : normalizedAudioCodec) {
+		if (!std::isalnum(static_cast<unsigned char>(c))) {
+			if (errorOut) {
+				*errorOut = "Mux audio codec name contains invalid characters.";
+			}
+			return false;
+		}
+	}
 
 	const auto fail = [&](const std::string & message) {
 		if (errorOut) {
@@ -1208,7 +1216,12 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		streamSpec += ",width=" + ofToString(encodedWidth);
 		streamSpec += ",height=" + ofToString(encodedHeight);
 	}
-	streamSpec += "}:standard{access=file,dst='" + normalizeSoutPath(videoPath) + "'}";
+	const std::string muxModule = muxModuleForPath(videoPath);
+	streamSpec += "}:standard{access=file";
+	if (!muxModule.empty()) {
+		streamSpec += ",mux=" + muxModule;
+	}
+	streamSpec += ",dst='" + normalizeSoutPath(videoPath) + "'}";
 
 	libvlc_media_add_option(recordingMedia, "demux=rawvid");
 	libvlc_media_add_option(recordingMedia, width.c_str());

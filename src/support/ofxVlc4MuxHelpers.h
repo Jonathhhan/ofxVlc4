@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -160,6 +161,20 @@ inline bool tryRemoveRecordingFileOnce(const std::string & path) {
 		return true;
 	}
 	return !error && !std::filesystem::exists(path, error);
+}
+
+// Returns the VLC mux module name for a given file path, derived from its
+// extension (without the leading dot, lowercased).  Returns an empty string
+// if the path has no extension.
+inline std::string muxModuleForPath(const std::string & path) {
+	std::string ext = std::filesystem::path(path).extension().string();
+	if (!ext.empty() && ext[0] == '.') {
+		ext.erase(0, 1);
+	}
+	for (auto & c : ext) {
+		c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+	}
+	return ext;
 }
 
 // Derives a default muxed-output path from the given source video path by

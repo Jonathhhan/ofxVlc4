@@ -229,6 +229,58 @@ static void testRemoveRecordingFile() {
 }
 
 // ---------------------------------------------------------------------------
+// muxModuleForPath
+// ---------------------------------------------------------------------------
+
+static void testMuxModuleForPath() {
+	beginSuite("muxModuleForPath");
+
+	using ofxVlc4MuxHelpers::muxModuleForPath;
+
+	// Common video extensions return the expected mux module name.
+	CHECK_EQ(muxModuleForPath("/tmp/video.ts"), std::string("ts"));
+	CHECK_EQ(muxModuleForPath("/tmp/video.mp4"), std::string("mp4"));
+	CHECK_EQ(muxModuleForPath("/tmp/video.mov"), std::string("mov"));
+	CHECK_EQ(muxModuleForPath("/tmp/video.mkv"), std::string("mkv"));
+	CHECK_EQ(muxModuleForPath("/tmp/video.avi"), std::string("avi"));
+	CHECK_EQ(muxModuleForPath("/tmp/video.webm"), std::string("webm"));
+	CHECK_EQ(muxModuleForPath("/tmp/video.ogg"), std::string("ogg"));
+
+	// Mixed-case extensions are lowercased.
+	CHECK_EQ(muxModuleForPath("/tmp/video.MP4"), std::string("mp4"));
+	CHECK_EQ(muxModuleForPath("/tmp/video.Ts"), std::string("ts"));
+
+	// No extension returns an empty string.
+	CHECK_EQ(muxModuleForPath("/tmp/video"), std::string());
+	CHECK_EQ(muxModuleForPath("video"), std::string());
+
+	// Empty path returns empty string.
+	CHECK_EQ(muxModuleForPath(""), std::string());
+}
+
+// ---------------------------------------------------------------------------
+// buildDefaultMuxOutputPath
+// ---------------------------------------------------------------------------
+
+static void testBuildDefaultMuxOutputPath() {
+	beginSuite("buildDefaultMuxOutputPath");
+
+	using ofxVlc4MuxHelpers::buildDefaultMuxOutputPath;
+
+	// Replaces extension and appends "-muxed" to the stem.
+	{
+		const std::string result = buildDefaultMuxOutputPath("/tmp/recording.ts", "mp4");
+		CHECK(result.find("recording-muxed.mp4") != std::string::npos);
+	}
+
+	// Different container extension.
+	{
+		const std::string result = buildDefaultMuxOutputPath("/tmp/clip.ts", "mkv");
+		CHECK(result.find("clip-muxed.mkv") != std::string::npos);
+	}
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -238,6 +290,8 @@ int main() {
 	testWaitForRecordingFileNoCancel();
 	testWaitForRecordingFileCancelFlag();
 	testRemoveRecordingFile();
+	testMuxModuleForPath();
+	testBuildDefaultMuxOutputPath();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;
