@@ -593,6 +593,7 @@ std::string ofApp::runDemoComputation(const std::string & input, AiMode mode,
 
 	// Prepare input features from the text.
 	std::vector<float> features(featureDim, 0.0f);
+	const float normalizer = std::max(1.0f, static_cast<float>(inputLen));
 	features[0] = static_cast<float>(inputLen) / 100.0f;
 	int spaceCount = 0, upperCount = 0, digitCount = 0, punctCount = 0;
 	for (char c : input) {
@@ -601,13 +602,22 @@ std::string ofApp::runDemoComputation(const std::string & input, AiMode mode,
 		if (std::isdigit(static_cast<unsigned char>(c))) digitCount++;
 		if (std::ispunct(static_cast<unsigned char>(c))) punctCount++;
 	}
-	features[1] = static_cast<float>(spaceCount) / std::max(1.0f, static_cast<float>(inputLen));
-	features[2] = static_cast<float>(upperCount) / std::max(1.0f, static_cast<float>(inputLen));
-	features[3] = static_cast<float>(digitCount) / std::max(1.0f, static_cast<float>(inputLen));
-	features[4] = static_cast<float>(punctCount) / std::max(1.0f, static_cast<float>(inputLen));
+	features[1] = static_cast<float>(spaceCount) / normalizer;
+	features[2] = static_cast<float>(upperCount) / normalizer;
+	features[3] = static_cast<float>(digitCount) / normalizer;
+	features[4] = static_cast<float>(punctCount) / normalizer;
 	features[5] = temperature;
 	features[6] = static_cast<float>(maxTokens) / 2048.0f;
-	features[7] = static_cast<float>(mode == AiMode::Chat ? 1 : (mode == AiMode::Script ? 2 : 3)) / 5.0f;
+
+	float modeValue = 0.0f;
+	switch (mode) {
+	case AiMode::Chat:      modeValue = 1.0f; break;
+	case AiMode::Script:    modeValue = 2.0f; break;
+	case AiMode::Summarize: modeValue = 3.0f; break;
+	case AiMode::Write:     modeValue = 4.0f; break;
+	case AiMode::Custom:    modeValue = 5.0f; break;
+	}
+	features[7] = modeValue / 5.0f;
 
 	// Random weights seeded from input hash.
 	std::hash<std::string> hasher;

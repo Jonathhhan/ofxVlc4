@@ -160,7 +160,7 @@ if [[ ! -s "$OUTPUT_PATH" ]]; then
 	die "Downloaded file is empty. Check the URL and try again."
 fi
 
-FILE_SIZE=$(stat -f%z "$OUTPUT_PATH" 2>/dev/null || stat -c%s "$OUTPUT_PATH" 2>/dev/null || echo 0)
+FILE_SIZE=$(wc -c < "$OUTPUT_PATH" 2>/dev/null || echo 0)
 write_step "Download complete!  Size: $(numfmt --to=iec "$FILE_SIZE" 2>/dev/null || echo "$FILE_SIZE bytes")"
 write_step "Model saved to: $OUTPUT_PATH"
 write_step ""
