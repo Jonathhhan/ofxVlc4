@@ -868,6 +868,14 @@ void PlaybackController::handleMediaPlayerEvent(const libvlc_event_t * event) {
 	case libvlc_MediaPlayerUncorked:
 		onMediaPlayerUncorked();
 		return;
+	case libvlc_MediaPlayerNothingSpecial:
+		return;
+	case libvlc_MediaPlayerForward:
+		return;
+	case libvlc_MediaPlayerBackward:
+		return;
+	case libvlc_MediaPlayerMediaStopping:
+		return;
 	default:
 		return;
 	}
@@ -1148,6 +1156,15 @@ void PlaybackController::setTime(int ms) {
 		resetAudioBuffer();
 		libvlc_media_player_set_time(player, clampedMs, true);
 	}
+}
+
+void PlaybackController::seekByMs(int deltaMs) {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	if (!player) {
+		return;
+	}
+	resetAudioBuffer();
+	libvlc_media_player_jump_time(player, static_cast<libvlc_time_t>(deltaMs));
 }
 
 float PlaybackController::getLength() const {

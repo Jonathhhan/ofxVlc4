@@ -5,6 +5,7 @@
 namespace {
 
 static const libvlc_event_type_t kPlayerEventTypes[] = {
+	libvlc_MediaPlayerNothingSpecial,
 	libvlc_MediaPlayerLengthChanged,
 	libvlc_MediaPlayerStopped,
 	libvlc_MediaPlayerStopping,
@@ -34,6 +35,9 @@ static const libvlc_event_type_t kPlayerEventTypes[] = {
 	libvlc_MediaPlayerEncounteredError,
 	libvlc_MediaPlayerCorked,
 	libvlc_MediaPlayerUncorked,
+	libvlc_MediaPlayerForward,
+	libvlc_MediaPlayerBackward,
+	libvlc_MediaPlayerMediaStopping,
 };
 
 } // namespace

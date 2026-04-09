@@ -4169,6 +4169,48 @@ void ofxVlc4::MediaComponent::clearAbLoop() {
 	owner.logNotice("A-B loop cleared.");
 }
 
+bool ofxVlc4::MediaComponent::setAbLoopByTime(int64_t aTimeMs, int64_t bTimeMs) {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	if (!player) {
+		return false;
+	}
+	if (bTimeMs <= aTimeMs) {
+		owner.setError("A-B loop end must be after the start.");
+		return false;
+	}
+	owner.m_impl->playbackPolicyRuntime.pendingAbLoopStartTimeMs = -1;
+	owner.m_impl->playbackPolicyRuntime.pendingAbLoopStartPosition = -1.0f;
+	const int result = libvlc_media_player_set_abloop_time(player, aTimeMs, bTimeMs);
+	if (result != 0) {
+		owner.setError("A-B loop could not be applied.");
+		return false;
+	}
+	owner.setStatus("A-B loop enabled.");
+	owner.logNotice("A-B loop enabled.");
+	return true;
+}
+
+bool ofxVlc4::MediaComponent::setAbLoopByPosition(float aPosition, float bPosition) {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	if (!player) {
+		return false;
+	}
+	if (bPosition <= aPosition) {
+		owner.setError("A-B loop end must be after the start.");
+		return false;
+	}
+	owner.m_impl->playbackPolicyRuntime.pendingAbLoopStartTimeMs = -1;
+	owner.m_impl->playbackPolicyRuntime.pendingAbLoopStartPosition = -1.0f;
+	const int result = libvlc_media_player_set_abloop_position(player, aPosition, bPosition);
+	if (result != 0) {
+		owner.setError("A-B loop could not be applied.");
+		return false;
+	}
+	owner.setStatus("A-B loop enabled.");
+	owner.logNotice("A-B loop enabled.");
+	return true;
+}
+
 ofxVlc4::AbLoopInfo ofxVlc4::getAbLoop() const {
 	return mediaComponent->getAbLoop();
 }
@@ -4179,6 +4221,14 @@ bool ofxVlc4::setAbLoopA() {
 
 bool ofxVlc4::setAbLoopB() {
 	return mediaComponent->setAbLoopB();
+}
+
+bool ofxVlc4::setAbLoopByTime(int64_t aTimeMs, int64_t bTimeMs) {
+	return mediaComponent->setAbLoopByTime(aTimeMs, bTimeMs);
+}
+
+bool ofxVlc4::setAbLoopByPosition(float aPosition, float bPosition) {
+	return mediaComponent->setAbLoopByPosition(aPosition, bPosition);
 }
 
 void ofxVlc4::clearAbLoop() {
@@ -4361,6 +4411,10 @@ void ofxVlc4::MediaComponent::nextFrame() {
 	owner.logVerbose("Advanced one frame.");
 }
 
+void ofxVlc4::MediaComponent::seekByMs(int deltaMs) {
+	playback().seekByMs(deltaMs);
+}
+
 void ofxVlc4::MediaComponent::navigate(NavigationMode mode) {
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	if (!player) {
@@ -4384,16 +4438,15 @@ void ofxVlc4::nextFrame() {
 	mediaComponent->nextFrame();
 }
 
+void ofxVlc4::seekByMs(int deltaMs) {
+	mediaComponent->seekByMs(deltaMs);
+}
+
 void ofxVlc4::navigate(NavigationMode mode) {
 	mediaComponent->navigate(mode);
 }
 
 bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
-	const auto seekByMilliseconds = [this](int deltaMs) {
-		const int currentTimeMs = std::max(0, getTime());
-		setTime(std::max(0, currentTimeMs + deltaMs));
-	};
-
 	switch (command) {
 	case PlayerCommand::PlayPause:
 		if (isPlaying()) {
@@ -4418,16 +4471,16 @@ bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
 		previousMediaListItem();
 		return true;
 	case PlayerCommand::SeekForwardSmall:
-		seekByMilliseconds(5000);
+		seekByMs(5000);
 		return true;
 	case PlayerCommand::SeekBackwardSmall:
-		seekByMilliseconds(-5000);
+		seekByMs(-5000);
 		return true;
 	case PlayerCommand::SeekForwardLarge:
-		seekByMilliseconds(30000);
+		seekByMs(30000);
 		return true;
 	case PlayerCommand::SeekBackwardLarge:
-		seekByMilliseconds(-30000);
+		seekByMs(-30000);
 		return true;
 	case PlayerCommand::VolumeUp:
 		setVolume(getVolume() + 5);
@@ -4610,8 +4663,9 @@ bool ofxVlc4::MediaComponent::selectTrackById(libvlc_track_type_t type, const st
 			info.selected = track->selected;
 			libvlc_media_player_select_track(player, track);
 			libvlc_media_tracklist_delete(tracklist);
-			owner.setStatus(std::string(type == libvlc_track_audio ? "Audio" : "Subtitle") + " track set.");
-			owner.logNotice(std::string(type == libvlc_track_audio ? "Audio" : "Subtitle") + " track: " + describeTrackLabel(info) + ".");
+			const char * typeLabel = type == libvlc_track_video ? "Video" : (type == libvlc_track_audio ? "Audio" : "Subtitle");
+			owner.setStatus(std::string(typeLabel) + " track set.");
+			owner.logNotice(std::string(typeLabel) + " track: " + describeTrackLabel(info) + ".");
 			return true;
 		}
 	}
@@ -4634,6 +4688,58 @@ bool ofxVlc4::MediaComponent::selectSubtitleTrackById(const std::string & trackI
 		owner.logNotice("Subtitle track disabled.");
 	}
 	return applied;
+}
+
+bool ofxVlc4::MediaComponent::selectVideoTrackById(const std::string & trackId) {
+	return selectTrackById(libvlc_track_video, trackId);
+}
+
+void ofxVlc4::MediaComponent::unselectTrackType(libvlc_track_type_t type) {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	if (!player) {
+		return;
+	}
+	libvlc_media_player_unselect_track_type(player, type);
+	const char * typeLabel = type == libvlc_track_video ? "Video" : (type == libvlc_track_audio ? "Audio" : "Subtitle");
+	owner.setStatus(std::string(typeLabel) + " tracks unselected.");
+	owner.logNotice(std::string(typeLabel) + " tracks unselected.");
+}
+
+void ofxVlc4::MediaComponent::unselectVideoTracks() {
+	unselectTrackType(libvlc_track_video);
+}
+
+void ofxVlc4::MediaComponent::unselectAudioTracks() {
+	unselectTrackType(libvlc_track_audio);
+}
+
+void ofxVlc4::MediaComponent::unselectSubtitleTracks() {
+	unselectTrackType(libvlc_track_text);
+	refreshSubtitleStateInfo();
+}
+
+void ofxVlc4::MediaComponent::selectTracksByIds(libvlc_track_type_t type, const std::string & commaSeparatedIds) {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	if (!player) {
+		return;
+	}
+	libvlc_media_player_select_tracks_by_ids(player, type, commaSeparatedIds.c_str());
+	const char * typeLabel = type == libvlc_track_video ? "Video" : (type == libvlc_track_audio ? "Audio" : "Subtitle");
+	owner.setStatus(std::string(typeLabel) + " tracks selected by IDs.");
+	owner.logNotice(std::string(typeLabel) + " tracks selected by IDs: " + commaSeparatedIds);
+}
+
+void ofxVlc4::MediaComponent::selectVideoTracksByIds(const std::string & commaSeparatedIds) {
+	selectTracksByIds(libvlc_track_video, commaSeparatedIds);
+}
+
+void ofxVlc4::MediaComponent::selectAudioTracksByIds(const std::string & commaSeparatedIds) {
+	selectTracksByIds(libvlc_track_audio, commaSeparatedIds);
+}
+
+void ofxVlc4::MediaComponent::selectSubtitleTracksByIds(const std::string & commaSeparatedIds) {
+	selectTracksByIds(libvlc_track_text, commaSeparatedIds);
+	refreshSubtitleStateInfo();
 }
 
 std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::getTrackInfos(libvlc_track_type_t type) const {
@@ -4662,6 +4768,42 @@ bool ofxVlc4::selectAudioTrackById(const std::string & trackId) {
 
 bool ofxVlc4::selectSubtitleTrackById(const std::string & trackId) {
 	return mediaComponent->selectSubtitleTrackById(trackId);
+}
+
+bool ofxVlc4::selectVideoTrackById(const std::string & trackId) {
+	return mediaComponent->selectVideoTrackById(trackId);
+}
+
+void ofxVlc4::unselectVideoTracks() {
+	mediaComponent->unselectVideoTracks();
+}
+
+void ofxVlc4::unselectAudioTracks() {
+	mediaComponent->unselectAudioTracks();
+}
+
+void ofxVlc4::unselectSubtitleTracks() {
+	mediaComponent->unselectSubtitleTracks();
+}
+
+void ofxVlc4::unselectTrackType(libvlc_track_type_t type) {
+	mediaComponent->unselectTrackType(type);
+}
+
+void ofxVlc4::selectTracksByIds(libvlc_track_type_t type, const std::string & commaSeparatedIds) {
+	mediaComponent->selectTracksByIds(type, commaSeparatedIds);
+}
+
+void ofxVlc4::selectVideoTracksByIds(const std::string & commaSeparatedIds) {
+	mediaComponent->selectVideoTracksByIds(commaSeparatedIds);
+}
+
+void ofxVlc4::selectAudioTracksByIds(const std::string & commaSeparatedIds) {
+	mediaComponent->selectAudioTracksByIds(commaSeparatedIds);
+}
+
+void ofxVlc4::selectSubtitleTracksByIds(const std::string & commaSeparatedIds) {
+	mediaComponent->selectSubtitleTracksByIds(commaSeparatedIds);
 }
 
 void ofxVlc4::clearCurrentMedia(bool clearVideoResources) {

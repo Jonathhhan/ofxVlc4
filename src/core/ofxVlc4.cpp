@@ -889,6 +889,20 @@ ofxVlc4AddonVersionInfo ofxVlc4::getAddonVersionInfo() {
 	};
 }
 
+std::string ofxVlc4::getLibVlcVersion() {
+	const char * version = libvlc_get_version();
+	return version ? version : "";
+}
+
+std::string ofxVlc4::getLibVlcCompiler() {
+	const char * compiler = libvlc_get_compiler();
+	return compiler ? compiler : "";
+}
+
+int ofxVlc4::getLibVlcAbiVersion() {
+	return libvlc_abi_version();
+}
+
 std::string ofxVlc4::getDiagnosticsReport() const {
 	const auto boolStr = [](bool v) -> const char * { return v ? "yes" : "no"; };
 	const auto naStr = [](const std::string & s) -> std::string {

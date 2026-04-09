@@ -2518,6 +2518,23 @@ float ofxVlc4::VideoComponent::getWidth() const {
 	return rawHeight * aspect;
 }
 
+void * ofxVlc4::VideoComponent::getNativeWindowHandle() const {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	if (!player) {
+		return nullptr;
+	}
+#ifdef TARGET_WIN32
+	return libvlc_media_player_get_hwnd(player);
+#elif defined(TARGET_OSX)
+	return libvlc_media_player_get_nsobject(player);
+#elif defined(TARGET_LINUX)
+	const uint32_t xwindow = libvlc_media_player_get_xwindow(player);
+	return reinterpret_cast<void *>(static_cast<uintptr_t>(xwindow));
+#else
+	return nullptr;
+#endif
+}
+
 void ofxVlc4::applyVideoInputHandling() {
 	videoComponent->applyVideoInputHandling();
 }
@@ -3205,4 +3222,8 @@ void ofxVlc4::refreshPixelAspectRatio() {
 
 void ofxVlc4::refreshDisplayAspectRatio() {
 	videoComponent->refreshDisplayAspectRatio();
+}
+
+void * ofxVlc4::getNativeWindowHandle() const {
+	return videoComponent->getNativeWindowHandle();
 }
