@@ -66,11 +66,9 @@ inline bool trimRipple(Track & track, size_t segmentIndex,
 		Timecode oldEnd = seg.timelineEnd();
 		seg.duration = Timecode(newDuration, rate);
 
+		// Shift downstream first, then replace to avoid temporary overlap.
+		track.rippleShift(oldEnd, deltaFrames);
 		if (!track.replaceSegment(segmentIndex, seg)) return false;
-
-		// Shift downstream segments by deltaFrames.
-		Timecode shiftFrom = oldEnd;
-		track.rippleShift(shiftFrom, deltaFrames);
 	}
 	return true;
 }
@@ -184,9 +182,17 @@ inline bool trimSlide(Track & track, size_t segmentIndex, int64_t deltaFrames)
 	next.timelineStart = Timecode(newNextStart, rate);
 	next.duration = Timecode(newNextDur, rate);
 
-	if (!track.replaceSegment(segmentIndex - 1, prev)) return false;
-	if (!track.replaceSegment(segmentIndex, curr)) return false;
-	if (!track.replaceSegment(segmentIndex + 1, next)) return false;
+	if (deltaFrames > 0) {
+		// Sliding right: next shrinks first to make room.
+		if (!track.replaceSegment(segmentIndex + 1, next)) return false;
+		if (!track.replaceSegment(segmentIndex, curr)) return false;
+		if (!track.replaceSegment(segmentIndex - 1, prev)) return false;
+	} else {
+		// Sliding left: prev shrinks first to make room.
+		if (!track.replaceSegment(segmentIndex - 1, prev)) return false;
+		if (!track.replaceSegment(segmentIndex, curr)) return false;
+		if (!track.replaceSegment(segmentIndex + 1, next)) return false;
+	}
 	return true;
 }
 

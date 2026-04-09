@@ -330,3 +330,97 @@ target_include_directories(test_playlist_helpers PRIVATE
 )
 
 add_test(NAME playlist_helpers COMMAND test_playlist_helpers)
+
+# ---------------------------------------------------------------------------
+# test_nle_timecode
+# Tests the SMPTE timecode engine: construction, conversions, drop-frame
+# math, arithmetic, comparison, clamping, and FrameRate helpers.
+# ---------------------------------------------------------------------------
+
+add_executable(test_nle_timecode
+    test_nle_timecode.cpp
+)
+
+target_include_directories(test_nle_timecode PRIVATE
+    "${SRC_DIR}/nle"
+)
+
+add_test(NAME nle_timecode COMMAND test_nle_timecode)
+
+# ---------------------------------------------------------------------------
+# test_nle_sequence
+# Tests Track, Segment, and Sequence: creation, overlap rejection,
+# segmentIndexAt, rippleShift, duration, playhead, track removal.
+# ---------------------------------------------------------------------------
+
+add_executable(test_nle_sequence
+    test_nle_sequence.cpp
+)
+
+target_include_directories(test_nle_sequence PRIVATE
+    "${SRC_DIR}/nle"
+)
+
+add_test(NAME nle_sequence COMMAND test_nle_sequence)
+
+# ---------------------------------------------------------------------------
+# test_nle_edit_ops
+# Tests three-point editing, overwrite, splice-in, lift, and extract.
+# ---------------------------------------------------------------------------
+
+add_executable(test_nle_edit_ops
+    test_nle_edit_ops.cpp
+)
+
+target_include_directories(test_nle_edit_ops PRIVATE
+    "${SRC_DIR}/nle"
+)
+
+add_test(NAME nle_edit_ops COMMAND test_nle_edit_ops)
+
+# ---------------------------------------------------------------------------
+# test_nle_trim_ops
+# Tests trimRipple, trimRoll, trimSlip, and trimSlide operations.
+# ---------------------------------------------------------------------------
+
+add_executable(test_nle_trim_ops
+    test_nle_trim_ops.cpp
+)
+
+target_include_directories(test_nle_trim_ops PRIVATE
+    "${SRC_DIR}/nle"
+)
+
+add_test(NAME nle_trim_ops COMMAND test_nle_trim_ops)
+
+# ---------------------------------------------------------------------------
+# test_nle_edl_export
+# Tests CMX 3600 EDL export: single/multi segment, custom reel names,
+# empty sequence, drop-frame header.
+# ---------------------------------------------------------------------------
+
+add_executable(test_nle_edl_export
+    test_nle_edl_export.cpp
+)
+
+target_include_directories(test_nle_edl_export PRIVATE
+    "${SRC_DIR}/nle"
+)
+
+add_test(NAME nle_edl_export COMMAND test_nle_edl_export)
+
+# ---------------------------------------------------------------------------
+# test_nle_undo
+# Tests UndoStack: execute/undo/redo cycle, multiple commands, redo
+# cleared on new command, canUndo/canRedo, clear, descriptions.
+# ---------------------------------------------------------------------------
+
+add_executable(test_nle_undo
+    test_nle_undo.cpp
+)
+
+target_include_directories(test_nle_undo PRIVATE
+    "${SRC_DIR}/nle"
+)
+
+add_test(NAME nle_undo COMMAND test_nle_undo)

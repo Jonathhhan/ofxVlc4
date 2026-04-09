@@ -170,19 +170,17 @@ public:
 		int64_t totalFrames = 0;
 
 		if (isDropFrame(rate)) {
-			// Drop-frame conversion: SMPTE → absolute frame count.
+			// Standard drop-frame conversion: SMPTE → absolute frame count.
 			const int d = droppedFramesPerMinute(rate); // 2 or 4
-			const int framesPerMinute      = fps * 60 - d;
-			const int framesPerTenMinutes  = framesPerMinute * 10 + d;
-			const int framesPerHour        = framesPerTenMinutes * 6;
+			const int totalMinutes = hours * 60 + minutes;
+			const int dropCorrection = d * (totalMinutes - totalMinutes / 10);
 
 			totalFrames =
-				static_cast<int64_t>(hours) * framesPerHour +
-				static_cast<int64_t>(minutes / 10) * framesPerTenMinutes +
-				static_cast<int64_t>(minutes % 10) * framesPerMinute +
-				(minutes % 10 > 0 ? d : 0) +
+				static_cast<int64_t>(hours) * 3600 * fps +
+				static_cast<int64_t>(minutes) * 60 * fps +
 				static_cast<int64_t>(seconds) * fps +
-				frames;
+				frames -
+				dropCorrection;
 		} else {
 			// Non-drop-frame: straightforward arithmetic.
 			totalFrames =
@@ -210,34 +208,28 @@ public:
 		const int fps = nominalFps(m_rate);
 
 		if (isDropFrame(m_rate)) {
-			// Reverse of the drop-frame encoding.
+			// Standard frames → SMPTE drop-frame conversion.
 			const int d = droppedFramesPerMinute(m_rate);
 			const int framesPerMinute     = fps * 60 - d;
-			const int framesPerTenMinutes = framesPerMinute * 10 + d;
+			const int firstMinuteFrames   = fps * 60;
+			const int framesPerTenMinutes = firstMinuteFrames + framesPerMinute * 9;
 
 			int64_t remaining = m_frames;
 
 			const int tenMinBlocks = static_cast<int>(remaining / framesPerTenMinutes);
 			remaining %= framesPerTenMinutes;
 
-			int oneMinBlocks = 0;
-			if (remaining >= d) {
-				// Past the first minute in the 10-min block (which has no drop).
-				remaining -= d;
-				oneMinBlocks = static_cast<int>(remaining / framesPerMinute);
-				remaining %= framesPerMinute;
-				// Re-add the drop offset so the first minute is accounted for.
-				oneMinBlocks += 1;
+			int minuteInGroup = 0;
+			if (remaining >= firstMinuteFrames) {
+				// Past the first minute of the 10-min block.
+				remaining -= firstMinuteFrames;
+				minuteInGroup = static_cast<int>(remaining / framesPerMinute) + 1;
+				remaining = remaining % framesPerMinute + d;
 			}
-			// oneMinBlocks is now 0..9.  0 means we are in the first minute
-			// of the 10-minute block (no drop), 1..9 means minutes 1..9.
 
-			const int totalMinutes = tenMinBlocks * 10 +
-				(oneMinBlocks > 0 ? oneMinBlocks - 1 + 1 : 0);
-			// Simplify:  tenMinBlocks * 10 + oneMinBlocks
-
-			hours   = (tenMinBlocks * 10 + oneMinBlocks) / 60;
-			minutes = (tenMinBlocks * 10 + oneMinBlocks) % 60;
+			const int totalMinutes = tenMinBlocks * 10 + minuteInGroup;
+			hours   = totalMinutes / 60;
+			minutes = totalMinutes % 60;
 			seconds = static_cast<int>(remaining / fps);
 			frames  = static_cast<int>(remaining % fps);
 		} else {
