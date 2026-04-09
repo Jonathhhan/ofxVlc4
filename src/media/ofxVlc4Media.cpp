@@ -999,7 +999,7 @@ void ofxVlc4::MediaComponent::clearLastDialogError() {
 }
 
 bool ofxVlc4::MediaComponent::isLibVlcLoggingEnabled() const {
-	return owner.m_impl->subsystemRuntime.coreSession ? owner.m_impl->subsystemRuntime.coreSession->loggingEnabled() : owner.m_impl->diagnosticsRuntime.libVlcLoggingEnabled;
+	return owner.m_impl->subsystemRuntime.coreSession->loggingEnabled();
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLoggingEnabled(bool enabled) {
@@ -1015,11 +1015,11 @@ void ofxVlc4::MediaComponent::setLibVlcLoggingEnabled(bool enabled) {
 }
 
 bool ofxVlc4::MediaComponent::isLibVlcLogFileEnabled() const {
-	return owner.m_impl->subsystemRuntime.coreSession ? owner.m_impl->subsystemRuntime.coreSession->logFileEnabled() : owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled;
+	return owner.m_impl->subsystemRuntime.coreSession->logFileEnabled();
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLogFileEnabled(bool enabled) {
-	std::string resolvedPath = owner.m_impl->subsystemRuntime.coreSession ? owner.m_impl->subsystemRuntime.coreSession->logFilePath() : owner.m_impl->diagnosticsRuntime.libVlcLogFilePath;
+	std::string resolvedPath = owner.m_impl->subsystemRuntime.coreSession->logFilePath();
 	if (enabled && !hasLibVlcLogFilePath(resolvedPath)) {
 		resolvedPath = defaultLibVlcLogFilePath();
 		setLibVlcLogFilePathValue(resolvedPath);
@@ -1046,7 +1046,7 @@ void ofxVlc4::MediaComponent::setLibVlcLogFileEnabled(bool enabled) {
 }
 
 std::string ofxVlc4::MediaComponent::getLibVlcLogFilePath() const {
-	return owner.m_impl->subsystemRuntime.coreSession ? owner.m_impl->subsystemRuntime.coreSession->logFilePath() : owner.m_impl->diagnosticsRuntime.libVlcLogFilePath;
+	return owner.m_impl->subsystemRuntime.coreSession->logFilePath();
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLogFilePath(const std::string & path) {
@@ -1057,20 +1057,16 @@ void ofxVlc4::MediaComponent::setLibVlcLogFilePath(const std::string & path) {
 
 	const bool wasFileLoggingEnabled = isLibVlcLogFileEnabled();
 	setLibVlcLogFilePathValue(normalizedPath);
-	if (owner.m_impl->diagnosticsRuntime.libVlcLogFilePath.empty()) {
+	if (owner.m_impl->subsystemRuntime.coreSession->logFilePath().empty()) {
 		setLibVlcLogFileEnabledValue(false);
 	}
-	if ((wasFileLoggingEnabled || owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled) && owner.sessionInstance()) {
+	if ((wasFileLoggingEnabled || owner.m_impl->subsystemRuntime.coreSession->logFileEnabled()) && owner.sessionInstance()) {
 		applyLibVlcLogging();
 	}
 }
 
 std::vector<ofxVlc4::LibVlcLogEntry> ofxVlc4::MediaComponent::getLibVlcLogEntries() const {
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.libVlcLogMutex);
-	if (!owner.m_impl->subsystemRuntime.coreSession) {
-		return owner.m_impl->diagnosticsRuntime.libVlcLogEntries;
-	}
-
 	std::vector<LibVlcLogEntry> entries;
 	entries.reserve(owner.m_impl->subsystemRuntime.coreSession->logEntries().size());
 	for (const VlcCoreLogEntry & entry : owner.m_impl->subsystemRuntime.coreSession->logEntries()) {
@@ -1081,21 +1077,10 @@ std::vector<ofxVlc4::LibVlcLogEntry> ofxVlc4::MediaComponent::getLibVlcLogEntrie
 
 void ofxVlc4::MediaComponent::clearLibVlcLogEntries() {
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.libVlcLogMutex);
-	owner.m_impl->diagnosticsRuntime.libVlcLogEntries.clear();
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->clearLogEntries();
-	}
+	owner.m_impl->subsystemRuntime.coreSession->clearLogEntries();
 }
 
 void ofxVlc4::MediaComponent::applyLibVlcLogging() {
-	if (!owner.m_impl->subsystemRuntime.coreSession) {
-		return;
-	}
-
-	setLibVlcLoggingEnabledValue(owner.m_impl->diagnosticsRuntime.libVlcLoggingEnabled);
-	setLibVlcLogFileEnabledValue(owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled);
-	setLibVlcLogFilePathValue(owner.m_impl->diagnosticsRuntime.libVlcLogFilePath);
-
 	if (!owner.sessionInstance()) {
 		return;
 	}
@@ -1104,12 +1089,12 @@ void ofxVlc4::MediaComponent::applyLibVlcLogging() {
 	closeLibVlcLogFile();
 
 	const auto applyBufferedLoggingFallback = [this]() {
-		if (owner.m_impl->diagnosticsRuntime.libVlcLoggingEnabled) {
+		if (owner.m_impl->subsystemRuntime.coreSession->loggingEnabled()) {
 			libvlc_log_set(owner.sessionInstance(), ofxVlc4::libVlcLogStatic, &owner);
 		}
 	};
 
-	if (owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled) {
+	if (owner.m_impl->subsystemRuntime.coreSession->logFileEnabled()) {
 		const std::string normalizedPath = normalizeOptionalPath(owner.m_impl->subsystemRuntime.coreSession->logFilePath());
 		if (normalizedPath.empty()) {
 			ofxVlc4::logWarning("libVLC file logging enabled without a log path.");
@@ -1129,21 +1114,22 @@ void ofxVlc4::MediaComponent::applyLibVlcLogging() {
 			}
 		}
 
+		FILE * logFile = nullptr;
 #ifdef _MSC_VER
-		if (fopen_s(&owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle, normalizedPath.c_str(), "ab") != 0) {
-			owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle = nullptr;
+		if (fopen_s(&logFile, normalizedPath.c_str(), "ab") != 0) {
+			logFile = nullptr;
 		}
 #else
-		owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle = std::fopen(normalizedPath.c_str(), "ab");
+		logFile = std::fopen(normalizedPath.c_str(), "ab");
 #endif
-		if (!owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle) {
+		if (!logFile) {
 			ofxVlc4::logWarning("Failed to open libVLC log file: " + normalizedPath);
 			applyBufferedLoggingFallback();
 			return;
 		}
 
-		owner.m_impl->subsystemRuntime.coreSession->setLogFileHandle(owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle);
-		libvlc_log_set_file(owner.sessionInstance(), owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle);
+		owner.m_impl->subsystemRuntime.coreSession->setLogFileHandle(logFile);
+		libvlc_log_set_file(owner.sessionInstance(), owner.m_impl->subsystemRuntime.coreSession->logFileHandle());
 		return;
 	}
 
@@ -1151,16 +1137,7 @@ void ofxVlc4::MediaComponent::applyLibVlcLogging() {
 }
 
 void ofxVlc4::MediaComponent::closeLibVlcLogFile() {
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->closeLogFile();
-		return;
-	}
-
-	if (owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle) {
-		std::fflush(owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle);
-		std::fclose(owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle);
-		owner.m_impl->diagnosticsRuntime.libVlcLogFileHandle = nullptr;
-	}
+	owner.m_impl->subsystemRuntime.coreSession->closeLogFile();
 }
 
 void ofxVlc4::MediaComponent::appendLibVlcLog(const LibVlcLogEntry & entry) {
@@ -1171,26 +1148,16 @@ void ofxVlc4::MediaComponent::appendLibVlcLog(const LibVlcLogEntry & entry) {
 	const std::string friendlyError = mapLibVlcLogToFriendlyError(entry.message);
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.libVlcLogMutex);
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		VlcCoreLogEntry coreEntry;
-		coreEntry.level = entry.level;
-		coreEntry.module = entry.module;
-		coreEntry.file = entry.file;
-		coreEntry.line = entry.line;
-		coreEntry.objectName = entry.objectName;
-		coreEntry.objectHeader = entry.objectHeader;
-		coreEntry.objectId = entry.objectId;
-		coreEntry.message = entry.message;
-		owner.m_impl->subsystemRuntime.coreSession->appendLog(coreEntry);
-	} else {
-		if (owner.m_impl->diagnosticsRuntime.libVlcLogEntries.size() >= kLibVlcLogCapacity) {
-			const size_t overflow = owner.m_impl->diagnosticsRuntime.libVlcLogEntries.size() - kLibVlcLogCapacity + 1;
-			owner.m_impl->diagnosticsRuntime.libVlcLogEntries.erase(
-				owner.m_impl->diagnosticsRuntime.libVlcLogEntries.begin(),
-				owner.m_impl->diagnosticsRuntime.libVlcLogEntries.begin() + overflow);
-		}
-		owner.m_impl->diagnosticsRuntime.libVlcLogEntries.push_back(entry);
-	}
+	VlcCoreLogEntry coreEntry;
+	coreEntry.level = entry.level;
+	coreEntry.module = entry.module;
+	coreEntry.file = entry.file;
+	coreEntry.line = entry.line;
+	coreEntry.objectName = entry.objectName;
+	coreEntry.objectHeader = entry.objectHeader;
+	coreEntry.objectId = entry.objectId;
+	coreEntry.message = entry.message;
+	owner.m_impl->subsystemRuntime.coreSession->appendLog(coreEntry);
 
 	if (!friendlyError.empty() && owner.m_impl->diagnosticsRuntime.lastErrorMessage != friendlyError) {
 		owner.m_impl->diagnosticsRuntime.lastErrorMessage = friendlyError;
@@ -2596,24 +2563,15 @@ void ofxVlc4::MediaComponent::setDiscoveredMediaItemsLocked(std::vector<Discover
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLoggingEnabledValue(bool enabled) {
-	owner.m_impl->diagnosticsRuntime.libVlcLoggingEnabled = enabled;
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->setLoggingEnabled(enabled);
-	}
+	owner.m_impl->subsystemRuntime.coreSession->setLoggingEnabled(enabled);
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLogFileEnabledValue(bool enabled) {
-	owner.m_impl->diagnosticsRuntime.libVlcLogFileEnabled = enabled;
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->setLogFileEnabled(enabled);
-	}
+	owner.m_impl->subsystemRuntime.coreSession->setLogFileEnabled(enabled);
 }
 
 void ofxVlc4::MediaComponent::setLibVlcLogFilePathValue(const std::string & path) {
-	owner.m_impl->diagnosticsRuntime.libVlcLogFilePath = path;
-	if (owner.m_impl->subsystemRuntime.coreSession) {
-		owner.m_impl->subsystemRuntime.coreSession->setLogFilePath(path);
-	}
+	owner.m_impl->subsystemRuntime.coreSession->setLogFilePath(path);
 }
 
 void ofxVlc4::MediaComponent::setNativeRecordingEnabledValue(bool enabled) {

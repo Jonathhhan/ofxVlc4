@@ -71,11 +71,6 @@ struct ofxVlc4::Impl {
 		std::string lastErrorMessage;
 		std::vector<DialogInfo> activeDialogs;
 		DialogErrorInfo lastDialogError;
-		bool libVlcLoggingEnabled = false;
-		bool libVlcLogFileEnabled = false;
-		std::vector<LibVlcLogEntry> libVlcLogEntries;
-		std::string libVlcLogFilePath;
-		FILE * libVlcLogFileHandle = nullptr;
 	};
 
 	struct NativeRecordingRuntimeState {
