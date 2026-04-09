@@ -14,6 +14,9 @@ struct PlaybackTransportState {
 	std::string pendingDirectMediaLabel;
 	bool pendingDirectMediaIsLocation = true;
 	bool pendingDirectMediaParseAsNetwork = false;
+	// Atomic mirror of !pendingDirectMediaSource.empty() so VLC callback
+	// threads can query it without a data race on the std::string.
+	std::atomic<bool> hasPendingDirectMedia { false };
 	std::string activeDirectMediaSource;
 	std::vector<std::string> activeDirectMediaOptions;
 	bool activeDirectMediaIsLocation = true;

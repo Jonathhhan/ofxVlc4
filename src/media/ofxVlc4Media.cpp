@@ -691,12 +691,12 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 	owner.m_impl->legacyCoreMirrorRuntime.media = isLocation
 		? libvlc_media_new_location(source.c_str())
 		: libvlc_media_new_path(source.c_str());
-	owner.m_impl->subsystemRuntime.coreSession->setMedia(owner.m_impl->legacyCoreMirrorRuntime.media);
-	owner.syncLegacyStateFromCoreSession();
 	if (!owner.m_impl->legacyCoreMirrorRuntime.media) {
 		owner.setError("Failed to create media source.");
 		return false;
 	}
+	owner.m_impl->subsystemRuntime.coreSession->setMedia(owner.m_impl->legacyCoreMirrorRuntime.media);
+	owner.syncLegacyStateFromCoreSession();
 
 	for (const auto & option : options) {
 		const std::string trimmedOption = trimWhitespace(option);

@@ -262,6 +262,7 @@ bool PlaybackController::requestDirectMediaActivation(
 			playbackTransport.pendingDirectMediaLabel = label;
 			playbackTransport.pendingDirectMediaIsLocation = isLocation;
 			playbackTransport.pendingDirectMediaParseAsNetwork = parseAsNetwork;
+			playbackTransport.hasPendingDirectMedia.store(true);
 			playbackTransport.pendingActivateShouldPlay.store(shouldPlay);
 			playbackTransport.pendingActivateReady.store(false);
 			playbackTransport.playNextRequested.store(false);
@@ -284,6 +285,7 @@ bool PlaybackController::requestDirectMediaActivation(
 		playbackTransport.pendingDirectMediaLabel = label;
 		playbackTransport.pendingDirectMediaIsLocation = isLocation;
 		playbackTransport.pendingDirectMediaParseAsNetwork = parseAsNetwork;
+		playbackTransport.hasPendingDirectMedia.store(true);
 		playbackTransport.pendingActivateShouldPlay.store(shouldPlay);
 		playbackTransport.pendingActivateReady.store(false);
 		playbackTransport.pendingManualStopEvents.store(1);
@@ -578,6 +580,7 @@ void PlaybackController::clearPendingActivationRequest() {
 	playbackTransport.pendingDirectMediaLabel.clear();
 	playbackTransport.pendingDirectMediaIsLocation = true;
 	playbackTransport.pendingDirectMediaParseAsNetwork = false;
+	playbackTransport.hasPendingDirectMedia.store(false);
 }
 
 void PlaybackController::buildShuffleQueue(int excludeIndex) {
@@ -906,7 +909,7 @@ void PlaybackController::onMediaPlayerStopped() {
 	const int pendingManualStops = playbackTransport.pendingManualStopEvents.fetch_sub(1);
 	if (pendingManualStops > 0) {
 		playbackTransport.manualStopInProgress.store(true);
-		if (playbackTransport.pendingActivateIndex.load() >= 0 || !playbackTransport.pendingDirectMediaSource.empty()) {
+		if (playbackTransport.pendingActivateIndex.load() >= 0 || playbackTransport.hasPendingDirectMedia.load()) {
 			playbackTransport.pendingActivateReady.store(true);
 		} else if (!owner.sessionMedia()) {
 			playbackTransport.pendingManualStopEvents.store(0);
