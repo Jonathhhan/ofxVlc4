@@ -1008,25 +1008,58 @@ private:
 		std::string * errorOut);
 
 public:
+	/// @brief Construct a new ofxVlc4 instance.  Call init() to create the VLC player.
 	ofxVlc4();
+	/// @brief Destructor.  Releases all VLC resources and GL objects.
 	virtual ~ofxVlc4();
 
+	/// @name Logging
+	/// @{
+
+	/// @brief Set the addon-wide log level.
+	/// @param level  The openFrameworks log level (e.g. OF_LOG_VERBOSE).
 	static void setLogLevel(ofLogLevel level);
+	/// @brief Get the current addon-wide log level.
+	/// @return The active log level.
 	static ofLogLevel getLogLevel();
+	/// @brief Log a verbose message through the addon logger.
 	static void logVerbose(const std::string & message);
+	/// @brief Log an error message through the addon logger.
 	static void logError(const std::string & message);
+	/// @brief Log a warning message through the addon logger.
 	static void logWarning(const std::string & message);
+	/// @brief Log a notice-level message through the addon logger.
 	static void logNotice(const std::string & message);
 
+	/// @}
+	/// @name LibVLC Version Info
+	/// @{
+
+	/// @brief Get the runtime libVLC version string (e.g. "4.0.0").
 	static const char * getLibVlcVersion();
+	/// @brief Get the compiler used to build libVLC.
 	static const char * getLibVlcCompiler();
+	/// @brief Get the libVLC source changeset identifier.
 	static const char * getLibVlcChangeset();
+	/// @brief Get the libVLC ABI version number.
+	/// @return The ABI version as an integer.
 	static int getLibVlcAbiVersion();
+	/// @}
+	/// @name Recording Presets and Labels
+	/// @{
+
+	/// @brief Get a human-readable label for a recording audio source.
 	static const char * recordingAudioSourceLabel(ofxVlc4RecordingAudioSource source);
+	/// @brief Get a human-readable label for a recording session state.
 	static const char * recordingSessionStateLabel(ofxVlc4RecordingSessionState state);
+	/// @brief Get the FFmpeg/VLC codec string for a video codec preset.
 	static std::string recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPreset preset);
+	/// @brief Resolve a codec string back to a preset enum value.
 	static ofxVlc4RecordingVideoCodecPreset recordingVideoCodecPresetForCodec(const std::string & codec);
+	/// @brief Get a human-readable label for a video codec preset.
 	static const char * recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecPreset preset);
+	/// @brief Check whether a mux profile supports a given video codec.
+	/// @return True if the combination is compatible.
 	static bool recordingMuxProfileSupportsVideoCodec(
 		ofxVlc4RecordingMuxProfile profile,
 		ofxVlc4RecordingVideoCodecPreset preset);
@@ -1076,15 +1109,43 @@ public:
 		int audioBitrateKbps = 0);
 
 	// init() owns the VLC instance/player lifetime for this wrapper and can safely be called again.
+
+	/// @}
+	/// @name Lifecycle
+	/// @{
+
+	/// @brief Per-frame update.  Must be called every frame to process events and refresh state.
 	void update();
+	/// @brief Initialise the VLC instance and media player.
+	/// @param vlc_argc  Number of additional VLC command-line arguments.
+	/// @param vlc_argv  Array of VLC command-line argument strings.
+	/// @note  Safe to call multiple times — re-initialises the player each time.
 	void init(int vlc_argc, char const * vlc_argv[]);
+	/// @brief Get the extra init arguments that will be passed to libVLC on the next init().
 	std::vector<std::string> getExtraInitArgs() const;
+	/// @brief Set the extra init arguments for the next init() call.
 	void setExtraInitArgs(const std::vector<std::string> & args);
+	/// @brief Append a single extra init argument.
 	void addExtraInitArg(const std::string & arg);
+	/// @brief Clear all extra init arguments.
 	void clearExtraInitArgs();
+	/// @brief Get the current audio visualiser settings.
 	ofxVlc4AudioVisualizerSettings getAudioVisualizerSettings() const;
+	/// @brief Set the audio visualiser settings.
 	void setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & settings);
+	/// @}
+	/// @name Recording Sessions
+	/// @{
+
+	/// @brief Start a recording session from a fully-configured config object.
+	/// @param config  The recording session configuration.
+	/// @return True if the session started successfully.
 	bool startRecordingSession(const ofxVlc4RecordingSessionConfig & config);
+	/// @brief Start a texture recording session capturing the given texture.
+	/// @param name     Output file base name (timestamp is appended automatically).
+	/// @param texture  The texture to capture each frame.
+	/// @param options  Optional start options (e.g. include audio).
+	/// @return True if the session started successfully.
 	bool startTextureRecordingSession(
 		std::string name,
 		const ofTexture & texture,
@@ -1165,19 +1226,60 @@ public:
 	double getRecordingAudioRingBufferSeconds() const;
 	ofxVlc4RecorderPerformanceInfo getRecorderPerformanceInfo() const;
 
+	/// @}
+	/// @name Drawing and Frame Access
+	/// @{
+
+	/// @brief Draw the current video frame.
+	/// @param x  X position in pixels.
+	/// @param y  Y position in pixels.
+	/// @param w  Width in pixels.
+	/// @param h  Height in pixels.
 	void draw(float x, float y, float w, float h);
+	/// @brief Draw the current video frame at its native size.
+	/// @param x  X position in pixels.
+	/// @param y  Y position in pixels.
 	void draw(float x, float y);
+	/// @brief Per-frame update for the recorder pipeline.  Call after update().
 	void updateRecorder();
+	/// @brief Copy decoded audio samples into an ofSoundBuffer for real-time output.
+	/// @param buffer  Destination sound buffer.
+	/// @param gain    Gain multiplier applied to each sample.
 	void readAudioIntoBuffer(ofSoundBuffer & buffer, float gain);
+	/// @brief Submit externally-recorded audio samples to the recording pipeline.
+	/// @param samples      Pointer to interleaved float samples.
+	/// @param sampleCount  Total number of float values (frames × channels).
 	void submitRecordedAudioSamples(const float * samples, size_t sampleCount);
 
+	/// @brief Get the current video texture.  Only valid after the first frame is decoded.
+	/// @return Reference to the video texture.
 	ofTexture & getTexture();
 
+	/// @}
+	/// @name Transport Controls
+	/// @{
+
+	/// @brief Start or resume playback of the current media.
 	void play();
+	/// @brief Pause playback.
 	void pause();
+	/// @brief Stop playback and reset position to the beginning.
 	void stop();
 
+	/// @}
+	/// @name Playlist
+	/// @{
+
+	/// @brief Add a single file or URL to the end of the playlist.
+	/// @param path  File path or media URL.
 	void addToPlaylist(const std::string & path);
+	/// @brief Open a DirectShow capture device (Windows only).
+	/// @param videoDevice  Video device name (e.g. from dshow enumeration).
+	/// @param audioDevice  Optional audio device name.
+	/// @param width   Requested capture width (0 = device default).
+	/// @param height  Requested capture height (0 = device default).
+	/// @param fps     Requested frame rate (0 = device default).
+	/// @return True if the capture source was opened successfully.
 	bool openDshowCapture(
 		const std::string & videoDevice,
 		const std::string & audioDevice = "",
@@ -1579,33 +1681,79 @@ public:
 	void setVideoViewpoint(float yaw, float pitch, float roll, float fov, bool absolute = true);
 	void resetVideoViewpoint();
 
+	/// @}
+	/// @name Playback Position and State
+	/// @{
+
+	/// @brief Seek to a normalised position in the media.
+	/// @param pct  Position as a fraction in [0.0, 1.0].
 	void setPosition(float pct);
+	/// @brief Get the video height in pixels (0 if unknown).
 	float getHeight() const;
+	/// @brief Get the video width in pixels (0 if unknown).
 	float getWidth() const;
+	/// @brief Check whether playback is currently active.
+	/// @return True if the player is in the playing state.
 	bool isPlaying();
+	/// @brief Check whether the player is stopped.
 	bool isStopped() const;
+	/// @brief Check whether the player is transitioning between states.
 	bool isPlaybackTransitioning() const;
+	/// @brief Check whether a restart is pending after a media change.
 	bool isPlaybackRestartPending() const;
+	/// @brief Check whether the current media supports seeking.
 	bool isSeekable() const;
+	/// @brief Get the buffer cache fill level as a fraction in [0.0, 1.0].
 	float getBufferCache() const;
+	/// @brief Check whether the output stream is corked (paused by the system).
 	bool isCorked() const;
+	/// @brief Get the current playback position as a fraction in [0.0, 1.0].
 	float getPosition() const;
+	/// @brief Get the current playback time in milliseconds.
 	int getTime() const;
+	/// @brief Seek to an absolute time in milliseconds.
+	/// @param ms  Target time in milliseconds.
 	void setTime(int ms);
+	/// @brief Jump forward or backward by the given number of milliseconds.
+	/// @param ms  Signed offset in milliseconds (positive = forward).
 	void jumpTime(int ms);
+	/// @brief Get the total media length in milliseconds (0 if unknown).
 	float getLength() const;
+	/// @brief Get the current audio volume.
+	/// @return Volume in the range [0, 200].
 	int getVolume() const;
+	/// @brief Set the audio volume.
+	/// @param volume  Volume in the range [0, 200].
 	void setVolume(int volume);
+	/// @brief Check whether audio is muted.
 	bool isMuted() const;
+	/// @brief Toggle the audio mute state.
 	void toggleMute();
+	/// @brief Close the VLC player and release all resources.
 	void close();
 
+	/// @}
+	/// @name Low-Level Audio Access
+	/// @{
+
+	/// @brief Check whether audio capture is ready (buffer allocated, callbacks active).
 	bool audioIsReady() const;
+	/// @brief Get the number of audio channels being captured.
 	int getChannelCount() const;
+	/// @brief Get the audio sample rate in Hz.
 	int getSampleRate() const;
+	/// @brief Get the total number of audio overrun events (ring buffer full).
 	uint64_t getAudioOverrunCount() const;
+	/// @brief Get the total number of audio underrun events (ring buffer empty).
 	uint64_t getAudioUnderrunCount() const;
+	/// @brief Copy the latest audio samples into a caller-provided buffer.
+	/// @param dst          Destination buffer for interleaved float samples.
+	/// @param sampleCount  Maximum number of float values to copy.
+	/// @return The number of float values actually copied.
 	size_t peekLatestAudioSamples(float * dst, size_t sampleCount) const;
+	/// @brief Get the raw GL render texture (before FBO copy).  Prefer getTexture().
 	ofTexture & getRenderTexture();
+
+	/// @}
 
 };
