@@ -218,3 +218,22 @@ target_include_directories(test_video_helpers PRIVATE
 )
 
 add_test(NAME video_helpers COMMAND test_video_helpers)
+
+# ---------------------------------------------------------------------------
+# test_media_helpers
+# Tests the pure media helper functions (FOURCC conversion, bitrate/frame-rate
+# formatting, bookmark time labels, float formatting, WAV header binary
+# output, PlaybackTransportState defaults) extracted into
+# ofxVlc4MediaHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_media_helpers
+    test_media_helpers.cpp
+)
+
+target_include_directories(test_media_helpers PRIVATE
+    "${SRC_DIR}/support"
+    "${SRC_DIR}"
+)
+
+add_test(NAME media_helpers COMMAND test_media_helpers)

@@ -24,6 +24,7 @@ namespace ofxVlc4AudioHelpers {
 static constexpr double kBufferedAudioSeconds = 0.75;
 static constexpr double kMinBufferedAudioSeconds = 0.05;
 static constexpr double kMaxBufferedAudioSeconds = 5.0;
+// Pi constant — avoids M_PI (non-standard) and std::numbers::pi_v (C++20).
 static constexpr float kPi = 3.14159265358979323846f;
 
 // ---------------------------------------------------------------------------
