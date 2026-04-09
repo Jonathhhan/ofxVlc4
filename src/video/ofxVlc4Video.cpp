@@ -102,10 +102,6 @@ libvlc_position_t toLibvlcOverlayPosition(ofxVlc4::OverlayPosition position) {
 	}
 }
 
-libvlc_position_t toLibvlcVideoTitlePosition(ofxVlc4::OverlayPosition position) {
-	return toLibvlcOverlayPosition(position);
-}
-
 libvlc_teletext_key_t toLibvlcTeletextKey(ofxVlc4::TeletextKey key) {
 	switch (key) {
 	case ofxVlc4::TeletextKey::Green:
@@ -501,7 +497,7 @@ void ofxVlc4::VideoComponent::applyVideoTitleDisplay() {
 
 	libvlc_media_player_set_video_title_display(
 		player,
-		owner.m_impl->videoPresentationRuntime.videoTitleDisplayEnabled ? toLibvlcVideoTitlePosition(owner.m_impl->videoPresentationRuntime.videoTitleDisplayPosition) : libvlc_position_disable,
+		owner.m_impl->videoPresentationRuntime.videoTitleDisplayEnabled ? toLibvlcOverlayPosition(owner.m_impl->videoPresentationRuntime.videoTitleDisplayPosition) : libvlc_position_disable,
 		owner.m_impl->videoPresentationRuntime.videoTitleDisplayTimeoutMs);
 }
 

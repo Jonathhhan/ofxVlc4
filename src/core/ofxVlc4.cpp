@@ -350,6 +350,10 @@ ofxVlc4::ofxVlc4()
 	m_impl->subsystemRuntime.videoComponent = std::make_unique<VideoComponent>(*this);
 	m_impl->subsystemRuntime.mediaComponent = std::make_unique<MediaComponent>(*this);
 	m_impl->subsystemRuntime.playbackController = std::make_unique<PlaybackController>(*this);
+	audioComponent = m_impl->subsystemRuntime.audioComponent.get();
+	videoComponent = m_impl->subsystemRuntime.videoComponent.get();
+	mediaComponent = m_impl->subsystemRuntime.mediaComponent.get();
+	playbackController = m_impl->subsystemRuntime.playbackController.get();
 	m_impl->subsystemRuntime.mediaLibraryController = std::make_unique<MediaLibrary>(*this);
 	m_impl->subsystemRuntime.coreSession = std::make_unique<VlcCoreSession>();
 	m_impl->subsystemRuntime.eventRouter = std::make_unique<VlcEventRouter>(*this);
@@ -359,6 +363,38 @@ ofxVlc4::ofxVlc4()
 
 ofxVlc4::~ofxVlc4() {
 	close();
+}
+
+ofxVlc4::AudioComponent & ofxVlc4::audio() {
+	return *audioComponent;
+}
+
+const ofxVlc4::AudioComponent & ofxVlc4::audio() const {
+	return *audioComponent;
+}
+
+ofxVlc4::VideoComponent & ofxVlc4::video() {
+	return *videoComponent;
+}
+
+const ofxVlc4::VideoComponent & ofxVlc4::video() const {
+	return *videoComponent;
+}
+
+ofxVlc4::MediaComponent & ofxVlc4::media() {
+	return *mediaComponent;
+}
+
+const ofxVlc4::MediaComponent & ofxVlc4::media() const {
+	return *mediaComponent;
+}
+
+PlaybackController & ofxVlc4::playback() {
+	return *playbackController;
+}
+
+const PlaybackController & ofxVlc4::playback() const {
+	return *playbackController;
 }
 
 void ofxVlc4::setLogLevel(ofLogLevel level) {

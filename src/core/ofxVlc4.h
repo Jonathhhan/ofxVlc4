@@ -944,6 +944,10 @@ private:
 	struct Impl;
 	std::unique_ptr<Impl> m_impl;
 
+	AudioComponent * audioComponent = nullptr;
+	VideoComponent * videoComponent = nullptr;
+	MediaComponent * mediaComponent = nullptr;
+	PlaybackController * playbackController = nullptr;
 
 	// VLC Video callbacks
 	static bool videoResize(void * data, const libvlc_video_render_cfg_t * cfg, libvlc_video_output_cfg_t * render_cfg);
@@ -1759,5 +1763,14 @@ public:
 	uint64_t getAudioUnderrunCount() const;
 	size_t peekLatestAudioSamples(float * dst, size_t sampleCount) const;
 	ofTexture & getRenderTexture();
+
+	AudioComponent & audio();
+	const AudioComponent & audio() const;
+	VideoComponent & video();
+	const VideoComponent & video() const;
+	MediaComponent & media();
+	const MediaComponent & media() const;
+	PlaybackController & playback();
+	const PlaybackController & playback() const;
 
 };
