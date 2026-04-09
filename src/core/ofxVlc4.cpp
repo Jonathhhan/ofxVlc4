@@ -15,8 +15,6 @@
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
-#include <filesystem>
-#include <fstream>
 #include <sstream>
 
 using ofxVlc4Utils::clearAllocatedFbo;
@@ -1536,8 +1534,7 @@ void ofxVlc4::finalizeRecordingMuxThread() {
 			if (path.empty()) {
 				return;
 			}
-			std::error_code error;
-			if (!std::filesystem::exists(path, error)) {
+			if (!ofFile::doesFileExist(path, false)) {
 				return;
 			}
 
@@ -1592,8 +1589,7 @@ void ofxVlc4::processDeferredRecordingMuxCleanup(bool finalPass) {
 			continue;
 		}
 		if (finalPass || now >= item.deadline) {
-			std::error_code error;
-			if (std::filesystem::exists(item.path, error)) {
+			if (ofFile::doesFileExist(item.path, false)) {
 				logWarning("Recording mux kept source " + item.label + " file: " + item.path);
 			}
 			continue;

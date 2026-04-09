@@ -1102,16 +1102,10 @@ void ofxVlc4::MediaComponent::applyLibVlcLogging() {
 			return;
 		}
 
-		std::error_code ec;
-		const std::filesystem::path logPath(normalizedPath);
-		const std::filesystem::path parentPath = logPath.parent_path();
-		if (!parentPath.empty()) {
-			std::filesystem::create_directories(parentPath, ec);
-			if (ec) {
-				ofxVlc4::logWarning("Failed to create libVLC log directory: " + parentPath.string());
-				applyBufferedLoggingFallback();
-				return;
-			}
+		if (!ofFilePath::createEnclosingDirectory(normalizedPath, false, true)) {
+			ofxVlc4::logWarning("Failed to create libVLC log directory for: " + normalizedPath);
+			applyBufferedLoggingFallback();
+			return;
 		}
 
 		FILE * logFile = nullptr;
@@ -3481,12 +3475,10 @@ std::string ofxVlc4::takeSnapshot(const std::string & directory) {
 		return "";
 	}
 
-	const std::filesystem::path snapshotDirectory = directory.empty()
-		? std::filesystem::path(ofToDataPath("snapshots", true))
-		: std::filesystem::path(directory);
-	std::error_code ec;
-	std::filesystem::create_directories(snapshotDirectory, ec);
-	if (ec) {
+	const std::string snapshotDirectory = directory.empty()
+		? ofToDataPath("snapshots", true)
+		: directory;
+	if (!ofDirectory::createDirectory(snapshotDirectory, false, true)) {
 		updateSnapshotFailureState("Failed to create snapshot directory.");
 		setError("Failed to create snapshot directory.");
 		return "";
@@ -3496,20 +3488,20 @@ std::string ofxVlc4::takeSnapshot(const std::string & directory) {
 	if (fileStem == "snapshot") {
 		fileStem = sanitizeFileStem(ofFilePath::removeExt(mediaLabelForPath(getCurrentPath())));
 	}
-	const std::filesystem::path outputPath =
-		snapshotDirectory / (fileStem + "_" + ofGetTimestampString("%Y%m%d_%H%M%S") + ".png");
+	const std::string outputPath =
+		ofFilePath::join(snapshotDirectory, fileStem + "_" + ofGetTimestampString("%Y%m%d_%H%M%S") + ".png");
 
-	updateSnapshotStateOnRequest(outputPath.string());
+	updateSnapshotStateOnRequest(outputPath);
 
-	if (libvlc_video_take_snapshot(player, 0, outputPath.string().c_str(), 0, 0) != 0) {
+	if (libvlc_video_take_snapshot(player, 0, outputPath.c_str(), 0, 0) != 0) {
 		updateSnapshotFailureState("Snapshot could not be captured.");
 		setError("Snapshot could not be captured.");
 		return "";
 	}
 
-	setStatus("Snapshot requested: " + outputPath.string());
-	logNotice("Snapshot requested: " + outputPath.string());
-	return outputPath.string();
+	setStatus("Snapshot requested: " + outputPath);
+	logNotice("Snapshot requested: " + outputPath);
+	return outputPath;
 }
 
 ofxVlc4::ThumbnailInfo ofxVlc4::getLastGeneratedThumbnail() const {
