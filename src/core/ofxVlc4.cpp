@@ -31,6 +31,7 @@ using ofxVlc4Utils::readTextFileIfPresent;
 using ofxVlc4MuxHelpers::removeRecordingFile;
 using ofxVlc4MuxHelpers::tryRemoveRecordingFileOnce;
 using ofxVlc4MuxHelpers::buildDefaultMuxOutputPath;
+using RecordingMuxRuntimeState = ofxVlc4::Impl::RecordingMuxRuntimeState;
 
 namespace {
 
