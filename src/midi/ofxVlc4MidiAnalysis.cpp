@@ -14,11 +14,17 @@
 namespace {
 
 uint16_t readBe16(const std::vector<uint8_t> & bytes, size_t offset) {
+	if (offset + 2 > bytes.size()) {
+		throw std::runtime_error("readBe16: offset out of bounds.");
+	}
 	return static_cast<uint16_t>((static_cast<uint16_t>(bytes[offset]) << 8) |
 		static_cast<uint16_t>(bytes[offset + 1]));
 }
 
 uint32_t readBe32(const std::vector<uint8_t> & bytes, size_t offset) {
+	if (offset + 4 > bytes.size()) {
+		throw std::runtime_error("readBe32: offset out of bounds.");
+	}
 	return (static_cast<uint32_t>(bytes[offset]) << 24) |
 		(static_cast<uint32_t>(bytes[offset + 1]) << 16) |
 		(static_cast<uint32_t>(bytes[offset + 2]) << 8) |
@@ -30,6 +36,9 @@ uint32_t readVlq(const std::vector<uint8_t> & bytes, size_t & offset, size_t end
 	int count = 0;
 	while (offset < endOffset) {
 		const uint8_t byte = bytes[offset++];
+		if (value > (UINT32_MAX >> 7)) {
+			throw std::runtime_error("MIDI variable-length value overflow.");
+		}
 		value = (value << 7) | static_cast<uint32_t>(byte & 0x7F);
 		++count;
 		if ((byte & 0x80) == 0) {
@@ -628,7 +637,7 @@ MidiAnalysisReport MidiFileAnalyzer::analyzeFile(const std::string & path) const
 			}
 			const uint32_t trackLength = readBe32(bytes, offset + 4);
 			offset += 8;
-			if (offset + trackLength > bytes.size()) {
+			if (trackLength > bytes.size() || offset > bytes.size() - trackLength) {
 				throw std::runtime_error("Invalid MIDI track length.");
 			}
 

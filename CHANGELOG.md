@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.4
+
+- **code review: ring buffer gain correctness** — `read(dst, wanted, gain)` and `peekLatest(dst, wanted, gain)` now apply gain only to the samples that were actually filled or copied, not to the zero-padded tail; the previous behavior multiplied zero-padded regions by gain which was harmless for audio output but wasteful and semantically incorrect
+
+- **code review: core session null safety in `releaseVlcResources`** — `coreSession->setPlayer(nullptr)`, `coreSession->setPlayerEvents(nullptr)`, and `coreSession->setInstance(nullptr)` calls during shutdown are now guarded with `if (coreSession)` null checks; this prevents a potential null-pointer dereference if the session was not fully initialized before teardown
+
+- **code review: MIDI parser bounds validation** — `readBe16()` and `readBe32()` now validate that the requested byte range is within the input buffer before accessing it, throwing a descriptive `std::runtime_error` on out-of-bounds access instead of reading past the end of the vector
+
+- **code review: MIDI VLQ overflow protection** — `readVlq()` now checks for arithmetic overflow before each `value << 7` shift, throwing if the accumulated value would exceed `UINT32_MAX`
+
+- **code review: MIDI track length overflow-safe comparison** — the track-length validation in `analyzeFile()` now uses an overflow-proof subtraction comparison (`trackLength > bytes.size() || offset > bytes.size() - trackLength`) instead of an addition that could wrap on 32-bit or large inputs
+
+- **code review: equalizer loop index type** — the equalizer band-application loop in `applyEqualizerSettingsNow()` now uses `size_t` for the loop variable instead of `unsigned`, matching standard STL container indexing conventions
+
+- **code review: `pathToFileUri` exception safety** — `std::filesystem::absolute()` and `lexically_normal()` in `pathToFileUri()` are now wrapped in a try-catch so that malformed or OS-rejected paths return an empty string instead of propagating an unhandled `filesystem_error` exception
+
+- **docs: README source layout updated** — added `ofxVlc4MuxHelpers.h`, `ofxVlc4Types.h`, and `ofxVlc4Impl.h` to the documented source layout; corrected the test binary count from eight to nine and added `test_types` to the test list
+
 ## 1.0.3
 
 - **tests: playlist manipulation unit tests** — `tests/test_playlist.cpp` adds a self-contained `Playlist` fixture that mirrors `MediaLibrary`'s locked add/remove/move operations; covers single-item add, duplicate path rejection, remove by index, move-single forward/backward, move-multiple, `currentIndex` tracking across all mutations, and edge cases (empty list, out-of-range indices, no-op moves); no OF, GLFW, or VLC dependencies required

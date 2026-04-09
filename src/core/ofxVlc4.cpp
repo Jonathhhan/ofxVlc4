@@ -1828,8 +1828,10 @@ void ofxVlc4::releaseVlcResources() {
 		libvlc_video_set_adjust_int(m_impl->legacyCoreMirrorRuntime.mediaPlayer, libvlc_adjust_Enable, 0);
 		libvlc_media_player_release(m_impl->legacyCoreMirrorRuntime.mediaPlayer);
 		m_impl->legacyCoreMirrorRuntime.mediaPlayer = nullptr;
-		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
-		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
+		if (m_impl->subsystemRuntime.coreSession) {
+			m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
+			m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
+		}
 	}
 
 	clearCurrentMedia(false);
@@ -1868,7 +1870,9 @@ void ofxVlc4::releaseVlcResources() {
 		libvlc_dialog_set_callbacks(m_impl->legacyCoreMirrorRuntime.libvlc, nullptr, nullptr);
 		libvlc_release(m_impl->legacyCoreMirrorRuntime.libvlc);
 		m_impl->legacyCoreMirrorRuntime.libvlc = nullptr;
-		m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
+		if (m_impl->subsystemRuntime.coreSession) {
+			m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
+		}
 	}
 	processDeferredRecordingMuxCleanup(true);
 

@@ -71,9 +71,12 @@ Support classes:
 
 - `src/recording/ofxVlc4Recorder.*`
 - `src/support/ofxVlc4RingBuffer.*`
+- `src/support/ofxVlc4MuxHelpers.h`
 - `src/midi/ofxVlc4MidiAnalysis.*`
 - `src/midi/ofxVlc4MidiBridge.*`
 - `src/midi/ofxVlc4MidiPlayback.*`
+- `src/core/ofxVlc4Types.h`
+- `src/core/ofxVlc4Impl.h`
 - `src/core/VlcCoreSession.*`
 - `src/core/VlcEventRouter.*`
 - `src/media/MediaLibrary.*`
@@ -553,7 +556,7 @@ For a focused surface to test that behavior, use `ofxVlc4RecorderExample`.
 
 The addon ships a CMake-based unit-test suite in `tests/`. The tests compile without a real openFrameworks, GLFW, or VLC installation — stubs in `tests/stubs/` and `tests/stubs_gl/` supply the minimal type definitions required.
 
-Eight test binaries are built:
+Nine test binaries are built:
 
 - `test_ringbuffer` — ring-buffer push/pop, wrap-around, and audio callback helpers (`src/support/ofxVlc4RingBuffer.cpp`)
 - `test_midi_analysis` — MIDI file/event parsing and timecode utilities (`src/midi/ofxVlc4MidiAnalysis.cpp`)
@@ -563,6 +566,7 @@ Eight test binaries are built:
 - `test_gl` — `hasCurrentGlContext()` and `clearAllocatedFbo()` from `ofxVlc4Utils.h`, using controllable GL stubs in `tests/stubs_gl/`
 - `test_midi_bridge` — MIDI event/channel-message conversion, filtering, and describe helpers (`src/midi/ofxVlc4MidiBridge.cpp`)
 - `test_midi_playback` — MIDI playback session load/clear, play/pause/stop, seek, update dispatch, tempo, sync, and loop (`src/midi/ofxVlc4MidiPlayback.cpp`)
+- `test_types` — type conversion and default value tests for addon POD types (`src/core/ofxVlc4Types.h`)
 
 To build and run all tests:
 

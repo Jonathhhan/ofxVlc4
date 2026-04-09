@@ -37,7 +37,12 @@ inline std::string normalizeSoutPath(const std::string & path) {
 // Converts an absolute or relative filesystem path to a percent-encoded
 // file:/// URI suitable for passing to libVLC.
 inline std::string pathToFileUri(const std::string & path) {
-	const std::string genericPath = std::filesystem::absolute(path).lexically_normal().generic_string();
+	std::string genericPath;
+	try {
+		genericPath = std::filesystem::absolute(path).lexically_normal().generic_string();
+	} catch (const std::filesystem::filesystem_error &) {
+		return {};
+	}
 	std::ostringstream uri;
 	// On Unix, generic_string() begins with '/' which already provides the
 	// third slash of the authority separator, so emit only "file://".
