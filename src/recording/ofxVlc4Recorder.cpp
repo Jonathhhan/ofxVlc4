@@ -717,6 +717,7 @@ void ofxVlc4::setVideoRecordingCodec(const std::string & codec) {
 		setError(recorderError);
 		return;
 	}
+	recorder.setVideoCaptureEncoder("");
 
 	ofxVlc4RecordingVideoCodecPreset codecPreset = ofxVlc4RecordingVideoCodecPreset::H264;
 	ofxVlc4RecordingMuxProfile muxProfile = ofxVlc4RecordingMuxProfile::Mp4Aac;
@@ -733,7 +734,24 @@ void ofxVlc4::setVideoRecordingCodec(const std::string & codec) {
 }
 
 void ofxVlc4::setVideoRecordingCodecPreset(ofxVlc4RecordingVideoCodecPreset preset) {
-	setVideoRecordingCodec(recordingVideoCodecForPreset(preset));
+	const std::string vcodec = recordingVideoCodecForPreset(preset);
+	const std::string venc = recordingVideoEncoderForPreset(preset);
+	if (std::string recorderError; !recorder.setVideoCaptureCodec(vcodec, recorderError)) {
+		setError(recorderError);
+		return;
+	}
+	recorder.setVideoCaptureEncoder(venc);
+
+	ofxVlc4RecordingMuxProfile muxProfile = ofxVlc4RecordingMuxProfile::Mp4Aac;
+	{
+		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
+		recordingSessionRuntime.preset.videoCodecPreset = preset;
+		muxProfile = recordingSessionRuntime.preset.muxProfile;
+	}
+	if (const std::string compatibilityMessage = recordingMuxProfileCompatibilityMessage(muxProfile, preset);
+		!compatibilityMessage.empty()) {
+		setStatus(compatibilityMessage);
+	}
 }
 
 void ofxVlc4::setVideoReadbackPolicy(ofxVlc4VideoReadbackPolicy policy) {
@@ -790,7 +808,8 @@ const std::string & ofxVlc4::getVideoRecordingCodec() const {
 }
 
 ofxVlc4RecordingVideoCodecPreset ofxVlc4::getVideoRecordingCodecPreset() const {
-	return recordingVideoCodecPresetForCodec(getVideoRecordingCodec());
+	std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
+	return recordingSessionRuntime.preset.videoCodecPreset;
 }
 
 ofxVlc4RecorderPerformanceInfo ofxVlc4::getRecorderPerformanceInfo() const {
@@ -1028,6 +1047,14 @@ const std::string & ofxVlc4Recorder::getVideoCaptureCodec() const {
 	return videoCodec;
 }
 
+void ofxVlc4Recorder::setVideoCaptureEncoder(const std::string & encoder) {
+	videoEncoder = encoder;
+}
+
+const std::string & ofxVlc4Recorder::getVideoCaptureEncoder() const {
+	return videoEncoder;
+}
+
 void ofxVlc4Recorder::setVideoReadbackPolicy(ofxVlc4VideoReadbackPolicy policy) {
 	std::lock_guard<std::mutex> lock(recordingMutex);
 	readbackPolicy = policy;
@@ -1200,6 +1227,9 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 	const std::string bufferSize = "prefetch-buffer-size=" + ofToString(captureWidth * captureHeight * 3);
 	const std::string rawFrameRate = "rawvid-fps=" + ofToString(videoFrameRate);
 	std::string streamSpec = "sout=#transcode{vcodec=" + videoCodec;
+	if (!videoEncoder.empty()) {
+		streamSpec += ",venc=" + videoEncoder;
+	}
 	if (videoBitrateKbps > 0) {
 		streamSpec += ",vb=" + ofToString(videoBitrateKbps);
 	}

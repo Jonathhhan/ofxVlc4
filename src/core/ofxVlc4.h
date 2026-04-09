@@ -80,7 +80,17 @@ enum class ofxVlc4RecordingVideoCodecPreset {
 	HapQ,
 	VP8,
 	VP9,
-	Theora
+	Theora,
+	H264_NVENC,
+	H265_NVENC,
+	H264_QSV,
+	H265_QSV,
+	H264_VAAPI,
+	H265_VAAPI,
+	H264_AMF,
+	H265_AMF,
+	H264_MFT,
+	H265_MFT
 };
 
 enum class ofxVlc4RecordingMuxProfile {
@@ -1178,6 +1188,8 @@ public:
 	static const char * recordingAudioSourceLabel(ofxVlc4RecordingAudioSource source);
 	static const char * recordingSessionStateLabel(ofxVlc4RecordingSessionState state);
 	static std::string recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPreset preset);
+	static std::string recordingVideoEncoderForPreset(ofxVlc4RecordingVideoCodecPreset preset);
+	static bool recordingVideoCodecPresetIsGpu(ofxVlc4RecordingVideoCodecPreset preset);
 	static ofxVlc4RecordingVideoCodecPreset recordingVideoCodecPresetForCodec(const std::string & codec);
 	static const char * recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecPreset preset);
 	static bool recordingMuxProfileSupportsVideoCodec(

@@ -78,6 +78,8 @@ private:
 	int getVideoCaptureBitrateKbps() const;
 	bool setVideoCaptureCodec(const std::string & codec, std::string & errorOut);
 	const std::string & getVideoCaptureCodec() const;
+	void setVideoCaptureEncoder(const std::string & encoder);
+	const std::string & getVideoCaptureEncoder() const;
 	void setVideoReadbackPolicy(ofxVlc4VideoReadbackPolicy policy);
 	ofxVlc4VideoReadbackPolicy getVideoReadbackPolicy() const;
 	void setVideoReadbackBufferCount(size_t bufferCount);
@@ -135,6 +137,7 @@ private:
 	uint64_t videoFrameIntervalUs = 33333;
 	int videoBitrateKbps = 8000;
 	std::string videoCodec = "MJPG";
+	std::string videoEncoder;
 
 	std::atomic<bool> videoRecordingActive { false };
 	std::atomic<bool> audioRecordingActive { false };

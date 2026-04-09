@@ -447,8 +447,65 @@ std::string ofxVlc4::recordingVideoCodecForPreset(ofxVlc4RecordingVideoCodecPres
 		return "VP90";
 	case ofxVlc4RecordingVideoCodecPreset::Theora:
 		return "theo";
+	case ofxVlc4RecordingVideoCodecPreset::H264_NVENC:
+	case ofxVlc4RecordingVideoCodecPreset::H264_QSV:
+	case ofxVlc4RecordingVideoCodecPreset::H264_VAAPI:
+	case ofxVlc4RecordingVideoCodecPreset::H264_AMF:
+	case ofxVlc4RecordingVideoCodecPreset::H264_MFT:
+		return "H264";
+	case ofxVlc4RecordingVideoCodecPreset::H265_NVENC:
+	case ofxVlc4RecordingVideoCodecPreset::H265_QSV:
+	case ofxVlc4RecordingVideoCodecPreset::H265_VAAPI:
+	case ofxVlc4RecordingVideoCodecPreset::H265_AMF:
+	case ofxVlc4RecordingVideoCodecPreset::H265_MFT:
+		return "X265";
 	}
 	return "H264";
+}
+
+std::string ofxVlc4::recordingVideoEncoderForPreset(ofxVlc4RecordingVideoCodecPreset preset) {
+	switch (preset) {
+	case ofxVlc4RecordingVideoCodecPreset::H264_NVENC:
+		return "avcodec{codec=h264_nvenc}";
+	case ofxVlc4RecordingVideoCodecPreset::H265_NVENC:
+		return "avcodec{codec=hevc_nvenc}";
+	case ofxVlc4RecordingVideoCodecPreset::H264_QSV:
+		return "qsv";
+	case ofxVlc4RecordingVideoCodecPreset::H265_QSV:
+		return "avcodec{codec=hevc_qsv}";
+	case ofxVlc4RecordingVideoCodecPreset::H264_VAAPI:
+		return "avcodec{codec=h264_vaapi}";
+	case ofxVlc4RecordingVideoCodecPreset::H265_VAAPI:
+		return "avcodec{codec=hevc_vaapi}";
+	case ofxVlc4RecordingVideoCodecPreset::H264_AMF:
+		return "avcodec{codec=h264_amf}";
+	case ofxVlc4RecordingVideoCodecPreset::H265_AMF:
+		return "avcodec{codec=hevc_amf}";
+	case ofxVlc4RecordingVideoCodecPreset::H264_MFT:
+		return "mft";
+	case ofxVlc4RecordingVideoCodecPreset::H265_MFT:
+		return "mft";
+	default:
+		return {};
+	}
+}
+
+bool ofxVlc4::recordingVideoCodecPresetIsGpu(ofxVlc4RecordingVideoCodecPreset preset) {
+	switch (preset) {
+	case ofxVlc4RecordingVideoCodecPreset::H264_NVENC:
+	case ofxVlc4RecordingVideoCodecPreset::H265_NVENC:
+	case ofxVlc4RecordingVideoCodecPreset::H264_QSV:
+	case ofxVlc4RecordingVideoCodecPreset::H265_QSV:
+	case ofxVlc4RecordingVideoCodecPreset::H264_VAAPI:
+	case ofxVlc4RecordingVideoCodecPreset::H265_VAAPI:
+	case ofxVlc4RecordingVideoCodecPreset::H264_AMF:
+	case ofxVlc4RecordingVideoCodecPreset::H265_AMF:
+	case ofxVlc4RecordingVideoCodecPreset::H264_MFT:
+	case ofxVlc4RecordingVideoCodecPreset::H265_MFT:
+		return true;
+	default:
+		return false;
+	}
 }
 
 ofxVlc4RecordingVideoCodecPreset ofxVlc4::recordingVideoCodecPresetForCodec(const std::string & codec) {
@@ -505,6 +562,26 @@ const char * ofxVlc4::recordingVideoCodecPresetLabel(ofxVlc4RecordingVideoCodecP
 		return "VP9";
 	case ofxVlc4RecordingVideoCodecPreset::Theora:
 		return "Theora";
+	case ofxVlc4RecordingVideoCodecPreset::H264_NVENC:
+		return "H264 (NVENC)";
+	case ofxVlc4RecordingVideoCodecPreset::H265_NVENC:
+		return "H265 (NVENC)";
+	case ofxVlc4RecordingVideoCodecPreset::H264_QSV:
+		return "H264 (QSV)";
+	case ofxVlc4RecordingVideoCodecPreset::H265_QSV:
+		return "H265 (QSV)";
+	case ofxVlc4RecordingVideoCodecPreset::H264_VAAPI:
+		return "H264 (VAAPI)";
+	case ofxVlc4RecordingVideoCodecPreset::H265_VAAPI:
+		return "H265 (VAAPI)";
+	case ofxVlc4RecordingVideoCodecPreset::H264_AMF:
+		return "H264 (AMF)";
+	case ofxVlc4RecordingVideoCodecPreset::H265_AMF:
+		return "H265 (AMF)";
+	case ofxVlc4RecordingVideoCodecPreset::H264_MFT:
+		return "H264 (MFT)";
+	case ofxVlc4RecordingVideoCodecPreset::H265_MFT:
+		return "H265 (MFT)";
 	}
 	return "H264";
 }
@@ -531,7 +608,12 @@ bool ofxVlc4::recordingMuxProfileSupportsVideoCodec(
 			profile == ofxVlc4RecordingMuxProfile::OggVorbis ||
 			profile == ofxVlc4RecordingMuxProfile::WebmOpus;
 	}
-	if (preset == ofxVlc4RecordingVideoCodecPreset::H265) {
+	if (preset == ofxVlc4RecordingVideoCodecPreset::H265 ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_NVENC ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_QSV ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_VAAPI ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_AMF ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_MFT) {
 		return profile == ofxVlc4RecordingMuxProfile::MkvOpus ||
 			profile == ofxVlc4RecordingMuxProfile::MkvFlac ||
 			profile == ofxVlc4RecordingMuxProfile::MkvLpcm ||
@@ -561,7 +643,12 @@ std::string ofxVlc4::recordingMuxProfileCompatibilityMessage(
 	if (isOpenCodec) {
 		return "VP8, VP9, and Theora recording require an MKV, OGG, or WebM mux profile.";
 	}
-	if (preset == ofxVlc4RecordingVideoCodecPreset::H265) {
+	if (preset == ofxVlc4RecordingVideoCodecPreset::H265 ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_NVENC ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_QSV ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_VAAPI ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_AMF ||
+		preset == ofxVlc4RecordingVideoCodecPreset::H265_MFT) {
 		return "H265 / HEVC recording currently requires an MKV mux profile.";
 	}
 	return "Selected recording codec and mux profile are not compatible.";

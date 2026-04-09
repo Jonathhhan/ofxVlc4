@@ -619,7 +619,17 @@ void ofApp::cycleVideoRecordingCodec() {
 		ofxVlc4RecordingVideoCodecPreset::Mjpg,
 		ofxVlc4RecordingVideoCodecPreset::Hap,
 		ofxVlc4RecordingVideoCodecPreset::HapAlpha,
-		ofxVlc4RecordingVideoCodecPreset::HapQ
+		ofxVlc4RecordingVideoCodecPreset::HapQ,
+		ofxVlc4RecordingVideoCodecPreset::H264_NVENC,
+		ofxVlc4RecordingVideoCodecPreset::H265_NVENC,
+		ofxVlc4RecordingVideoCodecPreset::H264_QSV,
+		ofxVlc4RecordingVideoCodecPreset::H265_QSV,
+		ofxVlc4RecordingVideoCodecPreset::H264_VAAPI,
+		ofxVlc4RecordingVideoCodecPreset::H265_VAAPI,
+		ofxVlc4RecordingVideoCodecPreset::H264_AMF,
+		ofxVlc4RecordingVideoCodecPreset::H265_AMF,
+		ofxVlc4RecordingVideoCodecPreset::H264_MFT,
+		ofxVlc4RecordingVideoCodecPreset::H265_MFT
 	};
 	const ofxVlc4RecordingVideoCodecPreset currentPreset = player->getVideoRecordingCodecPreset();
 	for (size_t i = 0; i < std::size(presets); ++i) {
@@ -639,7 +649,12 @@ void ofApp::cycleBenchmarkMuxProfile() {
 
 	const ofxVlc4RecordingVideoCodecPreset codecPreset = player->getVideoRecordingCodecPreset();
 	const ofxVlc4RecordingMuxProfile muxProfile = player->getRecordingMuxProfile();
-	if (codecPreset == ofxVlc4RecordingVideoCodecPreset::H265) {
+	if (codecPreset == ofxVlc4RecordingVideoCodecPreset::H265 ||
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_NVENC ||
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_QSV ||
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_VAAPI ||
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_AMF ||
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::H265_MFT) {
 		player->setRecordingMuxProfile(
 			muxProfile == ofxVlc4RecordingMuxProfile::MkvOpus
 				? ofxVlc4RecordingMuxProfile::MkvFlac
@@ -993,7 +1008,17 @@ void ofApp::drawControlPanel() {
 			ofxVlc4RecordingVideoCodecPreset::Mjpg,
 			ofxVlc4RecordingVideoCodecPreset::Hap,
 			ofxVlc4RecordingVideoCodecPreset::HapAlpha,
-			ofxVlc4RecordingVideoCodecPreset::HapQ
+			ofxVlc4RecordingVideoCodecPreset::HapQ,
+			ofxVlc4RecordingVideoCodecPreset::H264_NVENC,
+			ofxVlc4RecordingVideoCodecPreset::H265_NVENC,
+			ofxVlc4RecordingVideoCodecPreset::H264_QSV,
+			ofxVlc4RecordingVideoCodecPreset::H265_QSV,
+			ofxVlc4RecordingVideoCodecPreset::H264_VAAPI,
+			ofxVlc4RecordingVideoCodecPreset::H265_VAAPI,
+			ofxVlc4RecordingVideoCodecPreset::H264_AMF,
+			ofxVlc4RecordingVideoCodecPreset::H265_AMF,
+			ofxVlc4RecordingVideoCodecPreset::H264_MFT,
+			ofxVlc4RecordingVideoCodecPreset::H265_MFT
 		};
 		int codecIndex = 0;
 		for (size_t i = 0; i < std::size(codecPresets); ++i) {
