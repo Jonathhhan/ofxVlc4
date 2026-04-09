@@ -17,10 +17,10 @@ namespace ofxVlc4MuxHelpers {
 
 // Number of consecutive polls where the file size must be unchanged before
 // the file is considered fully written and ready to read.
-static constexpr int kFileStableCheckCount = 3;
+inline constexpr int kFileStableCheckCount = 3;
 
 // Polling interval used when waiting for a file to appear or be removed.
-static constexpr int kFilePollIntervalMs = 50;
+inline constexpr int kFilePollIntervalMs = 50;
 
 // Escapes single-quotes in a path and normalises it for use in a VLC sout
 // stream specification.

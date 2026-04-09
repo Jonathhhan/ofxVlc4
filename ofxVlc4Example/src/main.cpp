@@ -11,6 +11,7 @@ int main() {
 	settings.decorated = false;
 	settings.resizable = false;
 	settings.title = "ofxVlc4 Host";
-	ofCreateWindow(settings);
-	ofRunApp(new ofApp());
+	auto window = ofCreateWindow(settings);
+	ofRunApp(window, std::make_shared<ofApp>());
+	ofRunMainLoop();
 }

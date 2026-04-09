@@ -439,7 +439,7 @@ bool ofxVlc4::VideoComponent::usesShaderVideoAdjustments() const {
 }
 
 void ofxVlc4::VideoComponent::ensureVideoAdjustShaderLoaded() {
-	if (owner.m_impl->videoResourceRuntime.videoAdjustShaderReady || owner.m_impl->lifecycleRuntime.shuttingDown.load()) {
+	if (owner.m_impl->videoResourceRuntime.videoAdjustShaderReady || owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
@@ -829,7 +829,7 @@ void ofxVlc4::VideoComponent::prepareStartupVideoResources() {
 }
 
 void ofxVlc4::VideoComponent::ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight, int glPixelFormat) {
-	if (requiredWidth == 0 || requiredHeight == 0 || owner.m_impl->lifecycleRuntime.shuttingDown.load()) {
+	if (requiredWidth == 0 || requiredHeight == 0 || owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
@@ -856,7 +856,7 @@ void ofxVlc4::VideoComponent::ensureVideoRenderTargetCapacity(unsigned requiredW
 }
 
 void ofxVlc4::VideoComponent::ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight, int glPixelFormat) {
-	if (requiredWidth == 0 || requiredHeight == 0 || owner.m_impl->lifecycleRuntime.shuttingDown.load()) {
+	if (requiredWidth == 0 || requiredHeight == 0 || owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
@@ -1165,7 +1165,7 @@ void ofxVlc4::VideoComponent::unbindVlcRenderTarget() {
 }
 
 void ofxVlc4::VideoComponent::videoSwap() {
-	if (owner.m_impl->lifecycleRuntime.shuttingDown.load()) {
+	if (owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 

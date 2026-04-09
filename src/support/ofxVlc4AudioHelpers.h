@@ -21,11 +21,11 @@ namespace ofxVlc4AudioHelpers {
 // Constants
 // ---------------------------------------------------------------------------
 
-static constexpr double kBufferedAudioSeconds = 0.75;
-static constexpr double kMinBufferedAudioSeconds = 0.05;
-static constexpr double kMaxBufferedAudioSeconds = 5.0;
+inline constexpr double kBufferedAudioSeconds = 0.75;
+inline constexpr double kMinBufferedAudioSeconds = 0.05;
+inline constexpr double kMaxBufferedAudioSeconds = 5.0;
 // Pi constant — avoids M_PI (non-standard) and std::numbers::pi_v (C++20).
-static constexpr float kPi = 3.14159265358979323846f;
+inline constexpr float kPi = 3.14159265358979323846f;
 
 // ---------------------------------------------------------------------------
 // Audio capture sample format label/code
