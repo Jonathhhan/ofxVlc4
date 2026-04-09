@@ -1214,6 +1214,10 @@ public:
 	int getCurrentIndex() const;
 	bool isInitialized() const;
 	bool hasPlaylist() const;
+	bool savePlaylistM3U(const std::string & filePath) const;
+	bool savePlaylistXSPF(const std::string & filePath, const std::string & title = "Playlist") const;
+	std::vector<std::string> loadPlaylistM3U(const std::string & filePath) const;
+	std::vector<std::string> loadPlaylistXSPF(const std::string & filePath) const;
 	// Status/error messages let lightweight UIs surface addon feedback without duplicating validation logic.
 	const std::string & getLastStatusMessage() const;
 	const std::string & getLastErrorMessage() const;

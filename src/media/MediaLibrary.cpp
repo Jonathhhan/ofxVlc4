@@ -2,6 +2,7 @@
 
 #include "ofxVlc4.h"
 #include "ofxVlc4Impl.h"
+#include "support/ofxVlc4PlaylistHelpers.h"
 #include "support/ofxVlc4Utils.h"
 
 #include <algorithm>
@@ -1640,4 +1641,64 @@ void MediaLibrary::clearBookmarksForPath(const std::string & path) {
 void MediaLibrary::clearCurrentBookmarks() {
 	clearBookmarksForPath(getCurrentPath());
 	owner.setStatus("Bookmarks cleared.");
+}
+
+bool MediaLibrary::savePlaylistM3U(const std::string & filePath) const {
+	if (filePath.empty()) {
+		return false;
+	}
+	const std::vector<std::string> paths = getPlaylist();
+	if (paths.empty()) {
+		return false;
+	}
+	const std::string content = ofxVlc4PlaylistHelpers::serializeM3U(paths);
+	std::ofstream file(filePath, std::ios::out | std::ios::trunc);
+	if (!file.is_open()) {
+		return false;
+	}
+	file << content;
+	return file.good();
+}
+
+bool MediaLibrary::savePlaylistXSPF(const std::string & filePath, const std::string & title) const {
+	if (filePath.empty()) {
+		return false;
+	}
+	const std::vector<std::string> paths = getPlaylist();
+	if (paths.empty()) {
+		return false;
+	}
+	const std::string content = ofxVlc4PlaylistHelpers::serializeXSPF(paths, title);
+	std::ofstream file(filePath, std::ios::out | std::ios::trunc);
+	if (!file.is_open()) {
+		return false;
+	}
+	file << content;
+	return file.good();
+}
+
+std::vector<std::string> MediaLibrary::loadPlaylistM3U(const std::string & filePath) const {
+	if (filePath.empty()) {
+		return {};
+	}
+	std::ifstream file(filePath, std::ios::in | std::ios::binary);
+	if (!file.is_open()) {
+		return {};
+	}
+	std::ostringstream contents;
+	contents << file.rdbuf();
+	return ofxVlc4PlaylistHelpers::deserializeM3U(contents.str());
+}
+
+std::vector<std::string> MediaLibrary::loadPlaylistXSPF(const std::string & filePath) const {
+	if (filePath.empty()) {
+		return {};
+	}
+	std::ifstream file(filePath, std::ios::in | std::ios::binary);
+	if (!file.is_open()) {
+		return {};
+	}
+	std::ostringstream contents;
+	contents << file.rdbuf();
+	return ofxVlc4PlaylistHelpers::deserializeXSPF(contents.str());
 }

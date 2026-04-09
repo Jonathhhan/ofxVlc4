@@ -147,6 +147,10 @@ public:
 	std::vector<std::pair<std::string, std::string>> getMetadataAtIndex(int index) const;
 	std::vector<std::pair<std::string, std::string>> getCurrentMetadata() const;
 	bool hasPlaylist() const;
+	bool savePlaylistM3U(const std::string & filePath) const;
+	bool savePlaylistXSPF(const std::string & filePath, const std::string & title = "Playlist") const;
+	std::vector<std::string> loadPlaylistM3U(const std::string & filePath) const;
+	std::vector<std::string> loadPlaylistXSPF(const std::string & filePath) const;
 	std::vector<ofxVlc4::ProgramInfo> getPrograms() const;
 	int getSelectedProgramId() const;
 	bool selectProgramId(int programId);

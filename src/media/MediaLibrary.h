@@ -93,6 +93,10 @@ public:
 	bool removeBookmark(const std::string & bookmarkId);
 	void clearBookmarksForPath(const std::string & path);
 	void clearCurrentBookmarks();
+	bool savePlaylistM3U(const std::string & filePath) const;
+	bool savePlaylistXSPF(const std::string & filePath, const std::string & title = "Playlist") const;
+	std::vector<std::string> loadPlaylistM3U(const std::string & filePath) const;
+	std::vector<std::string> loadPlaylistXSPF(const std::string & filePath) const;
 
 private:
 	bool isPlaylistIndexLocked(int index) const;
