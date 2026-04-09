@@ -5,6 +5,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <numeric>
 #include <random>
 #include <sstream>
@@ -29,6 +31,16 @@ void ofApp::setup() {
 	gui.setup(nullptr, true, ImGuiConfigFlags_None, true);
 	ImGui::GetIO().IniFilename = "imgui_ggml_studio.ini";
 
+	// Initialize presets.
+	initModelPresets();
+	initScriptLanguages();
+
+	// Session directory.
+	sessionDir = ofToDataPath("sessions", true);
+	std::error_code ec;
+	std::filesystem::create_directories(sessionDir, ec);
+	lastSessionPath = ofFilePath::join(sessionDir, "autosave.session");
+
 	// Initialize ggml.
 	ofxGgmlSettings settings;
 	settings.threads = numThreads;
@@ -52,6 +64,9 @@ void ofApp::setup() {
 	// Pre-fill example system prompt.
 	std::strncpy(customSystemPrompt,
 		"You are a helpful assistant. Respond concisely.", sizeof(customSystemPrompt) - 1);
+
+	// Auto-load last session if available.
+	autoLoadSession();
 }
 
 void ofApp::update() {
@@ -92,6 +107,7 @@ void ofApp::draw() {
 }
 
 void ofApp::exit() {
+	autoSaveSession();
 	if (workerThread.joinable()) {
 		generating.store(false);
 		workerThread.join();

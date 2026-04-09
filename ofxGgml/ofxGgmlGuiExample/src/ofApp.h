@@ -34,6 +34,29 @@ struct Message {
 };
 
 // ---------------------------------------------------------------------------
+// ModelPreset — a recommended model with download metadata.
+// ---------------------------------------------------------------------------
+
+struct ModelPreset {
+	std::string name;         // e.g. "TinyLlama 1.1B Chat"
+	std::string filename;     // e.g. "tinyllama-1.1b-chat-v1.0.Q4_0.gguf"
+	std::string url;
+	std::string description;
+	std::string sizeMB;       // human-readable, e.g. "~600 MB"
+	std::string bestFor;      // e.g. "chat, general"
+};
+
+// ---------------------------------------------------------------------------
+// ScriptLanguage — language presets for the scripting panel.
+// ---------------------------------------------------------------------------
+
+struct ScriptLanguage {
+	std::string name;          // e.g. "C++"
+	std::string fileExt;       // e.g. ".cpp"
+	std::string systemPrompt;  // language-specific system prompt prefix
+};
+
+// ---------------------------------------------------------------------------
 // ofApp — ofxGgml AI Studio with ofxImGui
 // ---------------------------------------------------------------------------
 
@@ -92,6 +115,26 @@ private:
 	bool showLog = false;
 	std::deque<std::string> logMessages;
 	std::mutex logMutex;
+
+	// -- model presets --
+	std::vector<ModelPreset> modelPresets;
+	int selectedModelIndex = 0;
+	void initModelPresets();
+
+	// -- script language presets --
+	std::vector<ScriptLanguage> scriptLanguages;
+	int selectedLanguageIndex = 0;
+	void initScriptLanguages();
+
+	// -- session persistence --
+	std::string sessionDir;
+	std::string lastSessionPath;
+	bool saveSession(const std::string & path);
+	bool loadSession(const std::string & path);
+	void autoSaveSession();
+	void autoLoadSession();
+	std::string escapeSessionText(const std::string & text) const;
+	std::string unescapeSessionText(const std::string & text) const;
 
 	// -- graph execution helper --
 	void runInference(AiMode mode, const std::string & userText,
