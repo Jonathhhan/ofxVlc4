@@ -28,6 +28,7 @@ using ofxVlc4Utils::clearAllocatedFbo;
 using ofxVlc4Utils::joinFilterChainEntries;
 using ofxVlc4Utils::normalizeOptionalPath;
 using ofxVlc4Utils::parseFilterChainEntries;
+using ofxVlc4Utils::readTextFileIfPresent;
 using ofxVlc4Utils::setInputHandlingEnabled;
 using ofxVlc4Utils::trimWhitespace;
 
@@ -226,17 +227,6 @@ void main() {
 outputColor = vec4(clamp(color, 0.0, 1.0), 1.0);
 }
 )";
-
-std::string readTextFileIfPresent(const std::string & path) {
-	std::ifstream input(path, std::ios::in | std::ios::binary);
-	if (!input.is_open()) {
-		return "";
-	}
-
-	std::ostringstream contents;
-	contents << input.rdbuf();
-	return contents.str();
-}
 
 std::vector<std::string> videoAdjustShaderCandidatePaths(const std::string & fileName) {
 	const std::string exeDir = ofFilePath::getCurrentExeDir();

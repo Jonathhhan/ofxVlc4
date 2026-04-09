@@ -145,4 +145,30 @@ inline bool removeRecordingFile(const std::string & path, uint64_t timeoutMs) {
 	return !std::filesystem::exists(path, error);
 }
 
+// Attempts a single removal of the file at `path`.  Returns true if the file
+// is successfully removed or does not exist; false on failure.
+inline bool tryRemoveRecordingFileOnce(const std::string & path) {
+	if (path.empty()) {
+		return true;
+	}
+
+	std::error_code error;
+	if (!std::filesystem::exists(path, error)) {
+		return !error;
+	}
+	if (std::filesystem::remove(path, error)) {
+		return true;
+	}
+	return !error && !std::filesystem::exists(path, error);
+}
+
+// Derives a default muxed-output path from the given source video path by
+// appending "-muxed" before the extension and replacing it with the mux
+// container extension.
+inline std::string buildDefaultMuxOutputPath(const std::string & videoPath, const std::string & muxContainer) {
+	std::filesystem::path outputPath(videoPath);
+	outputPath.replace_filename(outputPath.stem().string() + "-muxed." + muxContainer);
+	return outputPath.string();
+}
+
 } // namespace ofxVlc4MuxHelpers
