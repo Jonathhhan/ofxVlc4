@@ -163,6 +163,7 @@ public:
 	VideoStateInfo getVideoStateInfo() const;
 	float getHeight() const;
 	float getWidth() const;
+	void * getNativeWindowHandle() const;
 
 private:
 	ofxVlc4::MediaComponent & media() const;

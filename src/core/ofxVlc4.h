@@ -184,6 +184,9 @@ struct ofxVlc4AudioVisualizerSettings {
 class ofxVlc4 {
 public:
 	static ofxVlc4AddonVersionInfo getAddonVersionInfo();
+	static std::string getLibVlcVersion();
+	static std::string getLibVlcCompiler();
+	static int getLibVlcAbiVersion();
 
 	struct MediaTrackInfo {
 		std::string id;
@@ -1150,6 +1153,8 @@ private:
 	bool queryVideoTrackGeometry(unsigned & width, unsigned & height, unsigned & sarNum, unsigned & sarDen) const;
 	std::vector<MediaTrackInfo> getTrackInfos(libvlc_track_type_t type) const;
 	bool selectTrackById(libvlc_track_type_t type, const std::string & trackId);
+	void unselectTrackType(libvlc_track_type_t type);
+	void selectTracksByIds(libvlc_track_type_t type, const std::string & commaSeparatedIds);
 	int getNextShuffleIndex() const;
 	bool isManualStopPending() const;
 	void clearRecorderCaptureState(const std::shared_ptr<ofAppGLFWWindow> & cleanupWindow);
@@ -1602,6 +1607,8 @@ public:
 	AbLoopInfo getAbLoop() const;
 	bool setAbLoopA();
 	bool setAbLoopB();
+	bool setAbLoopByTime(int64_t aTimeMs, int64_t bTimeMs);
+	bool setAbLoopByPosition(float aPosition, float bPosition);
 	void clearAbLoop();
 	std::vector<TitleInfo> getTitles() const;
 	int getCurrentTitleIndex() const;
@@ -1612,6 +1619,7 @@ public:
 	void previousChapter();
 	void nextChapter();
 	void nextFrame();
+	void seekByMs(int deltaMs);
 	void navigate(NavigationMode mode);
 	bool executePlayerCommand(PlayerCommand command);
 	int getTeletextPage() const;
@@ -1630,6 +1638,15 @@ public:
 	std::vector<MediaTrackInfo> getSubtitleTracks() const;
 	bool selectAudioTrackById(const std::string & trackId);
 	bool selectSubtitleTrackById(const std::string & trackId);
+	bool selectVideoTrackById(const std::string & trackId);
+	void unselectVideoTracks();
+	void unselectAudioTracks();
+	void unselectSubtitleTracks();
+	void selectTracksByIds(libvlc_track_type_t type, const std::string & commaSeparatedIds);
+	void selectVideoTracksByIds(const std::string & commaSeparatedIds);
+	void selectAudioTracksByIds(const std::string & commaSeparatedIds);
+	void selectSubtitleTracksByIds(const std::string & commaSeparatedIds);
+	void * getNativeWindowHandle() const;
 	bool isEqualizerEnabled() const;
 	void setEqualizerEnabled(bool enabled);
 	float getEqualizerPreamp() const;
