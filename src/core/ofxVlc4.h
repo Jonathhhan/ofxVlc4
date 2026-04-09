@@ -785,6 +785,16 @@ private:
 	friend class PlaybackController;
 	friend class MediaLibrary;
 
+	struct RendererItemEntry {
+		std::string id;
+		std::string name;
+		std::string type;
+		std::string iconUri;
+		bool canAudio = false;
+		bool canVideo = false;
+		libvlc_renderer_item_t * item = nullptr;
+	};
+
 	struct Impl;
 	std::unique_ptr<Impl> m_impl;
 

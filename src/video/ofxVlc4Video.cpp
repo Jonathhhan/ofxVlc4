@@ -1996,227 +1996,227 @@ float ofxVlc4::VideoComponent::getWidth() const {
 }
 
 void ofxVlc4::applyVideoAdjustments() {
-	videoComponent->applyVideoAdjustments();
+	m_impl->subsystemRuntime.videoComponent->applyVideoAdjustments();
 }
 
 void ofxVlc4::applyVideoDeinterlace() {
-	videoComponent->applyVideoDeinterlace();
+	m_impl->subsystemRuntime.videoComponent->applyVideoDeinterlace();
 }
 
 void ofxVlc4::applyVideoAspectRatio() {
-	videoComponent->applyVideoAspectRatio();
+	m_impl->subsystemRuntime.videoComponent->applyVideoAspectRatio();
 }
 
 void ofxVlc4::applyVideoCrop() {
-	videoComponent->applyVideoCrop();
+	m_impl->subsystemRuntime.videoComponent->applyVideoCrop();
 }
 
 void ofxVlc4::applyVideoScaleAndFit() {
-	videoComponent->applyVideoScaleAndFit();
+	m_impl->subsystemRuntime.videoComponent->applyVideoScaleAndFit();
 }
 
 void ofxVlc4::clearVideoHdrMetadata() {
-	videoComponent->clearVideoHdrMetadata();
+	m_impl->subsystemRuntime.videoComponent->clearVideoHdrMetadata();
 }
 
 void ofxVlc4::prepareStartupVideoResources() {
-	videoComponent->prepareStartupVideoResources();
+	m_impl->subsystemRuntime.videoComponent->prepareStartupVideoResources();
 }
 
 void ofxVlc4::releaseD3D11Resources() {
-	videoComponent->releaseD3D11Resources();
+	m_impl->subsystemRuntime.videoComponent->releaseD3D11Resources();
 }
 
 bool ofxVlc4::usesTextureVideoOutput() const {
-	return videoComponent->usesTextureVideoOutput();
+	return m_impl->subsystemRuntime.videoComponent->usesTextureVideoOutput();
 }
 
 void ofxVlc4::updateNativeVideoWindowVisibility() {
-	videoComponent->updateNativeVideoWindowVisibility();
+	m_impl->subsystemRuntime.videoComponent->updateNativeVideoWindowVisibility();
 }
 
 bool ofxVlc4::applyVideoOutputBackend() {
-	return videoComponent->applyVideoOutputBackend();
+	return m_impl->subsystemRuntime.videoComponent->applyVideoOutputBackend();
 }
 
 void ofxVlc4::applyVideoProjectionMode() {
-	videoComponent->applyVideoProjectionMode();
+	m_impl->subsystemRuntime.videoComponent->applyVideoProjectionMode();
 }
 
 void ofxVlc4::applyVideoStereoMode() {
-	videoComponent->applyVideoStereoMode();
+	m_impl->subsystemRuntime.videoComponent->applyVideoStereoMode();
 }
 
 void ofxVlc4::applyVideoViewpoint(bool absolute) {
-	videoComponent->applyVideoViewpoint(absolute);
+	m_impl->subsystemRuntime.videoComponent->applyVideoViewpoint(absolute);
 }
 
 void ofxVlc4::resetVideoAdjustments() {
-	videoComponent->resetVideoAdjustments();
+	m_impl->subsystemRuntime.videoComponent->resetVideoAdjustments();
 }
 
 ofxVlc4::VideoDeinterlaceMode ofxVlc4::getVideoDeinterlaceMode() const {
-	return videoComponent->getVideoDeinterlaceMode();
+	return m_impl->subsystemRuntime.videoComponent->getVideoDeinterlaceMode();
 }
 
 void ofxVlc4::setVideoDeinterlaceMode(VideoDeinterlaceMode mode) {
-	videoComponent->setVideoDeinterlaceMode(mode);
+	m_impl->subsystemRuntime.videoComponent->setVideoDeinterlaceMode(mode);
 }
 
 ofxVlc4::VideoAspectRatioMode ofxVlc4::getVideoAspectRatioMode() const {
-	return videoComponent->getVideoAspectRatioMode();
+	return m_impl->subsystemRuntime.videoComponent->getVideoAspectRatioMode();
 }
 
 void ofxVlc4::setVideoAspectRatioMode(VideoAspectRatioMode mode) {
-	videoComponent->setVideoAspectRatioMode(mode);
+	m_impl->subsystemRuntime.videoComponent->setVideoAspectRatioMode(mode);
 }
 
 ofxVlc4::VideoCropMode ofxVlc4::getVideoCropMode() const {
-	return videoComponent->getVideoCropMode();
+	return m_impl->subsystemRuntime.videoComponent->getVideoCropMode();
 }
 
 void ofxVlc4::setVideoCropMode(VideoCropMode mode) {
-	videoComponent->setVideoCropMode(mode);
+	m_impl->subsystemRuntime.videoComponent->setVideoCropMode(mode);
 }
 
 ofxVlc4::VideoDisplayFitMode ofxVlc4::getVideoDisplayFitMode() const {
-	return videoComponent->getVideoDisplayFitMode();
+	return m_impl->subsystemRuntime.videoComponent->getVideoDisplayFitMode();
 }
 
 void ofxVlc4::setVideoDisplayFitMode(VideoDisplayFitMode mode) {
-	videoComponent->setVideoDisplayFitMode(mode);
+	m_impl->subsystemRuntime.videoComponent->setVideoDisplayFitMode(mode);
 }
 
 float ofxVlc4::getVideoScale() const {
-	return videoComponent->getVideoScale();
+	return m_impl->subsystemRuntime.videoComponent->getVideoScale();
 }
 
 void ofxVlc4::setVideoScale(float scale) {
-	videoComponent->setVideoScale(scale);
+	m_impl->subsystemRuntime.videoComponent->setVideoScale(scale);
 }
 
 bool ofxVlc4::getCursorPosition(int & x, int & y) const {
-	return videoComponent->getCursorPosition(x, y);
+	return m_impl->subsystemRuntime.videoComponent->getCursorPosition(x, y);
 }
 
 bool ofxVlc4::isVideoAdjustmentsEnabled() const {
-	return videoComponent->isVideoAdjustmentsEnabled();
+	return m_impl->subsystemRuntime.videoComponent->isVideoAdjustmentsEnabled();
 }
 
 void ofxVlc4::setVideoAdjustmentsEnabled(bool enabled) {
-	videoComponent->setVideoAdjustmentsEnabled(enabled);
+	m_impl->subsystemRuntime.videoComponent->setVideoAdjustmentsEnabled(enabled);
 }
 
 ofxVlc4::VideoAdjustmentEngine ofxVlc4::getVideoAdjustmentEngine() const {
-	return videoComponent->getVideoAdjustmentEngine();
+	return m_impl->subsystemRuntime.videoComponent->getVideoAdjustmentEngine();
 }
 
 ofxVlc4::VideoAdjustmentEngine ofxVlc4::getActiveVideoAdjustmentEngine() const {
-	return videoComponent->getActiveVideoAdjustmentEngine();
+	return m_impl->subsystemRuntime.videoComponent->getActiveVideoAdjustmentEngine();
 }
 
 void ofxVlc4::setVideoAdjustmentEngine(ofxVlc4::VideoAdjustmentEngine engine) {
-	videoComponent->setVideoAdjustmentEngine(engine);
+	m_impl->subsystemRuntime.videoComponent->setVideoAdjustmentEngine(engine);
 }
 
 float ofxVlc4::getVideoContrast() const {
-	return videoComponent->getVideoContrast();
+	return m_impl->subsystemRuntime.videoComponent->getVideoContrast();
 }
 
 void ofxVlc4::setVideoContrast(float contrast) {
-	videoComponent->setVideoContrast(contrast);
+	m_impl->subsystemRuntime.videoComponent->setVideoContrast(contrast);
 }
 
 float ofxVlc4::getVideoBrightness() const {
-	return videoComponent->getVideoBrightness();
+	return m_impl->subsystemRuntime.videoComponent->getVideoBrightness();
 }
 
 void ofxVlc4::setVideoBrightness(float brightness) {
-	videoComponent->setVideoBrightness(brightness);
+	m_impl->subsystemRuntime.videoComponent->setVideoBrightness(brightness);
 }
 
 float ofxVlc4::getVideoHue() const {
-	return videoComponent->getVideoHue();
+	return m_impl->subsystemRuntime.videoComponent->getVideoHue();
 }
 
 void ofxVlc4::setVideoHue(float hue) {
-	videoComponent->setVideoHue(hue);
+	m_impl->subsystemRuntime.videoComponent->setVideoHue(hue);
 }
 
 float ofxVlc4::getVideoSaturation() const {
-	return videoComponent->getVideoSaturation();
+	return m_impl->subsystemRuntime.videoComponent->getVideoSaturation();
 }
 
 void ofxVlc4::setVideoSaturation(float saturation) {
-	videoComponent->setVideoSaturation(saturation);
+	m_impl->subsystemRuntime.videoComponent->setVideoSaturation(saturation);
 }
 
 float ofxVlc4::getVideoGamma() const {
-	return videoComponent->getVideoGamma();
+	return m_impl->subsystemRuntime.videoComponent->getVideoGamma();
 }
 
 void ofxVlc4::setVideoGamma(float gamma) {
-	videoComponent->setVideoGamma(gamma);
+	m_impl->subsystemRuntime.videoComponent->setVideoGamma(gamma);
 }
 
 ofxVlc4::VideoProjectionMode ofxVlc4::getVideoProjectionMode() const {
-	return videoComponent->getVideoProjectionMode();
+	return m_impl->subsystemRuntime.videoComponent->getVideoProjectionMode();
 }
 
 void ofxVlc4::setVideoProjectionMode(VideoProjectionMode mode) {
-	videoComponent->setVideoProjectionMode(mode);
+	m_impl->subsystemRuntime.videoComponent->setVideoProjectionMode(mode);
 }
 
 ofxVlc4::VideoStereoMode ofxVlc4::getVideoStereoMode() const {
-	return videoComponent->getVideoStereoMode();
+	return m_impl->subsystemRuntime.videoComponent->getVideoStereoMode();
 }
 
 void ofxVlc4::setVideoStereoMode(VideoStereoMode mode) {
-	videoComponent->setVideoStereoMode(mode);
+	m_impl->subsystemRuntime.videoComponent->setVideoStereoMode(mode);
 }
 
 float ofxVlc4::getVideoYaw() const {
-	return videoComponent->getVideoYaw();
+	return m_impl->subsystemRuntime.videoComponent->getVideoYaw();
 }
 
 float ofxVlc4::getVideoPitch() const {
-	return videoComponent->getVideoPitch();
+	return m_impl->subsystemRuntime.videoComponent->getVideoPitch();
 }
 
 float ofxVlc4::getVideoRoll() const {
-	return videoComponent->getVideoRoll();
+	return m_impl->subsystemRuntime.videoComponent->getVideoRoll();
 }
 
 float ofxVlc4::getVideoFov() const {
-	return videoComponent->getVideoFov();
+	return m_impl->subsystemRuntime.videoComponent->getVideoFov();
 }
 
 void ofxVlc4::setVideoViewpoint(float yaw, float pitch, float roll, float fov, bool absolute) {
-	videoComponent->setVideoViewpoint(yaw, pitch, roll, fov, absolute);
+	m_impl->subsystemRuntime.videoComponent->setVideoViewpoint(yaw, pitch, roll, fov, absolute);
 }
 
 void ofxVlc4::resetVideoViewpoint() {
-	videoComponent->resetVideoViewpoint();
+	m_impl->subsystemRuntime.videoComponent->resetVideoViewpoint();
 }
 
 float ofxVlc4::getHeight() const {
-	return videoComponent->getHeight();
+	return m_impl->subsystemRuntime.videoComponent->getHeight();
 }
 
 float ofxVlc4::getWidth() const {
-	return videoComponent->getWidth();
+	return m_impl->subsystemRuntime.videoComponent->getWidth();
 }
 
 void ofxVlc4::ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight) {
-	videoComponent->ensureVideoRenderTargetCapacity(requiredWidth, requiredHeight);
+	m_impl->subsystemRuntime.videoComponent->ensureVideoRenderTargetCapacity(requiredWidth, requiredHeight);
 }
 
 void ofxVlc4::ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight) {
-	videoComponent->ensureExposedTextureFboCapacity(requiredWidth, requiredHeight);
+	m_impl->subsystemRuntime.videoComponent->ensureExposedTextureFboCapacity(requiredWidth, requiredHeight);
 }
 
 bool ofxVlc4::applyPendingVideoResize() {
-	return videoComponent->applyPendingVideoResize();
+	return m_impl->subsystemRuntime.videoComponent->applyPendingVideoResize();
 }
 
 bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, libvlc_video_output_cfg_t * render_cfg) {
@@ -2224,7 +2224,7 @@ bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, li
 	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return false;
 	}
-	return that->videoComponent->videoResize(cfg, render_cfg);
+	return that->m_impl->subsystemRuntime.videoComponent->videoResize(cfg, render_cfg);
 }
 
 void ofxVlc4::videoSwap(void * data) {
@@ -2232,7 +2232,7 @@ void ofxVlc4::videoSwap(void * data) {
 	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
-	that->videoComponent->videoSwap();
+	that->m_impl->subsystemRuntime.videoComponent->videoSwap();
 }
 
 bool ofxVlc4::make_current(void * data, bool current) {
@@ -2240,7 +2240,7 @@ bool ofxVlc4::make_current(void * data, bool current) {
 	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return false;
 	}
-	return that->videoComponent->makeCurrent(current);
+	return that->m_impl->subsystemRuntime.videoComponent->makeCurrent(current);
 }
 
 void * ofxVlc4::get_proc_address(void * data, const char * name) {
@@ -2249,7 +2249,7 @@ void * ofxVlc4::get_proc_address(void * data, const char * name) {
 		return nullptr;
 	}
 
-	return that->videoComponent->getProcAddress(name);
+	return that->m_impl->subsystemRuntime.videoComponent->getProcAddress(name);
 }
 
 bool ofxVlc4::videoOutputSetup(
@@ -2261,7 +2261,7 @@ bool ofxVlc4::videoOutputSetup(
 	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return false;
 	}
-	return that->videoComponent->videoOutputSetup(cfg, out);
+	return that->m_impl->subsystemRuntime.videoComponent->videoOutputSetup(cfg, out);
 #else
 	(void)data;
 	(void)cfg;
@@ -2275,7 +2275,7 @@ void ofxVlc4::videoOutputCleanup(void * data) {
 	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
-	that->videoComponent->videoOutputCleanup();
+	that->m_impl->subsystemRuntime.videoComponent->videoOutputCleanup();
 }
 
 void ofxVlc4::videoFrameMetadata(void * data, libvlc_video_metadata_type_t type, const void * metadata) {
@@ -2283,71 +2283,71 @@ void ofxVlc4::videoFrameMetadata(void * data, libvlc_video_metadata_type_t type,
 	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
-	that->videoComponent->videoFrameMetadata(type, metadata);
+	that->m_impl->subsystemRuntime.videoComponent->videoFrameMetadata(type, metadata);
 }
 
 void ofxVlc4::bindVlcRenderTarget() {
-	videoComponent->bindVlcRenderTarget();
+	m_impl->subsystemRuntime.videoComponent->bindVlcRenderTarget();
 }
 
 void ofxVlc4::unbindVlcRenderTarget() {
-	videoComponent->unbindVlcRenderTarget();
+	m_impl->subsystemRuntime.videoComponent->unbindVlcRenderTarget();
 }
 
 bool ofxVlc4::drawCurrentFrame(const VideoStateInfo & state, float x, float y, float width, float height) {
-	return videoComponent->drawCurrentFrame(state, x, y, width, height);
+	return m_impl->subsystemRuntime.videoComponent->drawCurrentFrame(state, x, y, width, height);
 }
 
 void ofxVlc4::draw(float x, float y, float w, float h) {
-	videoComponent->draw(x, y, w, h);
+	m_impl->subsystemRuntime.videoComponent->draw(x, y, w, h);
 }
 
 void ofxVlc4::draw(float x, float y) {
-	videoComponent->draw(x, y);
+	m_impl->subsystemRuntime.videoComponent->draw(x, y);
 }
 
 void ofxVlc4::refreshExposedTexture() {
-	videoComponent->refreshExposedTexture();
+	m_impl->subsystemRuntime.videoComponent->refreshExposedTexture();
 }
 
 ofTexture & ofxVlc4::getTexture() {
-	return videoComponent->getTexture();
+	return m_impl->subsystemRuntime.videoComponent->getTexture();
 }
 
 ofTexture & ofxVlc4::getRenderTexture() {
-	return videoComponent->getRenderTexture();
+	return m_impl->subsystemRuntime.videoComponent->getRenderTexture();
 }
 
 ofxVlc4::VideoOutputBackend ofxVlc4::getVideoOutputBackend() const {
-	return videoComponent->getVideoOutputBackend();
+	return m_impl->subsystemRuntime.videoComponent->getVideoOutputBackend();
 }
 
 ofxVlc4::VideoOutputBackend ofxVlc4::getActiveVideoOutputBackend() const {
-	return videoComponent->getActiveVideoOutputBackend();
+	return m_impl->subsystemRuntime.videoComponent->getActiveVideoOutputBackend();
 }
 
 ofxVlc4::PreferredDecoderDevice ofxVlc4::getPreferredDecoderDevice() const {
-	return videoComponent->getPreferredDecoderDevice();
+	return m_impl->subsystemRuntime.videoComponent->getPreferredDecoderDevice();
 }
 
 ofxVlc4::VideoHdrMetadataInfo ofxVlc4::getVideoHdrMetadata() const {
-	return videoComponent->getVideoHdrMetadata();
+	return m_impl->subsystemRuntime.videoComponent->getVideoHdrMetadata();
 }
 
 ofxVlc4::VideoStateInfo ofxVlc4::getVideoStateInfo() const {
-	return videoComponent->getVideoStateInfo();
+	return m_impl->subsystemRuntime.videoComponent->getVideoStateInfo();
 }
 
 std::vector<ofxVlc4::VideoFilterInfo> ofxVlc4::getVideoFilters() const {
-	return videoComponent->getVideoFilters();
+	return m_impl->subsystemRuntime.videoComponent->getVideoFilters();
 }
 
 std::string ofxVlc4::getVideoFilterChain() const {
-	return videoComponent->getVideoFilterChain();
+	return m_impl->subsystemRuntime.videoComponent->getVideoFilterChain();
 }
 
 void ofxVlc4::setVideoFilterChain(const std::string & filterChain) {
-	videoComponent->setVideoFilterChain(filterChain);
+	m_impl->subsystemRuntime.videoComponent->setVideoFilterChain(filterChain);
 }
 
 bool ofxVlc4::canApplyNativeVideoFilters() const {
@@ -2405,21 +2405,21 @@ bool ofxVlc4::toggleVideoFilter(const std::string & filterName) {
 }
 
 void ofxVlc4::setVideoOutputBackend(VideoOutputBackend backend) {
-	videoComponent->setVideoOutputBackend(backend);
+	m_impl->subsystemRuntime.videoComponent->setVideoOutputBackend(backend);
 }
 
 void ofxVlc4::setPreferredDecoderDevice(PreferredDecoderDevice device) {
-	videoComponent->setPreferredDecoderDevice(device);
+	m_impl->subsystemRuntime.videoComponent->setPreferredDecoderDevice(device);
 }
 
 bool ofxVlc4::queryVideoTrackGeometry(unsigned & width, unsigned & height, unsigned & sarNum, unsigned & sarDen) const {
-	return videoComponent->queryVideoTrackGeometry(width, height, sarNum, sarDen);
+	return m_impl->subsystemRuntime.videoComponent->queryVideoTrackGeometry(width, height, sarNum, sarDen);
 }
 
 void ofxVlc4::refreshPixelAspectRatio() {
-	videoComponent->refreshPixelAspectRatio();
+	m_impl->subsystemRuntime.videoComponent->refreshPixelAspectRatio();
 }
 
 void ofxVlc4::refreshDisplayAspectRatio() {
-	videoComponent->refreshDisplayAspectRatio();
+	m_impl->subsystemRuntime.videoComponent->refreshDisplayAspectRatio();
 }
