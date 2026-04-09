@@ -115,6 +115,24 @@ target_include_directories(test_gl PRIVATE
 add_test(NAME gl COMMAND test_gl)
 
 # ---------------------------------------------------------------------------
+# test_gl_ops
+# Tests the GL operation helpers in ofxVlc4GlOps.h covering fence-sync,
+# FBO, texture, and PBO patterns used in playback and recording.
+# Uses the same stubs_gl/ directory as test_gl.
+# ---------------------------------------------------------------------------
+
+add_executable(test_gl_ops
+    test_gl_ops.cpp
+)
+
+target_include_directories(test_gl_ops PRIVATE
+    "${STUBS_GL_DIR}"        # ofMain.h stub + GLFW/ sub-stub (controllable)
+    "${SRC_DIR}/support"     # ofxVlc4GlOps.h
+)
+
+add_test(NAME gl_ops COMMAND test_gl_ops)
+
+# ---------------------------------------------------------------------------
 # test_midi_bridge
 # Tests MidiBridge (event-record ↔ channel-message conversion, filtering,
 # describe) and MidiTimelineCursor.  Depends only on the MIDI source files;
