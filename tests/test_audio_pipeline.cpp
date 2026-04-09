@@ -75,9 +75,10 @@ static void testBasicPipeline() {
 
 	// Generate a test tone — 480 frames (stereo interleaved) of a 440Hz sine.
 	const size_t frameCount = 480;
+	constexpr float kPi = 3.14159265f;
 	std::vector<float> toneSamples(frameCount * channels);
 	for (size_t i = 0; i < frameCount; ++i) {
-		const float sample = std::sin(2.0f * 3.14159265f * 440.0f * static_cast<float>(i) / static_cast<float>(sampleRate));
+		const float sample = std::sin(2.0f * kPi * 440.0f * static_cast<float>(i) / static_cast<float>(sampleRate));
 		toneSamples[i * channels + 0] = sample;
 		toneSamples[i * channels + 1] = sample;
 	}

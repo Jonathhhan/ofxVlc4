@@ -20,13 +20,13 @@ struct RecordingOutputPaths {
 	std::string videoPath;
 };
 
-// ---------------------------------------------------------------------------
-// sout module-name validation (mux container, audio/video codec)
-//
-// Only alphanumeric characters are valid in VLC sout module names.  Anything
-// else could corrupt or inject into the sout pipeline string.
-// ---------------------------------------------------------------------------
-
+/// @brief Validate that a sout module name contains only alphanumeric characters.
+///
+/// Only alphanumeric characters are valid in VLC sout module names.  Anything
+/// else could corrupt or inject into the sout pipeline string.
+///
+/// @param name  The module name to validate (e.g. "mp4", "aac").
+/// @return True if @p name is non-empty and contains only [A-Za-z0-9].
 inline bool isValidSoutModuleName(const std::string & name) {
 	if (name.empty()) {
 		return false;
