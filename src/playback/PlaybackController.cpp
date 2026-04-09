@@ -186,7 +186,9 @@ void PlaybackController::activatePlaylistIndexImmediate(int index, bool shouldPl
 	if (shouldPlay) {
 		applyPendingEqualizerOnPlay();
 		applyPendingVideoAdjustmentsOnPlay();
-		libvlc_media_player_play(player);
+		if (libvlc_media_player_play(player) != 0) {
+			owner.logWarning("libvlc_media_player_play failed in playIndex.");
+		}
 	}
 }
 
@@ -224,7 +226,9 @@ bool PlaybackController::activateDirectMediaImmediate(
 	if (shouldPlay) {
 		applyPendingEqualizerOnPlay();
 		applyPendingVideoAdjustmentsOnPlay();
-		libvlc_media_player_play(player);
+		if (libvlc_media_player_play(player) != 0) {
+			owner.logWarning("libvlc_media_player_play failed in activateDirectMediaImmediate.");
+		}
 		owner.logNotice("Playback started.");
 	}
 
@@ -369,7 +373,9 @@ void PlaybackController::setPosition(float pct) {
 	}
 
 	resetAudioBuffer();
-	libvlc_media_player_set_position(player, pct, true);
+	if (libvlc_media_player_set_position(player, pct, true) != 0) {
+		owner.logWarning("libvlc_media_player_set_position failed.");
+	}
 }
 
 void PlaybackController::play() {
@@ -443,7 +449,9 @@ void PlaybackController::play() {
 	} else {
 		applyPendingEqualizerOnPlay();
 		applyPendingVideoAdjustmentsOnPlay();
-		libvlc_media_player_play(player);
+		if (libvlc_media_player_play(player) != 0) {
+			owner.logWarning("libvlc_media_player_play failed in play.");
+		}
 	}
 	owner.logNotice("Playback started.");
 }
@@ -648,8 +656,12 @@ void PlaybackController::handlePlaybackEnded() {
 		resetAudioBuffer();
 
 		if (libvlc_media_player_t * player = owner.sessionPlayer()) {
-			libvlc_media_player_set_time(player, 0, true);
-			libvlc_media_player_play(player);
+			if (libvlc_media_player_set_time(player, 0, true) != 0) {
+				owner.logWarning("libvlc_media_player_set_time failed in repeat.");
+			}
+			if (libvlc_media_player_play(player) != 0) {
+				owner.logWarning("libvlc_media_player_play failed in repeat.");
+			}
 			return;
 		}
 
@@ -1149,7 +1161,9 @@ void PlaybackController::setTime(int ms) {
 
 	if (libvlc_media_player_t * player = owner.sessionPlayer()) {
 		resetAudioBuffer();
-		libvlc_media_player_set_time(player, clampedMs, true);
+		if (libvlc_media_player_set_time(player, clampedMs, true) != 0) {
+			owner.logWarning("libvlc_media_player_set_time failed in setTime.");
+		}
 	}
 }
 

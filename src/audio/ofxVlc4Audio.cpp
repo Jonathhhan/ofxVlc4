@@ -424,7 +424,9 @@ void ofxVlc4::AudioComponent::applyCurrentVolumeToPlayer() {
 		return;
 	}
 
-	libvlc_audio_set_volume(player, ofClamp(owner.m_impl->audioRuntime.currentVolume.load(std::memory_order_relaxed), 0, 100));
+	if (libvlc_audio_set_volume(player, ofClamp(owner.m_impl->audioRuntime.currentVolume.load(std::memory_order_acquire), 0, 100)) != 0) {
+		owner.logWarning("libvlc_audio_set_volume failed.");
+	}
 }
 
 void ofxVlc4::AudioComponent::applyAudioOutputModule() {
@@ -751,7 +753,7 @@ bool ofxVlc4::AudioComponent::selectAudioOutputDevice(const std::string & device
 
 int ofxVlc4::AudioComponent::getVolume() const {
 	const AudioStateInfo info = getAudioStateInfo();
-	return info.volumeKnown ? info.volume : owner.m_impl->audioRuntime.currentVolume.load(std::memory_order_relaxed);
+	return info.volumeKnown ? info.volume : owner.m_impl->audioRuntime.currentVolume.load(std::memory_order_acquire);
 }
 
 void ofxVlc4::AudioComponent::setVolume(int volume) {
@@ -763,7 +765,7 @@ void ofxVlc4::AudioComponent::setVolume(int volume) {
 
 bool ofxVlc4::AudioComponent::isMuted() const {
 	const AudioStateInfo info = getAudioStateInfo();
-	return info.mutedKnown ? info.muted : owner.m_impl->audioRuntime.outputMuted.load(std::memory_order_relaxed);
+	return info.mutedKnown ? info.muted : owner.m_impl->audioRuntime.outputMuted.load(std::memory_order_acquire);
 }
 
 void ofxVlc4::AudioComponent::toggleMute() {
@@ -1404,9 +1406,9 @@ void ofxVlc4::AudioComponent::resetAudioStateInfo() {
 	owner.m_impl->stateCacheRuntime.audio = {};
 	owner.m_impl->stateCacheRuntime.audio.trackCount = 0;
 	owner.m_impl->stateCacheRuntime.audio.tracksAvailable = false;
-	owner.m_impl->stateCacheRuntime.audio.volume = owner.m_impl->audioRuntime.currentVolume.load(std::memory_order_relaxed);
+	owner.m_impl->stateCacheRuntime.audio.volume = owner.m_impl->audioRuntime.currentVolume.load(std::memory_order_acquire);
 	owner.m_impl->stateCacheRuntime.audio.volumeKnown = false;
-	owner.m_impl->stateCacheRuntime.audio.muted = owner.m_impl->audioRuntime.outputMuted.load(std::memory_order_relaxed);
+	owner.m_impl->stateCacheRuntime.audio.muted = owner.m_impl->audioRuntime.outputMuted.load(std::memory_order_acquire);
 	owner.m_impl->stateCacheRuntime.audio.mutedKnown = false;
 	owner.m_impl->stateCacheRuntime.audio.mixMode = owner.m_impl->playerConfigRuntime.audioMixMode;
 	owner.m_impl->stateCacheRuntime.audio.stereoMode = owner.m_impl->playerConfigRuntime.audioStereoMode;
@@ -1415,8 +1417,8 @@ void ofxVlc4::AudioComponent::resetAudioStateInfo() {
 
 void ofxVlc4::AudioComponent::updateAudioStateFromVolumeEvent(int volume) {
 	const int clampedVolume = ofClamp(volume, 0, 100);
-	owner.m_impl->audioRuntime.currentVolume.store(clampedVolume, std::memory_order_relaxed);
-	owner.m_impl->audioRuntime.outputVolume.store(static_cast<float>(clampedVolume) / 100.0f, std::memory_order_relaxed);
+	owner.m_impl->audioRuntime.currentVolume.store(clampedVolume, std::memory_order_release);
+	owner.m_impl->audioRuntime.outputVolume.store(static_cast<float>(clampedVolume) / 100.0f, std::memory_order_release);
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.audioStateMutex);
 	owner.m_impl->stateCacheRuntime.audio.volumeKnown = true;
@@ -1424,7 +1426,7 @@ void ofxVlc4::AudioComponent::updateAudioStateFromVolumeEvent(int volume) {
 }
 
 void ofxVlc4::AudioComponent::updateAudioStateFromMutedEvent(bool muted) {
-	owner.m_impl->audioRuntime.outputMuted.store(muted, std::memory_order_relaxed);
+	owner.m_impl->audioRuntime.outputMuted.store(muted, std::memory_order_release);
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.audioStateMutex);
 	owner.m_impl->stateCacheRuntime.audio.mutedKnown = true;
@@ -1641,9 +1643,9 @@ void ofxVlc4::AudioComponent::audioPlay(const void * samples, unsigned int count
 
 	const size_t channelCount = static_cast<size_t>(std::max(1, owner.m_impl->audioRuntime.channels.load(std::memory_order_relaxed)));
 	const size_t sampleCount = static_cast<size_t>(count) * channelCount;
-	const float outputVolume = owner.m_impl->audioRuntime.outputMuted.load(std::memory_order_relaxed)
+	const float outputVolume = owner.m_impl->audioRuntime.outputMuted.load(std::memory_order_acquire)
 		? 0.0f
-		: owner.m_impl->audioRuntime.outputVolume.load(std::memory_order_relaxed);
+		: owner.m_impl->audioRuntime.outputVolume.load(std::memory_order_acquire);
 	uint64_t ringWriteMicros = 0;
 	uint64_t recorderMicros = 0;
 	const auto writeCapturedSamples = [&](const float * inputSamples, size_t inputSampleCount) {
@@ -1735,7 +1737,7 @@ void ofxVlc4::AudioComponent::audioPlay(const void * samples, unsigned int count
 
 void ofxVlc4::AudioComponent::audioSetVolume(float volume, bool mute) {
 	const float clampedVolume = std::max(0.0f, volume);
-	owner.m_impl->audioRuntime.outputVolume.store(clampedVolume, std::memory_order_relaxed);
+	owner.m_impl->audioRuntime.outputVolume.store(clampedVolume, std::memory_order_release);
 	updateAudioStateFromVolumeEvent(static_cast<int>(std::round(clampedVolume * 100.0f)));
 	updateAudioStateFromMutedEvent(mute);
 }

@@ -1,6 +1,7 @@
 #include "VlcCoreSession.h"
 
 #include <algorithm>
+#include <string>
 
 namespace {
 
@@ -98,7 +99,13 @@ void VlcCoreSession::attachPlayerEvents(void * data, EventCallback callback) {
 	}
 
 	for (libvlc_event_type_t type : kPlayerEventTypes) {
-		libvlc_event_attach(mediaPlayerEventManager, type, callback, data);
+		if (libvlc_event_attach(mediaPlayerEventManager, type, callback, data) != 0) {
+			VlcCoreLogEntry entry;
+			entry.level = LIBVLC_WARNING;
+			entry.module = "VlcCoreSession";
+			entry.message = "libvlc_event_attach failed for player event type " + std::to_string(static_cast<int>(type));
+			appendLog(entry);
+		}
 	}
 }
 
@@ -126,9 +133,27 @@ void VlcCoreSession::attachMediaEvents(void * data, EventCallback callback) {
 		return;
 	}
 
-	libvlc_event_attach(mediaEventManager, libvlc_MediaParsedChanged, callback, data);
-	libvlc_event_attach(mediaEventManager, libvlc_MediaThumbnailGenerated, callback, data);
-	libvlc_event_attach(mediaEventManager, libvlc_MediaAttachedThumbnailsFound, callback, data);
+	if (libvlc_event_attach(mediaEventManager, libvlc_MediaParsedChanged, callback, data) != 0) {
+		VlcCoreLogEntry entry;
+		entry.level = LIBVLC_WARNING;
+		entry.module = "VlcCoreSession";
+		entry.message = "libvlc_event_attach failed for MediaParsedChanged.";
+		appendLog(entry);
+	}
+	if (libvlc_event_attach(mediaEventManager, libvlc_MediaThumbnailGenerated, callback, data) != 0) {
+		VlcCoreLogEntry entry;
+		entry.level = LIBVLC_WARNING;
+		entry.module = "VlcCoreSession";
+		entry.message = "libvlc_event_attach failed for MediaThumbnailGenerated.";
+		appendLog(entry);
+	}
+	if (libvlc_event_attach(mediaEventManager, libvlc_MediaAttachedThumbnailsFound, callback, data) != 0) {
+		VlcCoreLogEntry entry;
+		entry.level = LIBVLC_WARNING;
+		entry.module = "VlcCoreSession";
+		entry.message = "libvlc_event_attach failed for MediaAttachedThumbnailsFound.";
+		appendLog(entry);
+	}
 }
 
 void VlcCoreSession::detachMediaEvents(void * data, EventCallback callback) {
@@ -171,9 +196,27 @@ void VlcCoreSession::attachMediaDiscovererListEvents(void * data, EventCallback 
 		return;
 	}
 
-	libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemAdded, callback, data);
-	libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemDeleted, callback, data);
-	libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListEndReached, callback, data);
+	if (libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemAdded, callback, data) != 0) {
+		VlcCoreLogEntry entry;
+		entry.level = LIBVLC_WARNING;
+		entry.module = "VlcCoreSession";
+		entry.message = "libvlc_event_attach failed for MediaListItemAdded.";
+		appendLog(entry);
+	}
+	if (libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemDeleted, callback, data) != 0) {
+		VlcCoreLogEntry entry;
+		entry.level = LIBVLC_WARNING;
+		entry.module = "VlcCoreSession";
+		entry.message = "libvlc_event_attach failed for MediaListItemDeleted.";
+		appendLog(entry);
+	}
+	if (libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListEndReached, callback, data) != 0) {
+		VlcCoreLogEntry entry;
+		entry.level = LIBVLC_WARNING;
+		entry.module = "VlcCoreSession";
+		entry.message = "libvlc_event_attach failed for MediaListEndReached.";
+		appendLog(entry);
+	}
 }
 
 void VlcCoreSession::detachMediaDiscovererListEvents(void * data, EventCallback callback) {
@@ -208,8 +251,20 @@ void VlcCoreSession::attachRendererEvents(void * data, EventCallback callback) {
 		return;
 	}
 
-	libvlc_event_attach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemAdded, callback, data);
-	libvlc_event_attach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemDeleted, callback, data);
+	if (libvlc_event_attach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemAdded, callback, data) != 0) {
+		VlcCoreLogEntry entry;
+		entry.level = LIBVLC_WARNING;
+		entry.module = "VlcCoreSession";
+		entry.message = "libvlc_event_attach failed for RendererDiscovererItemAdded.";
+		appendLog(entry);
+	}
+	if (libvlc_event_attach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemDeleted, callback, data) != 0) {
+		VlcCoreLogEntry entry;
+		entry.level = LIBVLC_WARNING;
+		entry.module = "VlcCoreSession";
+		entry.message = "libvlc_event_attach failed for RendererDiscovererItemDeleted.";
+		appendLog(entry);
+	}
 }
 
 void VlcCoreSession::detachRendererEvents(void * data, EventCallback callback) {

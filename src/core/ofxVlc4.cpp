@@ -1080,6 +1080,16 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		initArgPointers.push_back(argument.c_str());
 	}
 
+	const int runtimeAbi = libvlc_abi_version();
+	if (runtimeAbi != LIBVLC_ABI_VERSION_INT) {
+		logWarning("libVLC ABI mismatch: compiled against "
+			+ ofToString(LIBVLC_ABI_VERSION_INT)
+			+ " but runtime is "
+			+ ofToString(runtimeAbi)
+			+ ". Unexpected behavior may occur.");
+	}
+
+	libvlc_clearerr();
 	m_impl->legacyCoreMirrorRuntime.libvlc = libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data());
 	if (!m_impl->legacyCoreMirrorRuntime.libvlc) {
 		const char * error = libvlc_errmsg();
@@ -1089,8 +1099,12 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	m_impl->subsystemRuntime.coreSession->setInstance(m_impl->legacyCoreMirrorRuntime.libvlc);
 	syncLegacyStateFromCoreSession();
 
+	libvlc_set_user_agent(m_impl->legacyCoreMirrorRuntime.libvlc, "ofxVlc4", "ofxVlc4/libVLC");
+	libvlc_set_app_id(m_impl->legacyCoreMirrorRuntime.libvlc, "org.openframeworks.ofxVlc4", "", "");
+
 	m_impl->subsystemRuntime.mediaComponent->applyLibVlcLogging();
 
+	libvlc_clearerr();
 	m_impl->legacyCoreMirrorRuntime.mediaPlayer = libvlc_media_player_new(m_impl->legacyCoreMirrorRuntime.libvlc);
 	if (!m_impl->legacyCoreMirrorRuntime.mediaPlayer) {
 		const char * error = libvlc_errmsg();

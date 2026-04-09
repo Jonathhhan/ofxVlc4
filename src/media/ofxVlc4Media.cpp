@@ -593,14 +593,18 @@ bool ofxVlc4::MediaComponent::reapplyCurrentMediaForFilterChainChange(const std:
 	}
 
 	if (resumeTimeMs > 0 && libvlc_media_player_is_seekable(player)) {
-		libvlc_media_player_set_time(player, resumeTimeMs, true);
+		if (libvlc_media_player_set_time(player, resumeTimeMs, true) != 0) {
+			owner.logWarning("libvlc_media_player_set_time failed while reapplying filter chain.");
+		}
 	}
 
 	if (wasPlaying || wasPaused) {
 		audio().applyEqualizerSettings();
 		audio().clearPendingEqualizerApplyOnPlay();
 		video().clearPendingVideoAdjustApplyOnPlay();
-		libvlc_media_player_play(player);
+		if (libvlc_media_player_play(player) != 0) {
+			owner.logWarning("libvlc_media_player_play failed while reapplying filter chain.");
+		}
 		if (wasPaused) {
 			libvlc_media_player_set_pause(player, 1);
 		}
