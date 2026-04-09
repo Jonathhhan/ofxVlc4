@@ -676,8 +676,8 @@ ofxVlc4::WatchTimeInfo ofxVlc4::getWatchTimeInfo() const {
 }
 
 void ofxVlc4::setWatchTimeCallback(WatchTimeCallback callback) {
-	std::lock_guard<std::mutex> lock(watchTimeMutex);
-	this->watchTimeCallback = std::move(callback);
+	std::lock_guard<std::mutex> lock(m_impl->synchronizationRuntime.watchTimeMutex);
+	m_impl->watchTimeRuntime.callback = std::move(callback);
 }
 
 void ofxVlc4::clearWatchTimeCallback() {
@@ -685,12 +685,12 @@ void ofxVlc4::clearWatchTimeCallback() {
 }
 
 bool ofxVlc4::hasWatchTimeCallback() const {
-	std::lock_guard<std::mutex> lock(watchTimeMutex);
-	return static_cast<bool>(watchTimeCallback);
+	std::lock_guard<std::mutex> lock(m_impl->synchronizationRuntime.watchTimeMutex);
+	return static_cast<bool>(m_impl->watchTimeRuntime.callback);
 }
 
 double ofxVlc4::getPlaybackClockFramesPerSecond() const {
-	const double cachedFps = cachedVideoTrackFps.load();
+	const double cachedFps = m_impl->stateCacheRuntime.cachedVideoTrackFps.load();
 	if (std::isfinite(cachedFps) && cachedFps > 0.0) {
 		return cachedFps;
 	}
@@ -721,7 +721,7 @@ double ofxVlc4::getPlaybackClockFramesPerSecond() const {
 	for (const auto & track : tracks) {
 		const double fps = resolveFps(track);
 		if (std::isfinite(fps) && fps > 0.0) {
-			cachedVideoTrackFps.store(fps);
+			m_impl->stateCacheRuntime.cachedVideoTrackFps.store(fps);
 			return fps;
 		}
 	}

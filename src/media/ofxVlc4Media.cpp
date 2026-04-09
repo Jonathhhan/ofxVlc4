@@ -526,7 +526,7 @@ void ofxVlc4::movePlaylistItems(const std::vector<int> & fromIndices, int toInde
 }
 
 std::vector<std::pair<std::string, std::string>> ofxVlc4::buildMetadataForMedia(libvlc_media_t * sourceMedia) const {
-	return mediaLibraryController->buildMetadataForMedia(sourceMedia);
+	return m_impl->subsystemRuntime.mediaLibraryController->buildMetadataForMedia(sourceMedia);
 }
 
 bool ofxVlc4::MediaComponent::loadMediaSource(
@@ -1036,7 +1036,7 @@ void ofxVlc4::setMediaPlayerRole(MediaPlayerRole role) {
 
 
 bool ofxVlc4::isPlaybackLocallyStopped() const {
-	return playbackController->isPlaybackLocallyStopped();
+	return m_impl->subsystemRuntime.playbackController->isPlaybackLocallyStopped();
 }
 
 
@@ -1046,19 +1046,22 @@ void ofxVlc4::applyMediaPlayerRole() {
 
 
 void ofxVlc4::detachEvents() {
-	if (mediaPlayerEventManager) {
-		if (coreSession && eventRouter) {
-			coreSession->detachPlayerEvents(eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
+	auto & cs = m_impl->subsystemRuntime.coreSession;
+	auto & er = m_impl->subsystemRuntime.eventRouter;
+
+	if (cs && cs->playerEvents()) {
+		if (er) {
+			cs->detachPlayerEvents(er.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
 		} else {
-			mediaPlayerEventManager = nullptr;
+			cs->setPlayerEvents(nullptr);
 		}
 	}
 
-	if (mediaEventManager) {
-		if (coreSession && eventRouter) {
-			coreSession->detachMediaEvents(eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
+	if (cs && cs->mediaEvents()) {
+		if (er) {
+			cs->detachMediaEvents(er.get(), VlcEventRouter::vlcMediaEventStatic);
 		} else {
-			mediaEventManager = nullptr;
+			cs->setMediaEvents(nullptr);
 		}
 	}
 }
@@ -1647,11 +1650,11 @@ void ofxVlc4::cancelThumbnailRequest() {
 
 
 void ofxVlc4::resetCurrentMediaParseState() {
-	mediaLibraryController->resetCurrentMediaParseState();
+	m_impl->subsystemRuntime.mediaLibraryController->resetCurrentMediaParseState();
 }
 
 libvlc_media_t * ofxVlc4::retainCurrentOrLoadedMedia() const {
-	return mediaLibraryController->retainCurrentOrLoadedMedia();
+	return m_impl->subsystemRuntime.mediaLibraryController->retainCurrentOrLoadedMedia();
 }
 
 ofxVlc4::MediaParseInfo ofxVlc4::getCurrentMediaParseInfo() const {
@@ -2006,19 +2009,19 @@ ofxVlc4::MediaStats ofxVlc4::getMediaStats() const {
 }
 
 bool ofxVlc4::canPause() const {
-	return playbackController->canPause();
+	return m_impl->subsystemRuntime.playbackController->canPause();
 }
 
 unsigned ofxVlc4::getVideoOutputCount() const {
-	return videoComponent->getVideoOutputCount();
+	return m_impl->subsystemRuntime.videoComponent->getVideoOutputCount();
 }
 
 bool ofxVlc4::hasVideoOutput() const {
-	return videoComponent->hasVideoOutput();
+	return m_impl->subsystemRuntime.videoComponent->hasVideoOutput();
 }
 
 bool ofxVlc4::isScrambled() const {
-	return videoComponent->isScrambled();
+	return m_impl->subsystemRuntime.videoComponent->isScrambled();
 }
 
 ofxVlc4::AbLoopInfo ofxVlc4::MediaComponent::getAbLoop() const {
