@@ -1708,6 +1708,41 @@ void ofVlcPlayer4Gui::drawPathSection(
 			addPath[0] = '\0';
 		}
 	}
+
+	// Playlist save/load (M3U and XSPF formats).
+	ImGui::Separator();
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, kLabelInnerSpacing);
+	ImGui::PushItemWidth(labeledInputWidth(layout));
+	ImGui::InputText("File##playlistFile", playlistFilePath, sizeof(playlistFilePath));
+	ImGui::PopItemWidth();
+	ImGui::PopStyleVar();
+
+	const bool hasFilePath = playlistFilePath[0] != '\0';
+	ImGui::BeginDisabled(!hasPlaylist || !hasFilePath);
+	if (ImGui::Button("Save M3U", ImVec2(layout.actionButtonWidth, 0.0f)) && hasPlaylist && hasFilePath) {
+		player.savePlaylistM3U(playlistFilePath);
+	}
+	ImGui::SameLine(0.0f, kButtonSpacing);
+	if (ImGui::Button("Save XSPF", ImVec2(layout.actionButtonWidth, 0.0f)) && hasPlaylist && hasFilePath) {
+		player.savePlaylistXSPF(playlistFilePath);
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine(0.0f, kButtonSpacing);
+	ImGui::BeginDisabled(!hasFilePath);
+	if (ImGui::Button("Load M3U", ImVec2(layout.actionButtonWidth, 0.0f)) && hasFilePath) {
+		const auto items = player.loadPlaylistM3U(playlistFilePath);
+		for (const auto & item : items) {
+			addPathToPlaylist(item);
+		}
+	}
+	ImGui::SameLine(0.0f, kButtonSpacing);
+	if (ImGui::Button("Load XSPF", ImVec2(layout.actionButtonWidth, 0.0f)) && hasFilePath) {
+		const auto items = player.loadPlaylistXSPF(playlistFilePath);
+		for (const auto & item : items) {
+			addPathToPlaylist(item);
+		}
+	}
+	ImGui::EndDisabled();
 }
 
 void ofVlcPlayer4Gui::deleteSelected(ofxVlc4 & player) {

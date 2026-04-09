@@ -173,6 +173,7 @@ private:
 
 	int volume = 50;
 	char addPath[1024] = "";
+	char playlistFilePath[1024] = "";
 	char projectMTexturePath[1024] = "";
 	char projectMPlaylistFilter[512] = "";
 	char projectMTextureSearchPath[1024] = "";
