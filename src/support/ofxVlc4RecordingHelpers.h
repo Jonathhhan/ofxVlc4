@@ -6,6 +6,7 @@
 // stubs; no VLC runtime needed.
 // ---------------------------------------------------------------------------
 
+#include <cctype>
 #include <string>
 
 namespace ofxVlc4RecordingHelpers {
@@ -18,6 +19,25 @@ struct RecordingOutputPaths {
 	std::string audioPath;
 	std::string videoPath;
 };
+
+// ---------------------------------------------------------------------------
+// sout module-name validation (mux container, audio/video codec)
+//
+// Only alphanumeric characters are valid in VLC sout module names.  Anything
+// else could corrupt or inject into the sout pipeline string.
+// ---------------------------------------------------------------------------
+
+inline bool isValidSoutModuleName(const std::string & name) {
+	if (name.empty()) {
+		return false;
+	}
+	for (const char c : name) {
+		if (!std::isalnum(static_cast<unsigned char>(c))) {
+			return false;
+		}
+	}
+	return true;
+}
 
 // ---------------------------------------------------------------------------
 // Text trimming (mirrors the anonymous-namespace variant in Recorder.cpp)

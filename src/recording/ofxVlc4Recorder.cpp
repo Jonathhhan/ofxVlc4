@@ -87,6 +87,16 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		}
 		return false;
 	}
+	// Only alphanumeric characters are valid in a VLC codec/sout module name.
+	// Reject anything else to prevent sout string injection.
+	for (const char c : normalizedAudioCodec) {
+		if (!std::isalnum(static_cast<unsigned char>(c))) {
+			if (errorOut) {
+				*errorOut = "Audio codec name contains invalid characters.";
+			}
+			return false;
+		}
+	}
 
 	const auto fail = [&](const std::string & message) {
 		if (errorOut) {

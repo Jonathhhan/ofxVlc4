@@ -216,6 +216,46 @@ static void testBuildRecordingOutputPaths() {
 }
 
 // ---------------------------------------------------------------------------
+// isValidSoutModuleName
+// ---------------------------------------------------------------------------
+
+static void testIsValidSoutModuleName() {
+	beginSuite("isValidSoutModuleName");
+
+	// Valid alphanumeric names.
+	CHECK(isValidSoutModuleName("mp4"));
+	CHECK(isValidSoutModuleName("mkv"));
+	CHECK(isValidSoutModuleName("aac"));
+	CHECK(isValidSoutModuleName("h264"));
+	CHECK(isValidSoutModuleName("flac"));
+	CHECK(isValidSoutModuleName("opus"));
+	CHECK(isValidSoutModuleName("MP4"));
+	CHECK(isValidSoutModuleName("AAC"));
+
+	// Empty is invalid.
+	CHECK(!isValidSoutModuleName(""));
+
+	// Whitespace is invalid.
+	CHECK(!isValidSoutModuleName(" "));
+	CHECK(!isValidSoutModuleName("mp4 "));
+	CHECK(!isValidSoutModuleName(" mp4"));
+
+	// Special characters that could enable sout injection.
+	CHECK(!isValidSoutModuleName("mp4}:standard{access=file"));
+	CHECK(!isValidSoutModuleName("aac{"));
+	CHECK(!isValidSoutModuleName("mp4'"));
+	CHECK(!isValidSoutModuleName("a:b"));
+	CHECK(!isValidSoutModuleName("a#b"));
+	CHECK(!isValidSoutModuleName("a,b"));
+	CHECK(!isValidSoutModuleName("a=b"));
+
+	// Punctuation.
+	CHECK(!isValidSoutModuleName("mp4.v2"));
+	CHECK(!isValidSoutModuleName("mp4-v2"));
+	CHECK(!isValidSoutModuleName("mp4_v2"));
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -224,6 +264,7 @@ int main() {
 	testBuildRecordingOutputStem();
 	testBuildRecordingOutputPath();
 	testBuildRecordingOutputPaths();
+	testIsValidSoutModuleName();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;
