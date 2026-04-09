@@ -229,6 +229,72 @@ static void testRemoveRecordingFile() {
 }
 
 // ---------------------------------------------------------------------------
+// tryRemoveRecordingFileOnce
+// ---------------------------------------------------------------------------
+
+static void testTryRemoveRecordingFileOnce() {
+	beginSuite("tryRemoveRecordingFileOnce");
+
+	using ofxVlc4MuxHelpers::tryRemoveRecordingFileOnce;
+
+	const std::string tmpPath = (std::filesystem::temp_directory_path() / "ofxvlc4_test_tryremove.bin").string();
+
+	// Empty path → returns true.
+	CHECK(tryRemoveRecordingFileOnce(""));
+
+	// File doesn't exist → returns true.
+	std::filesystem::remove(tmpPath);
+	CHECK(tryRemoveRecordingFileOnce(tmpPath));
+
+	// File exists → removes it and returns true.
+	{
+		std::ofstream f(tmpPath, std::ios::binary);
+		f.write("test", 4);
+	}
+	CHECK(std::filesystem::exists(tmpPath));
+	CHECK(tryRemoveRecordingFileOnce(tmpPath));
+	CHECK(!std::filesystem::exists(tmpPath));
+
+	// Already removed → still returns true.
+	CHECK(tryRemoveRecordingFileOnce(tmpPath));
+}
+
+// ---------------------------------------------------------------------------
+// buildDefaultMuxOutputPath
+// ---------------------------------------------------------------------------
+
+static void testBuildDefaultMuxOutputPath() {
+	beginSuite("buildDefaultMuxOutputPath");
+
+	using ofxVlc4MuxHelpers::buildDefaultMuxOutputPath;
+
+	// Basic case: video.ts → video-muxed.mp4
+	{
+		const std::string result = buildDefaultMuxOutputPath("/tmp/video.ts", "mp4");
+		CHECK(result.find("video-muxed.mp4") != std::string::npos);
+	}
+
+	// Different container: video.ts → video-muxed.mkv
+	{
+		const std::string result = buildDefaultMuxOutputPath("/tmp/video.ts", "mkv");
+		CHECK(result.find("video-muxed.mkv") != std::string::npos);
+	}
+
+	// Nested path preservation.
+	{
+		const std::string result = buildDefaultMuxOutputPath("/home/user/recordings/clip.avi", "mp4");
+		CHECK(result.find("clip-muxed.mp4") != std::string::npos);
+		CHECK(result.find("/home/user/recordings/") != std::string::npos || result.find("home") != std::string::npos);
+	}
+
+	// Filename with dots: my.video.ts → my.video-muxed.webm
+	{
+		const std::string result = buildDefaultMuxOutputPath("/tmp/my.video.ts", "webm");
+		CHECK(result.find("my.video-muxed.webm") != std::string::npos);
+	}
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -238,6 +304,8 @@ int main() {
 	testWaitForRecordingFileNoCancel();
 	testWaitForRecordingFileCancelFlag();
 	testRemoveRecordingFile();
+	testTryRemoveRecordingFileOnce();
+	testBuildDefaultMuxOutputPath();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

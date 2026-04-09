@@ -151,3 +151,19 @@ target_include_directories(test_midi_playback PRIVATE
 )
 
 add_test(NAME midi_playback COMMAND test_midi_playback)
+
+# ---------------------------------------------------------------------------
+# test_types
+# Tests the POD default values and enum coverage of ofxVlc4Types.h.
+# No dependency on OF, GLFW, or VLC.
+# ---------------------------------------------------------------------------
+
+add_executable(test_types
+    test_types.cpp
+)
+
+target_include_directories(test_types PRIVATE
+    "${SRC_DIR}/core"
+)
+
+add_test(NAME types COMMAND test_types)
