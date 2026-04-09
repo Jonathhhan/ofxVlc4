@@ -101,6 +101,13 @@ void ofApp::update() {
 	if (recordPlayer) recordPlayer->update();
 
 	updateShuttle();
+
+	// Drive segment-by-segment export state machine.
+	if (exportState != ExportState::Idle &&
+		exportState != ExportState::Done &&
+		exportState != ExportState::Failed) {
+		updateExportProgress();
+	}
 }
 
 void ofApp::draw() {
@@ -393,7 +400,17 @@ void ofApp::keyPressed(int key) {
 	// -- Export --
 	case 'e':
 	case 'E':
-		exportTimeline();
+		if (exportState == ExportState::PreparingSegment ||
+			exportState == ExportState::RecordingSegment ||
+			exportState == ExportState::WaitingForMux) {
+			cancelExport();
+		} else if (exportState == ExportState::Done ||
+				   exportState == ExportState::Failed) {
+			// Clear finished/failed state, returning to idle.
+			exportState = ExportState::Idle;
+		} else {
+			exportTimeline();
+		}
 		break;
 
 	// -- EDL export --
@@ -680,6 +697,17 @@ void ofApp::drawInfoBar(float x, float y, float w, float h) {
 	} else if (exportState == ExportState::Failed) {
 		info += "  |  EXPORT FAILED: ";
 		info += exportError;
+	} else if (exportState == ExportState::PreparingSegment ||
+			   exportState == ExportState::RecordingSegment ||
+			   exportState == ExportState::WaitingForMux) {
+		const size_t totalSegs = (sequence.videoTrackCount() > 0)
+			? sequence.videoTrack(0).segments().size() : 0;
+		char exportBuf[64];
+		std::snprintf(exportBuf, sizeof(exportBuf),
+			"  |  EXPORTING %d/%zu...",
+			exportSegmentIndex + 1,
+			totalSegs);
+		info += exportBuf;
 	}
 
 	ofDrawBitmapString(info, x + 8.0f, y + 14.0f);
@@ -917,12 +945,141 @@ void ofApp::exportTimeline() {
 		return;
 	}
 
-	// Export each segment as a separate file using VLC recording.
-	exportState = ExportState::Exporting;
+	// Don't start a new export while one is already running.
+	if (exportState == ExportState::PreparingSegment ||
+		exportState == ExportState::RecordingSegment ||
+		exportState == ExportState::WaitingForMux) {
+		return;
+	}
 
-	// For now, just mark the state. A real implementation would iterate
-	// segments using the recording pipeline similar to ofxVlc4EditorExample.
-	exportState = ExportState::Done;
+	exportState = ExportState::PreparingSegment;
+	exportSegmentIndex = 0;
+	exportClipStarted = false;
+	exportError.clear();
+	exportLastFile.clear();
+
+	std::error_code error;
+	std::filesystem::create_directories(exportOutputDir, error);
+
+	ofLogNotice("NLE") << "Starting timeline export: "
+					   << sequence.videoTrack(0).segments().size()
+					   << " segment(s) to " << exportOutputDir;
+}
+
+void ofApp::updateExportProgress() {
+	if (!sourcePlayer) {
+		exportState = ExportState::Failed;
+		exportError = "Player closed during export.";
+		return;
+	}
+
+	const auto & segs = sequence.videoTrack(0).segments();
+
+	switch (exportState) {
+	case ExportState::PreparingSegment: {
+		if (exportSegmentIndex < 0 ||
+			exportSegmentIndex >= static_cast<int>(segs.size())) {
+			exportState = ExportState::Done;
+			ofLogNotice("NLE") << "Timeline export complete.";
+			return;
+		}
+
+		const nle::Segment & seg = segs[exportSegmentIndex];
+		auto it = masterClips.find(seg.masterClipId);
+		if (it == masterClips.end()) {
+			exportState = ExportState::Failed;
+			exportError = "Missing master clip: " + seg.masterClipId;
+			return;
+		}
+
+		// Load the source file in the source player and seek to source IN.
+		sourcePlayer->stop();
+		sourcePlayer->clearPlaylist();
+		sourcePlayer->addPathToPlaylist(it->second.filePath);
+		sourcePlayer->playIndex(0);
+		sourcePlayer->setTime(seg.sourceIn.toMilliseconds());
+
+		// Start recording the source player's texture.
+		const std::string baseName = "export-seg-" + ofToString(exportSegmentIndex);
+		const std::string basePath = ofFilePath::join(exportOutputDir, baseName);
+
+		sourcePlayer->setRecordingPreset(ofxVlc4RecordingPreset{});
+		sourcePlayer->recordAudioVideo(basePath, sourcePlayer->getTexture());
+
+		exportClipStarted = true;
+		exportState = ExportState::RecordingSegment;
+
+		ofLogNotice("NLE") << "Exporting segment " << (exportSegmentIndex + 1)
+						   << "/" << segs.size()
+						   << " from " << it->second.name;
+		break;
+	}
+	case ExportState::RecordingSegment: {
+		if (exportSegmentIndex < 0 ||
+			exportSegmentIndex >= static_cast<int>(segs.size())) {
+			exportState = ExportState::Failed;
+			exportError = "Invalid segment index during recording.";
+			return;
+		}
+
+		const nle::Segment & seg = segs[exportSegmentIndex];
+		const int currentTimeMs = sourcePlayer->getTime();
+		const int sourceOutMs = seg.sourceOut().toMilliseconds();
+
+		// Check if we've reached the source OUT point.
+		if (currentTimeMs >= sourceOutMs) {
+			sourcePlayer->stopRecordingSession();
+			sourcePlayer->stop();
+			exportClipStarted = false;
+
+			exportLastFile = ofFilePath::join(
+				exportOutputDir,
+				"export-seg-" + ofToString(exportSegmentIndex));
+
+			// Move to next segment.
+			++exportSegmentIndex;
+			if (exportSegmentIndex >= static_cast<int>(segs.size())) {
+				exportState = ExportState::Done;
+				ofLogNotice("NLE") << "Timeline export complete.";
+			} else {
+				exportState = ExportState::PreparingSegment;
+			}
+		}
+		break;
+	}
+	case ExportState::WaitingForMux: {
+		const ofxVlc4RecordingSessionState muxState =
+			sourcePlayer->getRecordingSessionState();
+		if (muxState == ofxVlc4RecordingSessionState::Done ||
+			muxState == ofxVlc4RecordingSessionState::Idle) {
+			++exportSegmentIndex;
+			if (exportSegmentIndex >= static_cast<int>(segs.size())) {
+				exportState = ExportState::Done;
+				ofLogNotice("NLE") << "Timeline export complete.";
+			} else {
+				exportState = ExportState::PreparingSegment;
+			}
+		} else if (muxState == ofxVlc4RecordingSessionState::Failed) {
+			exportState = ExportState::Failed;
+			exportError = "Mux failed for segment " +
+						  ofToString(exportSegmentIndex) + ".";
+		}
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+void ofApp::cancelExport() {
+	if (exportClipStarted && sourcePlayer) {
+		sourcePlayer->stopRecordingSession();
+		sourcePlayer->stop();
+	}
+	exportState = ExportState::Idle;
+	exportSegmentIndex = -1;
+	exportClipStarted = false;
+	ofLogNotice("NLE") << "Export cancelled.";
 }
 
 void ofApp::exportEdl() {
@@ -978,6 +1135,13 @@ nle::ThreePointResult ofApp::resolveCurrentMarks() {
 void ofApp::shutdownPlayers() {
 	if (shuttingDown) return;
 	shuttingDown = true;
+
+	// Cancel any active export before closing players.
+	if (exportClipStarted && sourcePlayer) {
+		sourcePlayer->stopRecordingSession();
+		exportClipStarted = false;
+	}
+	exportState = ExportState::Idle;
 
 	if (sourcePlayer) {
 		sourcePlayer->close();

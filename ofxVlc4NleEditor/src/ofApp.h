@@ -96,10 +96,20 @@ private:
 	TrimMode currentTrimMode = TrimMode::None;
 
 	// -- Export state --
-	enum class ExportState { Idle, Exporting, Done, Failed };
+	enum class ExportState {
+		Idle,
+		PreparingSegment,
+		RecordingSegment,
+		WaitingForMux,
+		Done,
+		Failed
+	};
 	ExportState exportState = ExportState::Idle;
+	int exportSegmentIndex = -1;
+	bool exportClipStarted = false;
 	std::string exportOutputDir;
 	std::string exportError;
+	std::string exportLastFile;
 
 	// -- Layout constants --
 	static constexpr float kMonitorY = 0.0f;
@@ -184,6 +194,8 @@ private:
 
 	// -- Export --
 	void exportTimeline();
+	void updateExportProgress();
+	void cancelExport();
 	void exportEdl();
 
 	// -- Player shutdown --
