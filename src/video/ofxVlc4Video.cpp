@@ -742,8 +742,11 @@ void ofxVlc4::VideoComponent::updateNativeVideoWindowVisibility() {
 
 	if (owner.m_impl->videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::NativeWindow && owner.sessionPlayer()) {
 		owner.m_impl->videoResourceRuntime.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
-		owner.m_impl->videoResourceRuntime.vlcWindow->setWindowShape(960, 540);
-		owner.m_impl->videoResourceRuntime.vlcWindow->setWindowPosition(560, 24);
+		if (!owner.m_impl->videoResourceRuntime.nativeWindowGeometryInitialized) {
+			owner.m_impl->videoResourceRuntime.vlcWindow->setWindowShape(960, 540);
+			owner.m_impl->videoResourceRuntime.vlcWindow->setWindowPosition(560, 24);
+			owner.m_impl->videoResourceRuntime.nativeWindowGeometryInitialized = true;
+		}
 		glfwSetWindowAttrib(glfwWindow, GLFW_DECORATED, GLFW_TRUE);
 		glfwShowWindow(glfwWindow);
 	} else {
