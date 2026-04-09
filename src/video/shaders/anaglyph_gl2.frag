@@ -1,3 +1,5 @@
+#version 120
+
 uniform sampler2D tex0;
 uniform vec3 leftTint;
 uniform vec3 rightTint;
