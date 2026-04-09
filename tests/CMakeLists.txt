@@ -33,6 +33,29 @@ target_compile_definitions(test_ringbuffer PRIVATE
 add_test(NAME ringbuffer COMMAND test_ringbuffer)
 
 # ---------------------------------------------------------------------------
+# test_audio_pipeline
+# Mock-based pipeline test that exercises the audio callback → ring buffer →
+# read chain without a real VLC runtime.  Validates the core data path that
+# all audio features depend on.
+# ---------------------------------------------------------------------------
+
+add_executable(test_audio_pipeline
+    test_audio_pipeline.cpp
+    "${SRC_DIR}/support/ofxVlc4RingBuffer.cpp"
+)
+
+target_include_directories(test_audio_pipeline PRIVATE
+    "${STUBS_DIR}"
+    "${SRC_DIR}/support"
+)
+
+target_compile_definitions(test_audio_pipeline PRIVATE
+    OFXVLC4_RINGBUFFER_STUB
+)
+
+add_test(NAME audio_pipeline COMMAND test_audio_pipeline)
+
+# ---------------------------------------------------------------------------
 # test_midi_analysis
 # Depends only on the C++ standard library; no OF/GLFW stubs required.
 # ---------------------------------------------------------------------------

@@ -2029,38 +2029,37 @@ void ofxVlc4::readAudioIntoBuffer(ofSoundBuffer & buffer, float gain) {
 
 void ofxVlc4::audioPlay(void * data, const void * samples, unsigned int count, int64_t pts) {
 	ofxVlc4 * that = static_cast<ofxVlc4 *>(data);
-
-	if (!that) return;
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) return;
 	that->audioComponent->audioPlay(samples, count, pts);
 }
 
 void ofxVlc4::audioSetVolume(void * data, float volume, bool mute) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) return;
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) return;
 	that->audioComponent->audioSetVolume(volume, mute);
 }
 
 void ofxVlc4::audioPause(void * data, int64_t pts) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) return;
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) return;
 	that->audioComponent->audioPause(pts);
 }
 
 void ofxVlc4::audioResume(void * data, int64_t pts) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) return;
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) return;
 	that->audioComponent->audioResume(pts);
 }
 
 void ofxVlc4::audioFlush(void * data, int64_t pts) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) return;
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) return;
 	that->audioComponent->audioFlush(pts);
 }
 
 void ofxVlc4::audioDrain(void * data) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) return;
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) return;
 	that->audioComponent->audioDrain();
 }
 

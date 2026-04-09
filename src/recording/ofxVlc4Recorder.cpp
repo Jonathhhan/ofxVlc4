@@ -2,6 +2,7 @@
 #include "ofxVlc4Recorder.h"
 #include "support/ofxVlc4GlOps.h"
 #include "support/ofxVlc4MuxHelpers.h"
+#include "support/ofxVlc4RecordingHelpers.h"
 
 #include <algorithm>
 #include <chrono>
@@ -65,25 +66,19 @@ bool ofxVlc4::muxRecordingFilesInternal(
 	std::string * errorOut) {
 	const std::string normalizedMux = ofToLower(trimRecorderText(options.containerMux));
 	const std::string normalizedAudioCodec = ofToLower(trimRecorderText(options.audioCodec));
-	if (normalizedMux.empty()) {
+	if (!ofxVlc4RecordingHelpers::isValidSoutModuleName(normalizedMux)) {
 		if (errorOut) {
-			*errorOut = "Mux container is empty.";
+			*errorOut = normalizedMux.empty()
+				? "Mux container is empty."
+				: "Mux container name contains invalid characters.";
 		}
 		return false;
 	}
-	// Only alphanumeric characters are valid in a VLC mux/sout module name.
-	// Reject anything else to prevent sout string injection.
-	for (const char c : normalizedMux) {
-		if (!std::isalnum(static_cast<unsigned char>(c))) {
-			if (errorOut) {
-				*errorOut = "Mux container name contains invalid characters.";
-			}
-			return false;
-		}
-	}
-	if (normalizedAudioCodec.empty()) {
+	if (!ofxVlc4RecordingHelpers::isValidSoutModuleName(normalizedAudioCodec)) {
 		if (errorOut) {
-			*errorOut = "Mux audio codec is empty.";
+			*errorOut = normalizedAudioCodec.empty()
+				? "Mux audio codec is empty."
+				: "Audio codec name contains invalid characters.";
 		}
 		return false;
 	}
