@@ -6,7 +6,6 @@
 // ---------------------------------------------------------------------------
 
 #include <cmath>
-#include <fstream>
 #include <sstream>
 #include <string>
 #include <filesystem>
@@ -49,33 +48,6 @@ inline std::string ofToString(T value) {
 	std::ostringstream ss;
 	ss << value;
 	return ss.str();
-}
-
-// ---------------------------------------------------------------------------
-// ofBuffer stub (used by readTextFileIfPresent via ofBufferFromFile)
-// ---------------------------------------------------------------------------
-
-class ofBuffer {
-public:
-	ofBuffer() = default;
-	explicit ofBuffer(const std::string & text) : _data(text) {}
-
-	std::string getText() const { return _data; }
-	std::size_t size() const { return _data.size(); }
-	const char * getData() const { return _data.data(); }
-
-private:
-	std::string _data;
-};
-
-inline ofBuffer ofBufferFromFile(const std::string & path, bool /*binary*/ = false) {
-	std::ifstream input(path, std::ios::in | std::ios::binary);
-	if (!input.is_open()) {
-		return ofBuffer();
-	}
-	std::ostringstream contents;
-	contents << input.rdbuf();
-	return ofBuffer(contents.str());
 }
 
 // ---------------------------------------------------------------------------

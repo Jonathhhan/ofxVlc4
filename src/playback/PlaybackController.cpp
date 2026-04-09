@@ -1015,7 +1015,7 @@ void PlaybackController::prepareForClose() {
 				break;
 			}
 
-			ofSleepMillis(kCloseStopPollMs);
+			std::this_thread::sleep_for(std::chrono::milliseconds(kCloseStopPollMs));
 		}
 	}
 

@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <limits>
 #include <sstream>
+#include <thread>
 
 namespace {
 
@@ -111,10 +112,14 @@ bool ofxVlc4::muxRecordingFilesInternal(
 			: "Timed out waiting for recorded audio file.");
 	}
 
-	if (!ofFilePath::createEnclosingDirectory(outputPath, false, true)) {
-		return fail("Failed to create mux output directory.");
+	std::error_code error;
+	if (const auto outputDirectory = std::filesystem::path(outputPath).parent_path(); !outputDirectory.empty()) {
+		std::filesystem::create_directories(outputDirectory, error);
+		if (error) {
+			return fail("Failed to create mux output directory.");
+		}
 	}
-	ofFile::removeFile(outputPath, false);
+	std::filesystem::remove(outputPath, error);
 
 	const char * const args[] = {
 		"--intf=dummy",
@@ -201,7 +206,7 @@ bool ofxVlc4::muxRecordingFilesInternal(
 			break;
 		}
 
-		ofSleepMillis(50);
+		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	}
 
 	libvlc_media_player_stop_async(muxPlayer);
@@ -210,7 +215,7 @@ bool ofxVlc4::muxRecordingFilesInternal(
 	libvlc_release(muxInstance);
 
 	if (cancelRequested && cancelRequested->load(std::memory_order_acquire)) {
-		ofFile::removeFile(outputPath, false);
+		std::filesystem::remove(outputPath, error);
 		return fail("Recording mux cancelled.");
 	}
 	if (!success) {

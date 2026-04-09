@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
+#include <thread>
 
 using ofxVlc4Utils::isUri;
 using ofxVlc4Utils::fileNameFromUri;
@@ -220,7 +221,7 @@ void waitForMediaParse(libvlc_media_t * media, int timeoutMs) {
 			return;
 		}
 
-		ofSleepMillis(25);
+		std::this_thread::sleep_for(std::chrono::milliseconds(25));
 	}
 }
 
