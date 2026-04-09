@@ -2157,7 +2157,7 @@ void ofxVlc4::applyWatchTimeObserver() {
 	mediaComponent->applyWatchTimeObserver();
 }
 
-void ofxVlc4::dispatchWatchTimeEvent(ofxVlc4 * player) {
+void ofxVlc4::invokeWatchTimeCallback(ofxVlc4 * player) {
 	WatchTimeCallback callback;
 	WatchTimeInfo info;
 	{
@@ -2199,7 +2199,7 @@ void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * val
 			player->watchTimePauseSystemDateUs = 0;
 		}
 	}
-	dispatchWatchTimeEvent(player);
+	invokeWatchTimeCallback(player);
 }
 
 void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
@@ -2216,7 +2216,7 @@ void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
 		player->watchTimeLastEventType = WatchTimeEventType::Paused;
 		++player->watchTimeUpdateSequence;
 	}
-	dispatchWatchTimeEvent(player);
+	invokeWatchTimeCallback(player);
 }
 
 void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value, void * data) {
@@ -2239,7 +2239,7 @@ void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value
 			}
 		}
 	}
-	dispatchWatchTimeEvent(player);
+	invokeWatchTimeCallback(player);
 }
 
 bool ofxVlc4::postDialogLogin(
