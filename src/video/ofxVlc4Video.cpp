@@ -703,6 +703,12 @@ void ofxVlc4::VideoComponent::clearVideoHdrMetadata() {
 		owner.m_impl->videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::D3D11Metadata;
 }
 
+// Release all D3D11 COM objects in reverse creation order.
+// Each pointer is guarded, released, and zeroed.  This function is called
+// from prepareStartupVideoResources(), on creation failure, and during
+// normal shutdown.  The five raw pointers are intentionally *not* wrapped
+// in ComPtr<> because the rest of the codebase avoids the Windows SDK
+// smart-pointer headers — explicit Release() is the project convention.
 void ofxVlc4::VideoComponent::releaseD3D11Resources() {
 #ifdef TARGET_WIN32
 	if (owner.m_impl->videoResourceRuntime.d3d11RenderTargetView) {

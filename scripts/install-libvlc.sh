@@ -33,6 +33,19 @@ require_command() {
 	fi
 }
 
+# Verify a downloaded zip archive: file must exist, be non-empty, and pass
+# the zip integrity check.  Prevents silent corruption from partial downloads
+# or network errors.
+verify_zip_archive() {
+	local path="$1"
+	local label="${2:-archive}"
+	[[ -f "$path" ]] || die "Downloaded $label not found at '$path'."
+	[[ -s "$path" ]] || die "Downloaded $label is empty: '$path'."
+	if command -v unzip >/dev/null 2>&1; then
+		unzip -tq "$path" >/dev/null 2>&1 || die "Downloaded $label failed zip integrity check: '$path'."
+	fi
+}
+
 resolve_addon_root() {
 	local start_dir="$1"
 	local current
@@ -273,6 +286,7 @@ run_macos_install() {
 	write_step "Downloading VLC headers from GitHub master"
 	printf '     %s\n' "$HEADER_ZIP_URL"
 	curl -L --fail --output "$header_archive_path" "$HEADER_ZIP_URL"
+	verify_zip_archive "$header_archive_path" "VLC header archive"
 
 	write_step "Extracting VLC headers"
 	unzip -q "$header_archive_path" -d "$header_extract_path"
@@ -475,6 +489,25 @@ function Remove-PathIfExists([string]$Path) {
 		return
 	}
 	Remove-Item -LiteralPath $Path -Force
+}
+
+# Verify a downloaded zip archive: file must exist, be non-empty, and the
+# .NET ZipFile class must be able to open it without errors.
+function Test-ZipArchive([string]$Path, [string]$Label = 'archive') {
+	if (-not (Test-Path -LiteralPath $Path)) {
+		throw "Downloaded $Label not found at '$Path'."
+	}
+	$Info = Get-Item -LiteralPath $Path
+	if ($Info.Length -eq 0) {
+		throw "Downloaded $Label is empty: '$Path'."
+	}
+	try {
+		Add-Type -AssemblyName System.IO.Compression.FileSystem
+		$Zip = [System.IO.Compression.ZipFile]::OpenRead($Path)
+		$Zip.Dispose()
+	} catch {
+		throw "Downloaded $Label failed zip integrity check: '$Path'. $_"
+	}
 }
 
 function Install-SharedRuntime([string]$LibvlcDll, [string]$LibvlccoreDll, [string]$PluginsSourceRoot, [string]$LuaSourceRoot, [string]$SharedRuntimeDirectory) {
@@ -694,6 +727,7 @@ if ([string]::IsNullOrWhiteSpace($ZipUrl)) {
 Write-Step 'Downloading VLC archive'
 Write-Host "     $ZipUrl"
 Invoke-WebRequest -UseBasicParsing -Uri $ZipUrl -OutFile $ArchivePath
+Test-ZipArchive $ArchivePath 'VLC archive'
 
 Write-Step 'Extracting archive'
 Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractPath -Force
@@ -702,6 +736,7 @@ $ContentRoot = Resolve-ContentRoot $ExtractPath
 Write-Step 'Downloading VLC headers from GitHub master'
 Write-Host "     $HeaderZipUrl"
 Invoke-WebRequest -UseBasicParsing -Uri $HeaderZipUrl -OutFile $HeaderArchivePath
+Test-ZipArchive $HeaderArchivePath 'VLC header archive'
 
 Write-Step 'Extracting VLC headers'
 Expand-Archive -LiteralPath $HeaderArchivePath -DestinationPath $HeaderExtractPath -Force
