@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <deque>
 #include <fstream>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -23,7 +24,7 @@ public:
 private:
 	friend class ofxVlc4;
 
-	static constexpr uint64_t kMaxWavDataBytes = 0xFFFFFFFFull;
+	static constexpr uint64_t kMaxWavDataBytes = std::numeric_limits<uint32_t>::max();
 	static constexpr double kWavWarningThresholdRatio = 0.9;
 	static constexpr double kMinAudioRingBufferSeconds = 1.0;
 	void resetAudioCaptureState();

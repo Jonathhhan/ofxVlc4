@@ -1,6 +1,7 @@
 #include "VlcCoreSession.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <string>
 
 namespace {
@@ -292,10 +293,10 @@ void VlcCoreSession::closeLogFile() {
 	}
 
 	if (std::fflush(libVlcLogFileHandle) != 0) {
-		// Optionally log error
+		ofLogWarning("ofxVlc4") << "Failed to flush libVLC log file (errno " << errno << ").";
 	}
 	if (std::fclose(libVlcLogFileHandle) != 0) {
-		// Optionally log error
+		ofLogWarning("ofxVlc4") << "Failed to close libVLC log file (errno " << errno << ").";
 	}
 	libVlcLogFileHandle = nullptr;
 }

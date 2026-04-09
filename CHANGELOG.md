@@ -2,6 +2,18 @@
 
 ## 1.0.4
 
+- **code review: recording mux thread safety** — `cancelPendingRecordingMux()` now always `join()`s the worker thread instead of `detach()`ing it when the mux operation is still in progress; the previous behavior could leave an orphaned thread accessing shared state after the owning `ofxVlc4` instance was destroyed
+
+- **code review: log file close error reporting** — `VlcCoreSession::closeLogFile()` now logs a warning through `ofLogWarning` when `fflush()` or `fclose()` fails, replacing the previous placeholder comments
+
+- **code review: WAV limit constant clarity** — replaced the raw hex literal `0xFFFFFFFFull` with `std::numeric_limits<uint32_t>::max()` for the WAV data-size ceiling
+
+- **code review: test stub consistency** — unified the `getAbsolutePath()` implementation in `tests/stubs/ofMain.h` with the `tests/stubs_gl/ofMain.h` variant so both use the same ternary form
+
+- **fix: version constants bumped to 1.0.4** — `kOfxVlc4AddonVersionPatch` and `kOfxVlc4AddonVersionString` in `ofxVlc4.cpp` and the README release line now match the changelog
+
+- **pimpl migration: MIDI types, RecorderPerformanceInfo, getPlaylist()** — added `#include "midi/ofxVlc4MidiBridge.h"` to `ofxVlc4.h` for MIDI types used in the public API; moved `ofxVlc4RecorderPerformanceInfo` from `ofxVlc4Recorder.h` to `ofxVlc4Types.h`; replaced the broken inline `getPlaylist()` with a non-inline method delegating through `MediaComponent` → `MediaLibrary` (PR #46)
+
 - **code review: ring buffer gain correctness** — `read(dst, wanted, gain)` and `peekLatest(dst, wanted, gain)` now apply gain only to the samples that were actually filled or copied, not to the zero-padded tail; the previous behavior multiplied zero-padded regions by gain which was harmless for audio output but wasteful and semantically incorrect
 
 - **code review: core session null safety in `releaseVlcResources`** — `coreSession->setPlayer(nullptr)`, `coreSession->setPlayerEvents(nullptr)`, and `coreSession->setInstance(nullptr)` calls during shutdown are now guarded with `if (coreSession)` null checks; this prevents a potential null-pointer dereference if the session was not fully initialized before teardown
