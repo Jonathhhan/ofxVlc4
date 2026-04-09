@@ -184,3 +184,37 @@ target_include_directories(test_midi_report PRIVATE
 )
 
 add_test(NAME midi_report COMMAND test_midi_report)
+
+# ---------------------------------------------------------------------------
+# test_audio_helpers
+# Tests the pure audio helper functions (format labels, mode labels,
+# normalisation, equalizer serialisation, bit reversal, FFT, atomic max)
+# extracted into ofxVlc4AudioHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_audio_helpers
+    test_audio_helpers.cpp
+)
+
+target_include_directories(test_audio_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME audio_helpers COMMAND test_audio_helpers)
+
+# ---------------------------------------------------------------------------
+# test_video_helpers
+# Tests the pure video helper functions (deinterlace/aspect/crop labels,
+# mode conversions, colour clamping, visible size, playback mode strings)
+# extracted into ofxVlc4VideoHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_video_helpers
+    test_video_helpers.cpp
+)
+
+target_include_directories(test_video_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME video_helpers COMMAND test_video_helpers)
