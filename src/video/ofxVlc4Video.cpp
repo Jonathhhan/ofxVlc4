@@ -449,9 +449,6 @@ void ofxVlc4::VideoComponent::clearPublishedFrameFence() {
 	clearPublishedFrameFenceLocked();
 }
 
-void ofxVlc4::applyVlcFullscreen() {
-	videoComponent->applyVlcFullscreen();
-}
 
 void ofxVlc4::VideoComponent::applyCurrentPlayerSettings() {
 	applyVlcFullscreen();
@@ -2512,33 +2509,12 @@ float ofxVlc4::VideoComponent::getWidth() const {
 	return rawHeight * aspect;
 }
 
-void ofxVlc4::applyVideoInputHandling() {
-	videoComponent->applyVideoInputHandling();
-}
 
-void ofxVlc4::applyVideoTitleDisplay() {
-	videoComponent->applyVideoTitleDisplay();
-}
 
-void ofxVlc4::applyVideoAdjustments() {
-	videoComponent->applyVideoAdjustments();
-}
 
-void ofxVlc4::applyVideoDeinterlace() {
-	videoComponent->applyVideoDeinterlace();
-}
 
-void ofxVlc4::applyVideoAspectRatio() {
-	videoComponent->applyVideoAspectRatio();
-}
 
-void ofxVlc4::applyVideoCrop() {
-	videoComponent->applyVideoCrop();
-}
 
-void ofxVlc4::applyVideoScaleAndFit() {
-	videoComponent->applyVideoScaleAndFit();
-}
 
 void ofxVlc4::clearVideoHdrMetadata() {
 	videoComponent->clearVideoHdrMetadata();
@@ -2552,105 +2528,33 @@ void ofxVlc4::releaseD3D11Resources() {
 	videoComponent->releaseD3D11Resources();
 }
 
-bool ofxVlc4::usesTextureVideoOutput() const {
-	return videoComponent->usesTextureVideoOutput();
-}
 
 void ofxVlc4::updateNativeVideoWindowVisibility() {
 	videoComponent->updateNativeVideoWindowVisibility();
 }
 
-bool ofxVlc4::applyVideoOutputBackend() {
-	return videoComponent->applyVideoOutputBackend();
-}
 
-void ofxVlc4::applyTeletextSettings() {
-	videoComponent->applyTeletextSettings();
-}
 
-void ofxVlc4::applyVideoMarquee() {
-	videoComponent->applyVideoMarquee();
-}
 
-void ofxVlc4::applyVideoLogo() {
-	videoComponent->applyVideoLogo();
-}
 
-void ofxVlc4::applyVideoProjectionMode() {
-	videoComponent->applyVideoProjectionMode();
-}
 
-void ofxVlc4::applyVideoStereoMode() {
-	videoComponent->applyVideoStereoMode();
-}
 
-void ofxVlc4::applyVideoViewpoint(bool absolute) {
-	videoComponent->applyVideoViewpoint(absolute);
-}
 
-void ofxVlc4::resetVideoAdjustments() {
-	videoComponent->resetVideoAdjustments();
-}
 
-ofxVlc4::VideoDeinterlaceMode ofxVlc4::getVideoDeinterlaceMode() const {
-	return videoComponent->getVideoDeinterlaceMode();
-}
 
-void ofxVlc4::setVideoDeinterlaceMode(VideoDeinterlaceMode mode) {
-	videoComponent->setVideoDeinterlaceMode(mode);
-}
 
-ofxVlc4::VideoAspectRatioMode ofxVlc4::getVideoAspectRatioMode() const {
-	return videoComponent->getVideoAspectRatioMode();
-}
 
-void ofxVlc4::setVideoAspectRatioMode(VideoAspectRatioMode mode) {
-	videoComponent->setVideoAspectRatioMode(mode);
-}
 
-ofxVlc4::VideoCropMode ofxVlc4::getVideoCropMode() const {
-	return videoComponent->getVideoCropMode();
-}
 
-void ofxVlc4::setVideoCropMode(VideoCropMode mode) {
-	videoComponent->setVideoCropMode(mode);
-}
 
-ofxVlc4::VideoDisplayFitMode ofxVlc4::getVideoDisplayFitMode() const {
-	return videoComponent->getVideoDisplayFitMode();
-}
 
-void ofxVlc4::setVideoDisplayFitMode(VideoDisplayFitMode mode) {
-	videoComponent->setVideoDisplayFitMode(mode);
-}
 
-float ofxVlc4::getVideoScale() const {
-	return videoComponent->getVideoScale();
-}
 
-void ofxVlc4::setVideoScale(float scale) {
-	videoComponent->setVideoScale(scale);
-}
 
-int ofxVlc4::getTeletextPage() const {
-	return videoComponent->getTeletextPage();
-}
 
-void ofxVlc4::setTeletextPage(int page) {
-	videoComponent->setTeletextPage(page);
-}
 
-bool ofxVlc4::isTeletextTransparencyEnabled() const {
-	return videoComponent->isTeletextTransparencyEnabled();
-}
 
-void ofxVlc4::setTeletextTransparencyEnabled(bool enabled) {
-	videoComponent->setTeletextTransparencyEnabled(enabled);
-}
 
-void ofxVlc4::sendTeletextKey(TeletextKey key) {
-	videoComponent->sendTeletextKey(key);
-}
 
 void ofxVlc4::sendTeletextKeyRed() {
 	sendTeletextKey(TeletextKey::Red);
@@ -2676,325 +2580,85 @@ void ofxVlc4::toggleTeletextTransparency() {
 	setTeletextTransparencyEnabled(!isTeletextTransparencyEnabled());
 }
 
-bool ofxVlc4::isKeyInputEnabled() const {
-	return videoComponent->isKeyInputEnabled();
-}
-
-void ofxVlc4::setKeyInputEnabled(bool enabled) {
-	videoComponent->setKeyInputEnabled(enabled);
-}
-
-bool ofxVlc4::isMouseInputEnabled() const {
-	return videoComponent->isMouseInputEnabled();
-}
-
-void ofxVlc4::setMouseInputEnabled(bool enabled) {
-	videoComponent->setMouseInputEnabled(enabled);
-}
-
-bool ofxVlc4::isVlcFullscreenEnabled() const {
-	return videoComponent->isVlcFullscreenEnabled();
-}
-
-void ofxVlc4::setVlcFullscreenEnabled(bool enabled) {
-	videoComponent->setVlcFullscreenEnabled(enabled);
-}
-
-void ofxVlc4::toggleVlcFullscreen() {
-	videoComponent->toggleVlcFullscreen();
-}
-
-bool ofxVlc4::isVideoTitleDisplayEnabled() const {
-	return videoComponent->isVideoTitleDisplayEnabled();
-}
-
-void ofxVlc4::setVideoTitleDisplayEnabled(bool enabled) {
-	videoComponent->setVideoTitleDisplayEnabled(enabled);
-}
-
-ofxVlc4::OverlayPosition ofxVlc4::getVideoTitleDisplayPosition() const {
-	return videoComponent->getVideoTitleDisplayPosition();
-}
-
-void ofxVlc4::setVideoTitleDisplayPosition(OverlayPosition position) {
-	videoComponent->setVideoTitleDisplayPosition(position);
-}
-
-unsigned ofxVlc4::getVideoTitleDisplayTimeoutMs() const {
-	return videoComponent->getVideoTitleDisplayTimeoutMs();
-}
-
-void ofxVlc4::setVideoTitleDisplayTimeoutMs(unsigned timeoutMs) {
-	videoComponent->setVideoTitleDisplayTimeoutMs(timeoutMs);
-}
-
-bool ofxVlc4::getCursorPosition(int & x, int & y) const {
-	return videoComponent->getCursorPosition(x, y);
-}
-
-bool ofxVlc4::isVideoAdjustmentsEnabled() const {
-	return videoComponent->isVideoAdjustmentsEnabled();
-}
-
-void ofxVlc4::setVideoAdjustmentsEnabled(bool enabled) {
-	videoComponent->setVideoAdjustmentsEnabled(enabled);
-}
-
-ofxVlc4::VideoAdjustmentEngine ofxVlc4::getVideoAdjustmentEngine() const {
-	return videoComponent->getVideoAdjustmentEngine();
-}
-
-ofxVlc4::VideoAdjustmentEngine ofxVlc4::getActiveVideoAdjustmentEngine() const {
-	return videoComponent->getActiveVideoAdjustmentEngine();
-}
-
-void ofxVlc4::setVideoAdjustmentEngine(ofxVlc4::VideoAdjustmentEngine engine) {
-	videoComponent->setVideoAdjustmentEngine(engine);
-}
-
-float ofxVlc4::getVideoContrast() const {
-	return videoComponent->getVideoContrast();
-}
-
-void ofxVlc4::setVideoContrast(float contrast) {
-	videoComponent->setVideoContrast(contrast);
-}
-
-float ofxVlc4::getVideoBrightness() const {
-	return videoComponent->getVideoBrightness();
-}
-
-void ofxVlc4::setVideoBrightness(float brightness) {
-	videoComponent->setVideoBrightness(brightness);
-}
-
-float ofxVlc4::getVideoHue() const {
-	return videoComponent->getVideoHue();
-}
-
-void ofxVlc4::setVideoHue(float hue) {
-	videoComponent->setVideoHue(hue);
-}
-
-float ofxVlc4::getVideoSaturation() const {
-	return videoComponent->getVideoSaturation();
-}
-
-void ofxVlc4::setVideoSaturation(float saturation) {
-	videoComponent->setVideoSaturation(saturation);
-}
-
-float ofxVlc4::getVideoGamma() const {
-	return videoComponent->getVideoGamma();
-}
-
-void ofxVlc4::setVideoGamma(float gamma) {
-	videoComponent->setVideoGamma(gamma);
-}
-
-bool ofxVlc4::isMarqueeEnabled() const {
-	return videoComponent->isMarqueeEnabled();
-}
-
-void ofxVlc4::setMarqueeEnabled(bool enabled) {
-	videoComponent->setMarqueeEnabled(enabled);
-}
-
-std::string ofxVlc4::getMarqueeText() const {
-	return videoComponent->getMarqueeText();
-}
-
-void ofxVlc4::setMarqueeText(const std::string & text) {
-	videoComponent->setMarqueeText(text);
-}
-
-ofxVlc4::OverlayPosition ofxVlc4::getMarqueePosition() const {
-	return videoComponent->getMarqueePosition();
-}
-
-void ofxVlc4::setMarqueePosition(OverlayPosition position) {
-	videoComponent->setMarqueePosition(position);
-}
-
-int ofxVlc4::getMarqueeOpacity() const {
-	return videoComponent->getMarqueeOpacity();
-}
-
-void ofxVlc4::setMarqueeOpacity(int opacity) {
-	videoComponent->setMarqueeOpacity(opacity);
-}
-
-int ofxVlc4::getMarqueeSize() const {
-	return videoComponent->getMarqueeSize();
-}
-
-void ofxVlc4::setMarqueeSize(int size) {
-	videoComponent->setMarqueeSize(size);
-}
-
-int ofxVlc4::getMarqueeColor() const {
-	return videoComponent->getMarqueeColor();
-}
-
-void ofxVlc4::setMarqueeColor(int color) {
-	videoComponent->setMarqueeColor(color);
-}
-
-int ofxVlc4::getMarqueeRefresh() const {
-	return videoComponent->getMarqueeRefresh();
-}
-
-void ofxVlc4::setMarqueeRefresh(int refreshMs) {
-	videoComponent->setMarqueeRefresh(refreshMs);
-}
-
-int ofxVlc4::getMarqueeTimeout() const {
-	return videoComponent->getMarqueeTimeout();
-}
-
-void ofxVlc4::setMarqueeTimeout(int timeoutMs) {
-	videoComponent->setMarqueeTimeout(timeoutMs);
-}
-
-int ofxVlc4::getMarqueeX() const {
-	return videoComponent->getMarqueeX();
-}
-
-void ofxVlc4::setMarqueeX(int x) {
-	videoComponent->setMarqueeX(x);
-}
-
-int ofxVlc4::getMarqueeY() const {
-	return videoComponent->getMarqueeY();
-}
-
-void ofxVlc4::setMarqueeY(int y) {
-	videoComponent->setMarqueeY(y);
-}
-
-bool ofxVlc4::isLogoEnabled() const {
-	return videoComponent->isLogoEnabled();
-}
-
-void ofxVlc4::setLogoEnabled(bool enabled) {
-	videoComponent->setLogoEnabled(enabled);
-}
-
-std::string ofxVlc4::getLogoPath() const {
-	return videoComponent->getLogoPath();
-}
-
-void ofxVlc4::setLogoPath(const std::string & path) {
-	videoComponent->setLogoPath(path);
-}
-
-ofxVlc4::OverlayPosition ofxVlc4::getLogoPosition() const {
-	return videoComponent->getLogoPosition();
-}
-
-void ofxVlc4::setLogoPosition(OverlayPosition position) {
-	videoComponent->setLogoPosition(position);
-}
-
-int ofxVlc4::getLogoOpacity() const {
-	return videoComponent->getLogoOpacity();
-}
-
-void ofxVlc4::setLogoOpacity(int opacity) {
-	videoComponent->setLogoOpacity(opacity);
-}
-
-int ofxVlc4::getLogoX() const {
-	return videoComponent->getLogoX();
-}
-
-void ofxVlc4::setLogoX(int x) {
-	videoComponent->setLogoX(x);
-}
-
-int ofxVlc4::getLogoY() const {
-	return videoComponent->getLogoY();
-}
-
-void ofxVlc4::setLogoY(int y) {
-	videoComponent->setLogoY(y);
-}
-
-int ofxVlc4::getLogoDelay() const {
-	return videoComponent->getLogoDelay();
-}
-
-void ofxVlc4::setLogoDelay(int delayMs) {
-	videoComponent->setLogoDelay(delayMs);
-}
-
-int ofxVlc4::getLogoRepeat() const {
-	return videoComponent->getLogoRepeat();
-}
-
-void ofxVlc4::setLogoRepeat(int repeat) {
-	videoComponent->setLogoRepeat(repeat);
-}
-
-ofxVlc4::VideoProjectionMode ofxVlc4::getVideoProjectionMode() const {
-	return videoComponent->getVideoProjectionMode();
-}
-
-void ofxVlc4::setVideoProjectionMode(VideoProjectionMode mode) {
-	videoComponent->setVideoProjectionMode(mode);
-}
-
-ofxVlc4::VideoStereoMode ofxVlc4::getVideoStereoMode() const {
-	return videoComponent->getVideoStereoMode();
-}
-
-void ofxVlc4::setVideoStereoMode(VideoStereoMode mode) {
-	videoComponent->setVideoStereoMode(mode);
-}
-
-float ofxVlc4::getVideoYaw() const {
-	return videoComponent->getVideoYaw();
-}
-
-float ofxVlc4::getVideoPitch() const {
-	return videoComponent->getVideoPitch();
-}
-
-float ofxVlc4::getVideoRoll() const {
-	return videoComponent->getVideoRoll();
-}
-
-float ofxVlc4::getVideoFov() const {
-	return videoComponent->getVideoFov();
-}
-
-void ofxVlc4::setVideoViewpoint(float yaw, float pitch, float roll, float fov, bool absolute) {
-	videoComponent->setVideoViewpoint(yaw, pitch, roll, fov, absolute);
-}
-
-void ofxVlc4::resetVideoViewpoint() {
-	videoComponent->resetVideoViewpoint();
-}
-
-float ofxVlc4::getHeight() const {
-	return videoComponent->getHeight();
-}
-
-float ofxVlc4::getWidth() const {
-	return videoComponent->getWidth();
-}
-
-void ofxVlc4::ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight) {
-	videoComponent->ensureVideoRenderTargetCapacity(requiredWidth, requiredHeight);
-}
-
-void ofxVlc4::ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight) {
-	videoComponent->ensureExposedTextureFboCapacity(requiredWidth, requiredHeight);
-}
-
-bool ofxVlc4::applyPendingVideoResize() {
-	return videoComponent->applyPendingVideoResize();
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, libvlc_video_output_cfg_t * render_cfg) {
 	ofxVlc4 * that = static_cast<ofxVlc4 *>(data);
@@ -3063,69 +2727,21 @@ void ofxVlc4::videoFrameMetadata(void * data, libvlc_video_metadata_type_t type,
 	that->videoComponent->videoFrameMetadata(type, metadata);
 }
 
-void ofxVlc4::bindVlcRenderTarget() {
-	videoComponent->bindVlcRenderTarget();
-}
 
-void ofxVlc4::unbindVlcRenderTarget() {
-	videoComponent->unbindVlcRenderTarget();
-}
 
-bool ofxVlc4::drawCurrentFrame(const VideoStateInfo & state, float x, float y, float width, float height) {
-	return videoComponent->drawCurrentFrame(state, x, y, width, height);
-}
 
-void ofxVlc4::draw(float x, float y, float w, float h) {
-	videoComponent->draw(x, y, w, h);
-}
 
-void ofxVlc4::draw(float x, float y) {
-	videoComponent->draw(x, y);
-}
 
-void ofxVlc4::refreshExposedTexture() {
-	videoComponent->refreshExposedTexture();
-}
 
-ofTexture & ofxVlc4::getTexture() {
-	return videoComponent->getTexture();
-}
 
-ofTexture & ofxVlc4::getRenderTexture() {
-	return videoComponent->getRenderTexture();
-}
 
-ofxVlc4::VideoOutputBackend ofxVlc4::getVideoOutputBackend() const {
-	return videoComponent->getVideoOutputBackend();
-}
 
-ofxVlc4::VideoOutputBackend ofxVlc4::getActiveVideoOutputBackend() const {
-	return videoComponent->getActiveVideoOutputBackend();
-}
 
-ofxVlc4::PreferredDecoderDevice ofxVlc4::getPreferredDecoderDevice() const {
-	return videoComponent->getPreferredDecoderDevice();
-}
 
-ofxVlc4::VideoHdrMetadataInfo ofxVlc4::getVideoHdrMetadata() const {
-	return videoComponent->getVideoHdrMetadata();
-}
 
-ofxVlc4::VideoStateInfo ofxVlc4::getVideoStateInfo() const {
-	return videoComponent->getVideoStateInfo();
-}
 
-std::vector<ofxVlc4::VideoFilterInfo> ofxVlc4::getVideoFilters() const {
-	return videoComponent->getVideoFilters();
-}
 
-std::string ofxVlc4::getVideoFilterChain() const {
-	return videoComponent->getVideoFilterChain();
-}
 
-void ofxVlc4::setVideoFilterChain(const std::string & filterChain) {
-	videoComponent->setVideoFilterChain(filterChain);
-}
 
 bool ofxVlc4::canApplyNativeVideoFilters() const {
 	return videoOutputBackend == VideoOutputBackend::NativeWindow;
@@ -3181,22 +2797,7 @@ bool ofxVlc4::toggleVideoFilter(const std::string & filterName) {
 	return hasVideoFilter(filterName) ? removeVideoFilter(filterName) : addVideoFilter(filterName);
 }
 
-void ofxVlc4::setVideoOutputBackend(VideoOutputBackend backend) {
-	videoComponent->setVideoOutputBackend(backend);
-}
 
-void ofxVlc4::setPreferredDecoderDevice(PreferredDecoderDevice device) {
-	videoComponent->setPreferredDecoderDevice(device);
-}
 
-bool ofxVlc4::queryVideoTrackGeometry(unsigned & width, unsigned & height, unsigned & sarNum, unsigned & sarDen) const {
-	return videoComponent->queryVideoTrackGeometry(width, height, sarNum, sarDen);
-}
 
-void ofxVlc4::refreshPixelAspectRatio() {
-	videoComponent->refreshPixelAspectRatio();
-}
 
-void ofxVlc4::refreshDisplayAspectRatio() {
-	videoComponent->refreshDisplayAspectRatio();
-}

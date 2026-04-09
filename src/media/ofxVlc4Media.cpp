@@ -623,53 +623,16 @@ void ofxVlc4::applySafeLoadedMediaPlayerSettings() {
 	mediaComponent->applySafeLoadedMediaPlayerSettings();
 }
 
-bool ofxVlc4::reapplyCurrentMediaForFilterChainChange(const std::string & label) {
-	return mediaComponent->reapplyCurrentMediaForFilterChainChange(label);
-}
 
-bool ofxVlc4::loadMediaSource(
-	const std::string & source,
-	bool isLocation,
-	const std::vector<std::string> & options,
-	bool parseAsNetwork) {
-	return mediaComponent->loadMediaSource(source, isLocation, options, parseAsNetwork);
-}
 
-bool ofxVlc4::loadMediaAtIndex(int index) {
-	return mediaComponent->loadMediaAtIndex(index);
-}
 
-void ofxVlc4::addToPlaylistInternal(const std::string & path, bool preloadMetadata) {
-	mediaComponent->addToPlaylistInternal(path, preloadMetadata);
-}
 
-void ofxVlc4::addToPlaylist(const std::string & path) {
-	mediaComponent->addToPlaylist(path);
-}
 
-int ofxVlc4::addPathToPlaylist(const std::string & path) {
-	return mediaComponent->addPathToPlaylist(path);
-}
 
-int ofxVlc4::addPathToPlaylist(const std::string & path, std::initializer_list<std::string> extensions) {
-	return mediaComponent->addPathToPlaylist(path, extensions);
-}
 
-void ofxVlc4::clearPlaylist() {
-	mediaComponent->clearPlaylist();
-}
 
-void ofxVlc4::removeFromPlaylist(int index) {
-	mediaComponent->removeFromPlaylist(index);
-}
 
-void ofxVlc4::movePlaylistItem(int fromIndex, int toIndex) {
-	mediaComponent->movePlaylistItem(fromIndex, toIndex);
-}
 
-void ofxVlc4::movePlaylistItems(const std::vector<int> & fromIndices, int toIndex) {
-	mediaComponent->movePlaylistItems(fromIndices, toIndex);
-}
 
 std::vector<std::pair<std::string, std::string>> ofxVlc4::buildMetadataForMedia(libvlc_media_t * sourceMedia) const {
 	return mediaLibraryController->buildMetadataForMedia(sourceMedia);
@@ -886,24 +849,9 @@ void ofxVlc4::MediaComponent::setNativeRecordDirectory(const std::string & direc
 		return;
 	}
 
-	ofxVlc4::logWarning("Native VLC recording directory changes apply on the next recording start.");
-}
 
-bool ofxVlc4::isNativeRecordingEnabled() const {
-	return mediaComponent->isNativeRecordingEnabled();
-}
 
-void ofxVlc4::setNativeRecordingEnabled(bool enabled) {
-	mediaComponent->setNativeRecordingEnabled(enabled);
-}
 
-std::string ofxVlc4::getNativeRecordDirectory() const {
-	return mediaComponent->getNativeRecordDirectory();
-}
-
-void ofxVlc4::setNativeRecordDirectory(const std::string & directory) {
-	mediaComponent->setNativeRecordDirectory(directory);
-}
 
 void ofxVlc4::MediaComponent::dismissAllDialogs() {
 	std::vector<std::uintptr_t> tokens;
@@ -1896,41 +1844,14 @@ void ofxVlc4::MediaComponent::mediaDiscovererMediaListEvent(const libvlc_event_t
 	}
 }
 
-void ofxVlc4::clearMetadataCache() {
-	mediaComponent->clearMetadataCache();
-}
 
-void ofxVlc4::cacheArtworkPathForMediaPath(const std::string & mediaPath, const std::string & artworkPath) {
-	mediaComponent->cacheArtworkPathForMediaPath(mediaPath, artworkPath);
-}
 
-void ofxVlc4::clearGeneratedThumbnailInfo() {
-	mediaComponent->clearGeneratedThumbnailInfo();
-}
 
-void ofxVlc4::dismissAllDialogs() {
-	mediaComponent->dismissAllDialogs();
-}
 
-void ofxVlc4::upsertDialog(const DialogInfo & dialog) {
-	mediaComponent->upsertDialog(dialog);
-}
 
-void ofxVlc4::removeDialog(std::uintptr_t token) {
-	mediaComponent->removeDialog(token);
-}
 
-std::vector<ofxVlc4::DialogInfo> ofxVlc4::getActiveDialogs() const {
-	return mediaComponent->getActiveDialogs();
-}
 
-ofxVlc4::DialogErrorInfo ofxVlc4::getLastDialogError() const {
-	return mediaComponent->getLastDialogError();
-}
 
-void ofxVlc4::clearLastDialogError() {
-	mediaComponent->clearLastDialogError();
-}
 
 namespace {
 
@@ -2055,73 +1976,22 @@ ofxVlc4::LibVlcLogEntry toPublicLogEntry(const VlcCoreLogEntry & entry) {
 
 }
 
-bool ofxVlc4::isLibVlcLoggingEnabled() const {
-	return mediaComponent->isLibVlcLoggingEnabled();
-}
 
-void ofxVlc4::setLibVlcLoggingEnabled(bool enabled) {
-	mediaComponent->setLibVlcLoggingEnabled(enabled);
-}
 
-bool ofxVlc4::isLibVlcLogFileEnabled() const {
-	return mediaComponent->isLibVlcLogFileEnabled();
-}
 
-void ofxVlc4::setLibVlcLogFileEnabled(bool enabled) {
-	mediaComponent->setLibVlcLogFileEnabled(enabled);
-}
 
-std::string ofxVlc4::getLibVlcLogFilePath() const {
-	return mediaComponent->getLibVlcLogFilePath();
-}
 
-void ofxVlc4::setLibVlcLogFilePath(const std::string & path) {
-	mediaComponent->setLibVlcLogFilePath(path);
-}
 
-std::vector<ofxVlc4::LibVlcLogEntry> ofxVlc4::getLibVlcLogEntries() const {
-	return mediaComponent->getLibVlcLogEntries();
-}
 
-void ofxVlc4::clearLibVlcLogEntries() {
-	mediaComponent->clearLibVlcLogEntries();
-}
 
-ofxVlc4::MediaPlayerRole ofxVlc4::getMediaPlayerRole() const {
-	return mediaComponent->getMediaPlayerRole();
-}
 
-void ofxVlc4::setMediaPlayerRole(MediaPlayerRole role) {
-	mediaComponent->setMediaPlayerRole(role);
-}
 
-bool ofxVlc4::isWatchTimeEnabled() const {
-	return mediaComponent->isWatchTimeEnabled();
-}
 
-void ofxVlc4::setWatchTimeEnabled(bool enabled) {
-	mediaComponent->setWatchTimeEnabled(enabled);
-}
 
-int64_t ofxVlc4::getWatchTimeMinPeriodUs() const {
-	return mediaComponent->getWatchTimeMinPeriodUs();
-}
 
-void ofxVlc4::setWatchTimeMinPeriodUs(int64_t minPeriodUs) {
-	mediaComponent->setWatchTimeMinPeriodUs(minPeriodUs);
-}
 
-bool ofxVlc4::isPlaybackLocallyStopped() const {
-	return playbackController->isPlaybackLocallyStopped();
-}
 
-void ofxVlc4::clearWatchTimeState() {
-	mediaComponent->clearWatchTimeState();
-}
 
-ofxVlc4::WatchTimeInfo ofxVlc4::getWatchTimeInfo() const {
-	return mediaComponent->getWatchTimeInfo();
-}
 
 void ofxVlc4::setWatchTimeCallback(WatchTimeCallback callback) {
 	std::lock_guard<std::mutex> lock(watchTimeMutex);
@@ -2188,13 +2058,7 @@ std::string ofxVlc4::formatPlaybackTimecode(int64_t timeUs, double fps) {
 	return formatPlaybackTimecodeValue(timeUs, fps);
 }
 
-void ofxVlc4::applyMediaPlayerRole() {
-	mediaComponent->applyMediaPlayerRole();
-}
 
-void ofxVlc4::applyWatchTimeObserver() {
-	mediaComponent->applyWatchTimeObserver();
-}
 
 void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data) {
 	auto * player = static_cast<ofxVlc4 *>(data);
@@ -2308,21 +2172,8 @@ void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value
 	}
 }
 
-bool ofxVlc4::postDialogLogin(
-	std::uintptr_t token,
-	const std::string & username,
-	const std::string & password,
-	bool store) {
-	return mediaComponent->postDialogLogin(token, username, password, store);
-}
 
-bool ofxVlc4::postDialogAction(std::uintptr_t token, int action) {
-	return mediaComponent->postDialogAction(token, action);
-}
 
-bool ofxVlc4::dismissDialog(std::uintptr_t token) {
-	return mediaComponent->dismissDialog(token);
-}
 
 void ofxVlc4::detachEvents() {
 	if (mediaPlayerEventManager) {
@@ -2378,21 +2229,9 @@ void ofxVlc4::MediaComponent::stopRendererDiscoveryInternal() {
 	owner.syncLegacyStateFromCoreSession();
 }
 
-void ofxVlc4::stopMediaDiscoveryInternal() {
-	mediaComponent->stopMediaDiscoveryInternal();
-}
 
-void ofxVlc4::clearRendererItems() {
-	mediaComponent->clearRendererItems();
-}
 
-void ofxVlc4::stopRendererDiscoveryInternal() {
-	mediaComponent->stopRendererDiscoveryInternal();
-}
 
-void ofxVlc4::refreshDiscoveredMediaItems() {
-	mediaComponent->refreshDiscoveredMediaItems();
-}
 
 bool ofxVlc4::MediaComponent::applySelectedRenderer() {
 	libvlc_media_player_t * player = owner.sessionPlayer();
@@ -2432,53 +2271,17 @@ bool ofxVlc4::MediaComponent::applySelectedRenderer() {
 	return true;
 }
 
-bool ofxVlc4::applySelectedRenderer() {
-	return mediaComponent->applySelectedRenderer();
-}
 
-std::vector<ofxVlc4::MediaDiscovererInfo> ofxVlc4::getMediaDiscoverers(MediaDiscovererCategory category) const {
-	return mediaComponent->getMediaDiscoverers(category);
-}
 
-std::string ofxVlc4::getSelectedMediaDiscovererName() const {
-	return mediaComponent->getSelectedMediaDiscovererName();
-}
 
-ofxVlc4::MediaDiscoveryStateInfo ofxVlc4::getMediaDiscoveryState() const {
-	return mediaComponent->getMediaDiscoveryState();
-}
 
-bool ofxVlc4::startMediaDiscovery(const std::string & discovererName) {
-	return mediaComponent->startMediaDiscovery(discovererName);
-}
 
-void ofxVlc4::stopMediaDiscovery() {
-	mediaComponent->stopMediaDiscovery();
-}
 
-bool ofxVlc4::isMediaDiscoveryActive() const {
-	return mediaComponent->isMediaDiscoveryActive();
-}
 
-std::vector<ofxVlc4::DiscoveredMediaItemInfo> ofxVlc4::getDiscoveredMediaItems() const {
-	return mediaComponent->getDiscoveredMediaItems();
-}
 
-bool ofxVlc4::addDiscoveredMediaItemToPlaylist(int index) {
-	return mediaComponent->addDiscoveredMediaItemToPlaylist(index);
-}
 
-bool ofxVlc4::playDiscoveredMediaItem(int index) {
-	return mediaComponent->playDiscoveredMediaItem(index);
-}
 
-int ofxVlc4::addAllDiscoveredMediaItemsToPlaylist() {
-	return mediaComponent->addAllDiscoveredMediaItemsToPlaylist();
-}
 
-std::vector<ofxVlc4::RendererDiscovererInfo> ofxVlc4::getRendererDiscoverers() const {
-	return mediaComponent->getRendererDiscoverers();
-}
 
 std::vector<ofxVlc4::RendererDiscovererInfo> ofxVlc4::MediaComponent::getRendererDiscoverers() const {
 	std::vector<RendererDiscovererInfo> discoverers;
@@ -2510,18 +2313,12 @@ std::vector<ofxVlc4::RendererDiscovererInfo> ofxVlc4::MediaComponent::getRendere
 	return discoverers;
 }
 
-std::string ofxVlc4::getSelectedRendererDiscovererName() const {
-	return mediaComponent->getSelectedRendererDiscovererName();
-}
 
 std::string ofxVlc4::MediaComponent::getSelectedRendererDiscovererName() const {
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.rendererMutex);
 	return owner.m_impl->rendererDiscoveryRuntime.discovererName;
 }
 
-void ofxVlc4::resetRendererStateInfo() {
-	mediaComponent->resetRendererStateInfo();
-}
 
 void ofxVlc4::MediaComponent::resetRendererStateInfo() {
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.rendererMutex);
@@ -2579,9 +2376,6 @@ void ofxVlc4::MediaComponent::refreshPrimaryTrackStateInfo() {
 	owner.m_impl->stateCacheRuntime.cachedVideoTrackFps.store((std::isfinite(resolvedVideoFps) && resolvedVideoFps > 0.0) ? resolvedVideoFps : 0.0);
 }
 
-void ofxVlc4::refreshRendererStateInfo() {
-	mediaComponent->refreshRendererStateInfo();
-}
 
 ofxVlc4::MediaDiscoveryStateInfo ofxVlc4::MediaComponent::buildMediaDiscoveryStateInfoLocked() const {
 	MediaDiscoveryStateInfo state;
@@ -2750,9 +2544,6 @@ void ofxVlc4::MediaComponent::refreshRendererStateInfo() {
 	owner.m_impl->rendererDiscoveryRuntime.stateInfo = buildRendererStateInfoLocked();
 }
 
-ofxVlc4::RendererStateInfo ofxVlc4::getRendererStateInfo() const {
-	return mediaComponent->getRendererStateInfo();
-}
 
 ofxVlc4::RendererStateInfo ofxVlc4::MediaComponent::getRendererStateInfo() const {
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.rendererMutex);
@@ -3083,37 +2874,13 @@ void ofxVlc4::MediaComponent::movePlaylistItems(const std::vector<int> & fromInd
 	playback().invalidateShuffleQueue();
 }
 
-void ofxVlc4::resetSubtitleStateInfo() {
-	mediaComponent->resetSubtitleStateInfo();
-}
 
-void ofxVlc4::resetNavigationStateInfo() {
-	mediaComponent->resetNavigationStateInfo();
-}
 
-void ofxVlc4::refreshPrimaryTrackStateInfo() {
-	mediaComponent->refreshPrimaryTrackStateInfo();
-}
 
-void ofxVlc4::refreshSubtitleStateInfo() {
-	mediaComponent->refreshSubtitleStateInfo();
-}
 
-ofxVlc4::SubtitleStateInfo ofxVlc4::getSubtitleStateInfo() const {
-	return mediaComponent->getSubtitleStateInfo();
-}
 
-void ofxVlc4::refreshNavigationStateInfo() {
-	mediaComponent->refreshNavigationStateInfo();
-}
 
-ofxVlc4::NavigationStateInfo ofxVlc4::getNavigationStateInfo() const {
-	return mediaComponent->getNavigationStateInfo();
-}
 
-bool ofxVlc4::startRendererDiscovery(const std::string & discovererName) {
-	return mediaComponent->startRendererDiscovery(discovererName);
-}
 
 bool ofxVlc4::MediaComponent::startRendererDiscovery(const std::string & discovererName) {
 	const std::string trimmedName = trimWhitespace(discovererName);
@@ -3178,9 +2945,6 @@ bool ofxVlc4::MediaComponent::startRendererDiscovery(const std::string & discove
 	return true;
 }
 
-void ofxVlc4::stopRendererDiscovery() {
-	mediaComponent->stopRendererDiscovery();
-}
 
 void ofxVlc4::MediaComponent::stopRendererDiscovery() {
 	if (!owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer && getSelectedRendererDiscovererName().empty()) {
@@ -3201,13 +2965,7 @@ void ofxVlc4::MediaComponent::stopRendererDiscovery() {
 	owner.logNotice("Renderer discovery stopped.");
 }
 
-bool ofxVlc4::isRendererDiscoveryActive() const {
-	return mediaComponent->isRendererDiscoveryActive();
-}
 
-std::vector<ofxVlc4::RendererInfo> ofxVlc4::getDiscoveredRenderers() const {
-	return mediaComponent->getDiscoveredRenderers();
-}
 
 bool ofxVlc4::MediaComponent::isRendererDiscoveryActive() const {
 	return owner.m_impl->legacyCoreMirrorRuntime.rendererDiscoverer != nullptr;
@@ -3374,30 +3132,18 @@ void ofxVlc4::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
 	static_cast<ofxVlc4 *>(data)->vlcMediaEvent(event);
 }
 
-void ofxVlc4::mediaDiscovererMediaListEvent(const libvlc_event_t * event) {
-	mediaComponent->mediaDiscovererMediaListEvent(event);
-}
 
-void ofxVlc4::rendererDiscovererEvent(const libvlc_event_t * event) {
-	mediaComponent->handleRendererDiscovererEvent(event);
-}
 
 void ofxVlc4::vlcMediaEvent(const libvlc_event_t * event) {
 	mediaComponent->handleMediaEvent(event);
 }
 
-std::string ofxVlc4::getSelectedRendererId() const {
-	return mediaComponent->getSelectedRendererId();
-}
 
 std::string ofxVlc4::MediaComponent::getSelectedRendererId() const {
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.rendererMutex);
 	return owner.m_impl->rendererDiscoveryRuntime.selectedRendererId;
 }
 
-bool ofxVlc4::selectRenderer(const std::string & rendererId) {
-	return mediaComponent->selectRenderer(rendererId);
-}
 
 bool ofxVlc4::MediaComponent::selectRenderer(const std::string & rendererId) {
 	const std::string trimmedId = trimWhitespace(rendererId);
@@ -3435,9 +3181,6 @@ bool ofxVlc4::MediaComponent::selectRenderer(const std::string & rendererId) {
 	return true;
 }
 
-bool ofxVlc4::clearRenderer() {
-	return mediaComponent->clearRenderer();
-}
 
 bool ofxVlc4::MediaComponent::clearRenderer() {
 	{
@@ -3528,13 +3271,7 @@ void ofxVlc4::MediaComponent::clearMediaSlaves() {
 	owner.logNotice("Media slaves cleared.");
 }
 
-std::vector<ofxVlc4::MediaSlaveInfo> ofxVlc4::getMediaSlaves() const {
-	return mediaComponent->getMediaSlaves();
-}
 
-bool ofxVlc4::addMediaSlave(MediaSlaveType type, const std::string & uri, unsigned priority) {
-	return mediaComponent->addMediaSlave(type, uri, priority);
-}
 
 bool ofxVlc4::addSubtitleSlave(const std::string & uri, unsigned priority) {
 	return addMediaSlave(MediaSlaveType::Subtitle, uri, priority);
@@ -3544,9 +3281,6 @@ bool ofxVlc4::addAudioSlave(const std::string & uri, unsigned priority) {
 	return addMediaSlave(MediaSlaveType::Audio, uri, priority);
 }
 
-void ofxVlc4::clearMediaSlaves() {
-	mediaComponent->clearMediaSlaves();
-}
 
 std::string ofxVlc4::takeSnapshot(const std::string & directory) {
 	libvlc_media_player_t * player = sessionPlayer();
@@ -3587,35 +3321,9 @@ std::string ofxVlc4::takeSnapshot(const std::string & directory) {
 	return outputPath.string();
 }
 
-ofxVlc4::ThumbnailInfo ofxVlc4::getLastGeneratedThumbnail() const {
-	return mediaComponent->getLastGeneratedThumbnail();
-}
 
-bool ofxVlc4::requestThumbnailByTime(
-	int timeMs,
-	unsigned width,
-	unsigned height,
-	bool crop,
-	ThumbnailImageType type,
-	ThumbnailSeekSpeed speed,
-	int timeoutMs) {
-	return mediaComponent->requestThumbnailByTime(timeMs, width, height, crop, type, speed, timeoutMs);
-}
 
-bool ofxVlc4::requestThumbnailByPosition(
-	float position,
-	unsigned width,
-	unsigned height,
-	bool crop,
-	ThumbnailImageType type,
-	ThumbnailSeekSpeed speed,
-	int timeoutMs) {
-	return mediaComponent->requestThumbnailByPosition(position, width, height, crop, type, speed, timeoutMs);
-}
 
-void ofxVlc4::cancelThumbnailRequest() {
-	mediaComponent->cancelThumbnailRequest();
-}
 
 void ofxVlc4::dialogDisplayLoginStatic(
 	void * data,
@@ -3757,177 +3465,48 @@ libvlc_media_t * ofxVlc4::retainCurrentOrLoadedMedia() const {
 	return mediaLibraryController->retainCurrentOrLoadedMedia();
 }
 
-ofxVlc4::MediaParseInfo ofxVlc4::getCurrentMediaParseInfo() const {
-	return mediaComponent->getCurrentMediaParseInfo();
-}
 
-ofxVlc4::MediaParseStatus ofxVlc4::getCurrentMediaParseStatus() const {
-	return mediaComponent->getCurrentMediaParseStatus();
-}
 
-ofxVlc4::MediaParseOptions ofxVlc4::getMediaParseOptions() const {
-	return mediaComponent->getMediaParseOptions();
-}
 
-void ofxVlc4::setMediaParseOptions(const MediaParseOptions & options) {
-	mediaComponent->setMediaParseOptions(options);
-}
 
-std::string ofxVlc4::getCurrentMediaMeta(MediaMetaField field) const {
-	return mediaComponent->getCurrentMediaMeta(field);
-}
 
-bool ofxVlc4::setCurrentMediaMeta(MediaMetaField field, const std::string & value) {
-	return mediaComponent->setCurrentMediaMeta(field, value);
-}
 
-bool ofxVlc4::saveCurrentMediaMeta() {
-	return mediaComponent->saveCurrentMediaMeta();
-}
 
-std::vector<std::string> ofxVlc4::getCurrentMediaMetaExtraNames() const {
-	return mediaComponent->getCurrentMediaMetaExtraNames();
-}
 
-std::string ofxVlc4::getCurrentMediaMetaExtra(const std::string & name) const {
-	return mediaComponent->getCurrentMediaMetaExtra(name);
-}
 
-bool ofxVlc4::setCurrentMediaMetaExtra(const std::string & name, const std::string & value) {
-	return mediaComponent->setCurrentMediaMetaExtra(name, value);
-}
 
-bool ofxVlc4::removeCurrentMediaMetaExtra(const std::string & name) {
-	return mediaComponent->removeCurrentMediaMetaExtra(name);
-}
 
-std::vector<ofxVlc4::BookmarkInfo> ofxVlc4::getBookmarksForPath(const std::string & path) const {
-	return mediaComponent->getBookmarksForPath(path);
-}
 
-std::vector<ofxVlc4::BookmarkInfo> ofxVlc4::getCurrentBookmarks() const {
-	return mediaComponent->getCurrentBookmarks();
-}
 
-bool ofxVlc4::addBookmarkAtTime(int timeMs, const std::string & label) {
-	return mediaComponent->addBookmarkAtTime(timeMs, label);
-}
 
-bool ofxVlc4::addCurrentBookmark(const std::string & label) {
-	return mediaComponent->addCurrentBookmark(label);
-}
 
-bool ofxVlc4::seekToBookmark(const std::string & bookmarkId) {
-	return mediaComponent->seekToBookmark(bookmarkId);
-}
 
-bool ofxVlc4::removeBookmark(const std::string & bookmarkId) {
-	return mediaComponent->removeBookmark(bookmarkId);
-}
 
-void ofxVlc4::clearBookmarksForPath(const std::string & path) {
-	mediaComponent->clearBookmarksForPath(path);
-}
 
-void ofxVlc4::clearCurrentBookmarks() {
-	mediaComponent->clearCurrentBookmarks();
-}
 
-std::string ofxVlc4::getPathAtIndex(int index) const {
-	return mediaComponent->getPathAtIndex(index);
-}
 
-std::vector<ofxVlc4::PlaylistItemInfo> ofxVlc4::getPlaylistItems() const {
-	return mediaComponent->getPlaylistItems();
-}
 
-ofxVlc4::PlaylistStateInfo ofxVlc4::getPlaylistStateInfo() const {
-	return mediaComponent->getPlaylistStateInfo();
-}
 
-ofxVlc4::PlaylistItemInfo ofxVlc4::getCurrentPlaylistItemInfo() const {
-	return mediaComponent->getCurrentPlaylistItemInfo();
-}
 
-std::string ofxVlc4::getFileNameAtIndex(int index) const {
-	return mediaComponent->getFileNameAtIndex(index);
-}
 
-std::string ofxVlc4::getCurrentPath() const {
-	return mediaComponent->getCurrentPath();
-}
 
-int ofxVlc4::getCurrentIndex() const {
-	return mediaComponent->getCurrentIndex();
-}
 
-std::string ofxVlc4::getCurrentFileName() const {
-	return mediaComponent->getCurrentFileName();
-}
 
-std::vector<std::pair<std::string, std::string>> ofxVlc4::getMetadataAtIndex(int index) const {
-	return mediaComponent->getMetadataAtIndex(index);
-}
 
-std::vector<std::pair<std::string, std::string>> ofxVlc4::getCurrentMetadata() const {
-	return mediaComponent->getCurrentMetadata();
-}
 
-bool ofxVlc4::hasPlaylist() const {
-	return mediaComponent->hasPlaylist();
-}
 
-const std::string & ofxVlc4::getLastStatusMessage() const {
-	return mediaComponent->getLastStatusMessage();
-}
 
-const std::string & ofxVlc4::getLastErrorMessage() const {
-	return mediaComponent->getLastErrorMessage();
-}
 
-void ofxVlc4::clearLastMessages() {
-	mediaComponent->clearLastMessages();
-}
 
-bool ofxVlc4::requestCurrentMediaParse() {
-	return mediaComponent->requestCurrentMediaParse();
-}
 
-void ofxVlc4::stopCurrentMediaParse() {
-	mediaComponent->stopCurrentMediaParse();
-}
 
-ofxVlc4::PlaybackStateInfo ofxVlc4::getPlaybackStateInfo() const {
-	return mediaComponent->getPlaybackStateInfo();
-}
 
-ofxVlc4::MediaReadinessInfo ofxVlc4::getMediaReadinessInfo() const {
-	return mediaComponent->getMediaReadinessInfo();
-}
 
-void ofxVlc4::updateSnapshotStateOnRequest(const std::string & requestedPath) {
-	mediaComponent->updateSnapshotStateOnRequest(requestedPath);
-}
 
-void ofxVlc4::updateSnapshotStateFromEvent(const std::string & savedPath) {
-	mediaComponent->updateSnapshotStateFromEvent(savedPath);
-}
 
-void ofxVlc4::clearPendingSnapshotState() {
-	mediaComponent->clearPendingSnapshotState();
-}
 
-void ofxVlc4::updateSnapshotFailureState(const std::string & failureReason) {
-	mediaComponent->updateSnapshotFailureState(failureReason);
-}
 
-void ofxVlc4::updateNativeRecordingStateFromEvent(bool active, const std::string & recordedFilePath) {
-	mediaComponent->updateNativeRecordingStateFromEvent(active, recordedFilePath);
-}
 
-void ofxVlc4::updateNativeRecordingFailureState(const std::string & failureReason) {
-	mediaComponent->updateNativeRecordingFailureState(failureReason);
-}
 
 ofxVlc4::MediaStats ofxVlc4::MediaComponent::getMediaStats() const {
 	return mediaLibrary().getMediaStats();
@@ -4052,37 +3631,13 @@ bool ofxVlc4::MediaComponent::selectProgramId(int programId) {
 	return true;
 }
 
-std::vector<ofxVlc4::ProgramInfo> ofxVlc4::getPrograms() const {
-	return mediaComponent->getPrograms();
-}
 
-int ofxVlc4::getSelectedProgramId() const {
-	return mediaComponent->getSelectedProgramId();
-}
 
-bool ofxVlc4::selectProgramId(int programId) {
-	return mediaComponent->selectProgramId(programId);
-}
 
-ofxVlc4::MediaStats ofxVlc4::getMediaStats() const {
-	return mediaComponent->getMediaStats();
-}
 
-bool ofxVlc4::canPause() const {
-	return playbackController->canPause();
-}
 
-unsigned ofxVlc4::getVideoOutputCount() const {
-	return videoComponent->getVideoOutputCount();
-}
 
-bool ofxVlc4::hasVideoOutput() const {
-	return videoComponent->hasVideoOutput();
-}
 
-bool ofxVlc4::isScrambled() const {
-	return videoComponent->isScrambled();
-}
 
 ofxVlc4::AbLoopInfo ofxVlc4::MediaComponent::getAbLoop() const {
 	AbLoopInfo info;
@@ -4169,21 +3724,9 @@ void ofxVlc4::MediaComponent::clearAbLoop() {
 	owner.logNotice("A-B loop cleared.");
 }
 
-ofxVlc4::AbLoopInfo ofxVlc4::getAbLoop() const {
-	return mediaComponent->getAbLoop();
-}
 
-bool ofxVlc4::setAbLoopA() {
-	return mediaComponent->setAbLoopA();
-}
 
-bool ofxVlc4::setAbLoopB() {
-	return mediaComponent->setAbLoopB();
-}
 
-void ofxVlc4::clearAbLoop() {
-	mediaComponent->clearAbLoop();
-}
 
 std::vector<ofxVlc4::TitleInfo> ofxVlc4::MediaComponent::getTitles() const {
 	std::vector<TitleInfo> titles;
@@ -4244,17 +3787,8 @@ bool ofxVlc4::MediaComponent::selectTitleIndex(int index) {
 	return true;
 }
 
-std::vector<ofxVlc4::TitleInfo> ofxVlc4::getTitles() const {
-	return mediaComponent->getTitles();
-}
 
-int ofxVlc4::getCurrentTitleIndex() const {
-	return mediaComponent->getCurrentTitleIndex();
-}
 
-bool ofxVlc4::selectTitleIndex(int index) {
-	return mediaComponent->selectTitleIndex(index);
-}
 
 std::vector<ofxVlc4::ChapterInfo> ofxVlc4::MediaComponent::getChapters(int titleIndex) const {
 	std::vector<ChapterInfo> chapters;
@@ -4314,17 +3848,8 @@ bool ofxVlc4::MediaComponent::selectChapterIndex(int index) {
 	return true;
 }
 
-std::vector<ofxVlc4::ChapterInfo> ofxVlc4::getChapters(int titleIndex) const {
-	return mediaComponent->getChapters(titleIndex);
-}
 
-int ofxVlc4::getCurrentChapterIndex() const {
-	return mediaComponent->getCurrentChapterIndex();
-}
 
-bool ofxVlc4::selectChapterIndex(int index) {
-	return mediaComponent->selectChapterIndex(index);
-}
 
 void ofxVlc4::MediaComponent::previousChapter() {
 	libvlc_media_player_t * player = owner.sessionPlayer();
@@ -4372,21 +3897,9 @@ void ofxVlc4::MediaComponent::navigate(NavigationMode mode) {
 	owner.logVerbose("Menu navigation sent.");
 }
 
-void ofxVlc4::previousChapter() {
-	mediaComponent->previousChapter();
-}
 
-void ofxVlc4::nextChapter() {
-	mediaComponent->nextChapter();
-}
 
-void ofxVlc4::nextFrame() {
-	mediaComponent->nextFrame();
-}
 
-void ofxVlc4::navigate(NavigationMode mode) {
-	mediaComponent->navigate(mode);
-}
 
 bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
 	const auto seekByMilliseconds = [this](int deltaMs) {
@@ -4636,34 +4149,10 @@ bool ofxVlc4::MediaComponent::selectSubtitleTrackById(const std::string & trackI
 	return applied;
 }
 
-std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::getTrackInfos(libvlc_track_type_t type) const {
-	return mediaComponent->getTrackInfos(type);
-}
 
-std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::getVideoTracks() const {
-	return mediaComponent->getVideoTracks();
-}
 
-std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::getAudioTracks() const {
-	return mediaComponent->getAudioTracks();
-}
 
-std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::getSubtitleTracks() const {
-	return mediaComponent->getSubtitleTracks();
-}
 
-bool ofxVlc4::selectTrackById(libvlc_track_type_t type, const std::string & trackId) {
-	return mediaComponent->selectTrackById(type, trackId);
-}
 
-bool ofxVlc4::selectAudioTrackById(const std::string & trackId) {
-	return mediaComponent->selectAudioTrackById(trackId);
-}
 
-bool ofxVlc4::selectSubtitleTrackById(const std::string & trackId) {
-	return mediaComponent->selectSubtitleTrackById(trackId);
-}
 
-void ofxVlc4::clearCurrentMedia(bool clearVideoResources) {
-	mediaComponent->clearCurrentMedia(clearVideoResources);
-}

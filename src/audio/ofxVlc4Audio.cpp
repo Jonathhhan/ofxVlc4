@@ -312,29 +312,11 @@ void ofxVlc4::AudioComponent::ensureSpectrumWindowPrepared() const {
 	}
 }
 
-bool ofxVlc4::shouldApplyEqualizerImmediately() const {
-	return audioComponent->shouldApplyEqualizerImmediately();
-}
 
-void ofxVlc4::applyOrQueueEqualizerSettings() {
-	audioComponent->applyOrQueueEqualizerSettings();
-}
 
-void ofxVlc4::applyPendingEqualizerOnPlay() {
-	audioComponent->applyPendingEqualizerOnPlay();
-}
 
-void ofxVlc4::setAudioCaptureEnabled(bool enabled) {
-	audioComponent->setAudioCaptureEnabled(enabled);
-}
 
-bool ofxVlc4::isAudioCaptureEnabled() const {
-	return audioComponent->isAudioCaptureEnabled();
-}
 
-void ofxVlc4::submitRecordedAudioSamples(const float * samples, size_t sampleCount) {
-	audioComponent->submitRecordedAudioSamples(samples, sampleCount);
-}
 
 void ofxVlc4::AudioComponent::prepareStartupAudioResources() {
 	if (!owner.m_impl->playerConfigRuntime.audioCaptureEnabled) {
@@ -1183,81 +1165,24 @@ void ofxVlc4::applyEqualizerSettings() {
 	audioComponent->applyEqualizerSettings();
 }
 
-bool ofxVlc4::isEqualizerEnabled() const {
-	return audioComponent->isEqualizerEnabled();
-}
 
-void ofxVlc4::setEqualizerEnabled(bool enabled) {
-	audioComponent->setEqualizerEnabled(enabled);
-}
 
-float ofxVlc4::getEqualizerPreamp() const {
-	return audioComponent->getEqualizerPreamp();
-}
 
-void ofxVlc4::setEqualizerPreamp(float preamp) {
-	audioComponent->setEqualizerPreamp(preamp);
-}
 
-int ofxVlc4::getEqualizerBandCount() const {
-	return audioComponent->getEqualizerBandCount();
-}
 
-float ofxVlc4::getEqualizerBandFrequency(int index) const {
-	return audioComponent->getEqualizerBandFrequency(index);
-}
 
-float ofxVlc4::getEqualizerBandAmp(int index) const {
-	return audioComponent->getEqualizerBandAmp(index);
-}
 
-int ofxVlc4::getEqualizerPresetCount() const {
-	return audioComponent->getEqualizerPresetCount();
-}
 
-std::vector<std::string> ofxVlc4::getEqualizerPresetNames() const {
-	return audioComponent->getEqualizerPresetNames();
-}
 
-ofxVlc4::EqualizerPresetInfo ofxVlc4::getEqualizerPresetInfo(int index) const {
-	return audioComponent->getEqualizerPresetInfo(index);
-}
 
-std::vector<ofxVlc4::EqualizerPresetInfo> ofxVlc4::getEqualizerPresetInfos() const {
-	return audioComponent->getEqualizerPresetInfos();
-}
 
-int ofxVlc4::getCurrentEqualizerPresetIndex() const {
-	return audioComponent->getCurrentEqualizerPresetIndex();
-}
 
-int ofxVlc4::findMatchingEqualizerPresetIndex(float toleranceDb) const {
-	return audioComponent->findMatchingEqualizerPresetIndex(toleranceDb);
-}
 
-std::string ofxVlc4::exportCurrentEqualizerPreset() const {
-	return audioComponent->exportCurrentEqualizerPreset();
-}
 
-bool ofxVlc4::importEqualizerPreset(const std::string & serializedPreset) {
-	return audioComponent->importEqualizerPreset(serializedPreset);
-}
 
-bool ofxVlc4::applyEqualizerPreset(int index) {
-	return audioComponent->applyEqualizerPreset(index);
-}
 
-void ofxVlc4::setEqualizerBandAmp(int index, float amp) {
-	audioComponent->setEqualizerBandAmp(index, amp);
-}
 
-void ofxVlc4::resetEqualizer() {
-	audioComponent->resetEqualizer();
-}
 
-std::vector<float> ofxVlc4::getEqualizerSpectrumLevels(size_t pointCount) const {
-	return audioComponent->getEqualizerSpectrumLevels(pointCount);
-}
 
 ofxVlc4::AudioMixMode ofxVlc4::AudioComponent::getAudioMixMode() const {
 	return getAudioStateInfo().mixMode;
@@ -1758,13 +1683,7 @@ void ofxVlc4::AudioComponent::audioDrain() {
 	clearAudioPtsState();
 }
 
-void ofxVlc4::prepareAudioRingBuffer() {
-	audioComponent->prepareRingBuffer();
-}
 
-void ofxVlc4::prepareStartupAudioResources() {
-	audioComponent->prepareStartupAudioResources();
-}
 
 void ofxVlc4::resetAudioBuffer() {
 	audioComponent->resetBuffer();
@@ -1774,129 +1693,36 @@ void ofxVlc4::resetAudioStateInfo() {
 	audioComponent->resetAudioStateInfo();
 }
 
-void ofxVlc4::updateAudioStateFromVolumeEvent(int volume) {
-	audioComponent->updateAudioStateFromVolumeEvent(volume);
-}
 
-void ofxVlc4::updateAudioStateFromMutedEvent(bool muted) {
-	audioComponent->updateAudioStateFromMutedEvent(muted);
-}
 
-void ofxVlc4::updateAudioStateFromDeviceEvent(const std::string & deviceId) {
-	audioComponent->updateAudioStateFromDeviceEvent(deviceId);
-}
 
-void ofxVlc4::updateAudioStateFromAudioPts(int64_t ptsUs, int64_t systemUs) {
-	audioComponent->updateAudioStateFromAudioPts(ptsUs, systemUs);
-}
 
-void ofxVlc4::clearAudioPtsState() {
-	audioComponent->clearAudioPtsState();
-}
 
-ofxVlc4::AudioStateInfo ofxVlc4::getAudioStateInfo() const {
-	return audioComponent->getAudioStateInfo();
-}
 
-void ofxVlc4::applyCurrentVolumeToPlayer() {
-	audioComponent->applyCurrentVolumeToPlayer();
-}
 
-void ofxVlc4::applyAudioOutputModule() {
-	audioComponent->applyAudioOutputModule();
-}
 
-void ofxVlc4::applyAudioOutputDevice() {
-	audioComponent->applyAudioOutputDevice();
-}
 
-void ofxVlc4::applyAudioStereoMode() {
-	audioComponent->applyAudioStereoMode();
-}
 
-void ofxVlc4::applyAudioMixMode() {
-	audioComponent->applyAudioMixMode();
-}
 
-void ofxVlc4::applyPlaybackRate() {
-	audioComponent->applyPlaybackRate();
-}
 
-void ofxVlc4::applyAudioDelay() {
-	audioComponent->applyAudioDelay();
-}
 
-void ofxVlc4::applySubtitleDelay() {
-	audioComponent->applySubtitleDelay();
-}
 
-void ofxVlc4::applySubtitleTextScale() {
-	audioComponent->applySubtitleTextScale();
-}
 
-ofxVlc4::AudioMixMode ofxVlc4::getAudioMixMode() const {
-	return audioComponent->getAudioMixMode();
-}
 
-void ofxVlc4::setAudioMixMode(AudioMixMode mode) {
-	audioComponent->setAudioMixMode(mode);
-}
 
-ofxVlc4::AudioStereoMode ofxVlc4::getAudioStereoMode() const {
-	return audioComponent->getAudioStereoMode();
-}
 
-void ofxVlc4::setAudioStereoMode(AudioStereoMode mode) {
-	audioComponent->setAudioStereoMode(mode);
-}
 
-ofxVlc4::AudioCaptureSampleFormat ofxVlc4::getAudioCaptureSampleFormat() const {
-	return audioComponent->getAudioCaptureSampleFormat();
-}
 
-void ofxVlc4::setAudioCaptureSampleFormat(AudioCaptureSampleFormat format) {
-	audioComponent->setAudioCaptureSampleFormat(format);
-}
 
-int ofxVlc4::getAudioCaptureSampleRate() const {
-	return audioComponent->getAudioCaptureSampleRate();
-}
 
-void ofxVlc4::setAudioCaptureSampleRate(int rate) {
-	audioComponent->setAudioCaptureSampleRate(rate);
-}
 
-int ofxVlc4::getAudioCaptureChannelCount() const {
-	return audioComponent->getAudioCaptureChannelCount();
-}
 
-void ofxVlc4::setAudioCaptureChannelCount(int channelCount) {
-	audioComponent->setAudioCaptureChannelCount(channelCount);
-}
 
-double ofxVlc4::getAudioCaptureBufferSeconds() const {
-	return audioComponent->getAudioCaptureBufferSeconds();
-}
 
-void ofxVlc4::setAudioCaptureBufferSeconds(double seconds) {
-	audioComponent->setAudioCaptureBufferSeconds(seconds);
-}
 
-std::vector<ofxVlc4::AudioOutputModuleInfo> ofxVlc4::getAudioOutputModules() const {
-	return audioComponent->getAudioOutputModules();
-}
 
-std::vector<ofxVlc4::AudioFilterInfo> ofxVlc4::getAudioFilters() const {
-	return audioComponent->getAudioFilters();
-}
 
-std::string ofxVlc4::getAudioFilterChain() const {
-	return audioComponent->getAudioFilterChain();
-}
 
-void ofxVlc4::setAudioFilterChain(const std::string & filterChain) {
-	audioComponent->setAudioFilterChain(filterChain);
-}
 
 std::vector<std::string> ofxVlc4::getAudioFilterChainEntries() const {
 	return parseFilterChainEntries(getAudioFilterChain());
@@ -1948,77 +1774,23 @@ bool ofxVlc4::toggleAudioFilter(const std::string & filterName) {
 	return hasAudioFilter(filterName) ? removeAudioFilter(filterName) : addAudioFilter(filterName);
 }
 
-std::string ofxVlc4::getSelectedAudioOutputModuleName() const {
-	return audioComponent->getSelectedAudioOutputModuleName();
-}
 
-bool ofxVlc4::selectAudioOutputModule(const std::string & moduleName) {
-	return audioComponent->selectAudioOutputModule(moduleName);
-}
 
-float ofxVlc4::getPlaybackRate() const {
-	return audioComponent->getPlaybackRate();
-}
 
-void ofxVlc4::setPlaybackRate(float rate) {
-	audioComponent->setPlaybackRate(rate);
-}
 
-int ofxVlc4::getAudioDelayMs() const {
-	return audioComponent->getAudioDelayMs();
-}
 
-void ofxVlc4::setAudioDelayMs(int delayMs) {
-	audioComponent->setAudioDelayMs(delayMs);
-}
 
-int ofxVlc4::getSubtitleDelayMs() const {
-	return audioComponent->getSubtitleDelayMs();
-}
 
-void ofxVlc4::setSubtitleDelayMs(int delayMs) {
-	audioComponent->setSubtitleDelayMs(delayMs);
-}
 
-float ofxVlc4::getSubtitleTextScale() const {
-	return audioComponent->getSubtitleTextScale();
-}
 
-void ofxVlc4::setSubtitleTextScale(float scale) {
-	audioComponent->setSubtitleTextScale(scale);
-}
 
-std::vector<ofxVlc4::AudioOutputDeviceInfo> ofxVlc4::getAudioOutputDevices() const {
-	return audioComponent->getAudioOutputDevices();
-}
 
-std::string ofxVlc4::getSelectedAudioOutputDeviceId() const {
-	return audioComponent->getSelectedAudioOutputDeviceId();
-}
 
-bool ofxVlc4::selectAudioOutputDevice(const std::string & deviceId) {
-	return audioComponent->selectAudioOutputDevice(deviceId);
-}
 
-int ofxVlc4::getVolume() const {
-	return audioComponent->getVolume();
-}
 
-void ofxVlc4::setVolume(int volume) {
-	audioComponent->setVolume(volume);
-}
 
-bool ofxVlc4::isMuted() const {
-	return audioComponent->isMuted();
-}
 
-void ofxVlc4::toggleMute() {
-	audioComponent->toggleMute();
-}
 
-void ofxVlc4::readAudioIntoBuffer(ofSoundBuffer & buffer, float gain) {
-	audioComponent->readAudioIntoBuffer(buffer, gain);
-}
 
 void ofxVlc4::audioPlay(void * data, const void * samples, unsigned int count, int64_t pts) {
 	ofxVlc4 * that = static_cast<ofxVlc4 *>(data);
@@ -2057,18 +1829,6 @@ void ofxVlc4::audioDrain(void * data) {
 	that->audioComponent->audioDrain();
 }
 
-bool ofxVlc4::audioIsReady() const {
-	return audioComponent->audioIsReady();
-}
 
-uint64_t ofxVlc4::getAudioOverrunCount() const {
-	return audioComponent->getAudioOverrunCount();
-}
 
-uint64_t ofxVlc4::getAudioUnderrunCount() const {
-	return audioComponent->getAudioUnderrunCount();
-}
 
-size_t ofxVlc4::peekLatestAudioSamples(float * dst, size_t sampleCount) const {
-	return audioComponent->peekLatestAudioSamples(dst, sampleCount);
-}
