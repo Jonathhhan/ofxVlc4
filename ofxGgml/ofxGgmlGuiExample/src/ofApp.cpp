@@ -105,6 +105,7 @@ initScriptLanguages();
 
 // Default branch for GitHub.
 std::strncpy(scriptSourceBranch, "main", sizeof(scriptSourceBranch) - 1);
+scriptSourceBranch[sizeof(scriptSourceBranch) - 1] = '\0';
 
 // Session directory.
 sessionDir = ofToDataPath("sessions", true);
@@ -617,13 +618,15 @@ scriptSourceStatus = "Fetching...";
 // Validate: ownerRepo must be "owner/repo" with only alphanumeric, dash, underscore, dot.
 // Branch must be alphanumeric, dash, underscore, dot, slash.
 auto isValidGitHubPath = [](const std::string & s) -> bool {
+	if (s.empty() || s.find('/') == std::string::npos) return false;
+	if (s.find("..") != std::string::npos) return false;
 	for (char c : s) {
 		if (!std::isalnum(static_cast<unsigned char>(c)) &&
 			c != '/' && c != '-' && c != '_' && c != '.') {
 			return false;
 		}
 	}
-	return !s.empty() && s.find('/') != std::string::npos;
+	return true;
 };
 auto isValidBranch = [](const std::string & s) -> bool {
 	for (char c : s) {
@@ -1141,8 +1144,14 @@ std::string key = line.substr(0, eq);
 std::string value = line.substr(eq + 1);
 
 if (key == "mode") activeMode = static_cast<AiMode>(std::stoi(value));
-else if (key == "model") selectedModelIndex = std::clamp(std::stoi(value), 0, static_cast<int>(modelPresets.size()) - 1);
-else if (key == "language") selectedLanguageIndex = std::clamp(std::stoi(value), 0, static_cast<int>(scriptLanguages.size()) - 1);
+else if (key == "model") {
+	int maxIdx = static_cast<int>(modelPresets.size()) - 1;
+	selectedModelIndex = std::clamp(std::stoi(value), 0, maxIdx);
+}
+else if (key == "language") {
+	int maxIdx = static_cast<int>(scriptLanguages.size()) - 1;
+	selectedLanguageIndex = std::clamp(std::stoi(value), 0, maxIdx);
+}
 else if (key == "maxTokens") maxTokens = std::clamp(std::stoi(value), 32, 2048);
 else if (key == "temperature") temperature = std::clamp(std::stof(value), 0.0f, 2.0f);
 else if (key == "numThreads") numThreads = std::clamp(std::stoi(value), 1, 16);
