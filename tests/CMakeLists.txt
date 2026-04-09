@@ -237,3 +237,38 @@ target_include_directories(test_media_helpers PRIVATE
 )
 
 add_test(NAME media_helpers COMMAND test_media_helpers)
+
+# ---------------------------------------------------------------------------
+# test_recording_helpers
+# Tests the recording path-building helpers (trimRecorderText,
+# buildRecordingOutputStem, buildRecordingOutputPath,
+# buildRecordingOutputPaths) extracted into ofxVlc4RecordingHelpers.h.
+# Uses inline OF function stubs (ofFilePath::getFileExt etc.).
+# ---------------------------------------------------------------------------
+
+add_executable(test_recording_helpers
+    test_recording_helpers.cpp
+)
+
+target_include_directories(test_recording_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME recording_helpers COMMAND test_recording_helpers)
+
+# ---------------------------------------------------------------------------
+# test_media_library_helpers
+# Tests the media-library pure helpers (normalizeExtensions,
+# appendMetadataValue, hasDetailedTrackMetadata) extracted into
+# ofxVlc4MediaLibraryHelpers.h.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_media_library_helpers
+    test_media_library_helpers.cpp
+)
+
+target_include_directories(test_media_library_helpers PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME media_library_helpers COMMAND test_media_library_helpers)
