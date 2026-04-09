@@ -5,6 +5,7 @@
 #include "ofxVlc4Media.h"
 #include "playback/PlaybackController.h"
 #include "video/ofxVlc4Video.h"
+#include "support/ofxVlc4MuxHelpers.h"
 #include "support/ofxVlc4Utils.h"
 #include "core/VlcCoreSession.h"
 #include "core/VlcEventRouter.h"
@@ -29,6 +30,7 @@ using ofxVlc4Utils::mediaLabelForPath;
 using ofxVlc4Utils::normalizeOptionalPath;
 using ofxVlc4Utils::sanitizeFileStem;
 using ofxVlc4Utils::trimWhitespace;
+using ofxVlc4MuxHelpers::pathToFileUri;
 
 namespace {
 
@@ -194,33 +196,6 @@ bool isSupportedMediaPath(
 		supportsVlcImageInterop(absolutePath);
 }
 
-std::string percentEncodeUriPath(const std::string & value) {
-	std::ostringstream stream;
-	stream << std::uppercase << std::hex;
-	for (const unsigned char ch : value) {
-		if (std::isalnum(ch) || ch == '/' || ch == ':' || ch == '-' || ch == '_' || ch == '.' || ch == '~') {
-			stream << static_cast<char>(ch);
-		} else {
-			stream << '%' << std::setw(2) << std::setfill('0') << static_cast<int>(ch);
-		}
-	}
-	return stream.str();
-}
-
-std::string pathToFileUri(const std::string & value) {
-	std::error_code ec;
-	std::filesystem::path absolutePath = std::filesystem::absolute(std::filesystem::path(value), ec);
-	if (ec) {
-		absolutePath = std::filesystem::path(value);
-	}
-
-	std::string genericPath = absolutePath.generic_string();
-	if (!genericPath.empty() && genericPath.front() != '/') {
-		genericPath.insert(genericPath.begin(), '/');
-	}
-
-	return "file://" + percentEncodeUriPath(genericPath);
-}
 
 std::string normalizeMediaSlaveUri(const std::string & value) {
 	const std::string trimmedValue = trimWhitespace(value);
@@ -3835,6 +3810,11 @@ void ofxVlc4::clearCurrentBookmarks() {
 
 std::string ofxVlc4::getPathAtIndex(int index) const {
 	return mediaComponent->getPathAtIndex(index);
+}
+
+std::vector<std::string> ofxVlc4::getPlaylist() const {
+	std::lock_guard<std::mutex> lock(m_impl->mediaLibrary.playlistMutex);
+	return m_impl->mediaLibrary.playlist;
 }
 
 std::vector<ofxVlc4::PlaylistItemInfo> ofxVlc4::getPlaylistItems() const {

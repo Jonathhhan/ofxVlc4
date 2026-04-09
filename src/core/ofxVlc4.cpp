@@ -5,6 +5,7 @@
 #include "media/ofxVlc4Media.h"
 #include "playback/PlaybackController.h"
 #include "video/ofxVlc4Video.h"
+#include "support/ofxVlc4MuxHelpers.h"
 #include "support/ofxVlc4Utils.h"
 #include "VlcCoreSession.h"
 #include "VlcEventRouter.h"
@@ -18,6 +19,7 @@
 #include <sstream>
 
 using ofxVlc4Utils::clearAllocatedFbo;
+using ofxVlc4MuxHelpers::removeRecordingFile;
 
 namespace {
 
@@ -39,30 +41,6 @@ constexpr const char * kOfxVlc4AddonVersionString = "1.0.2";
 bool shouldLog(ofLogLevel level) {
 	const ofLogLevel configuredLevel = static_cast<ofLogLevel>(gLogLevel.load());
 	return configuredLevel != OF_LOG_SILENT && level >= configuredLevel;
-}
-
-bool removeRecordingFile(const std::string & path, uint64_t timeoutMs) {
-	if (path.empty()) {
-		return true;
-	}
-
-	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
-	do {
-		std::error_code error;
-		if (!std::filesystem::exists(path, error)) {
-			return !error;
-		}
-		if (std::filesystem::remove(path, error)) {
-			return true;
-		}
-		if (!error && !std::filesystem::exists(path, error)) {
-			return true;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	} while (std::chrono::steady_clock::now() < deadline);
-
-	std::error_code error;
-	return !std::filesystem::exists(path, error);
 }
 
 bool tryRemoveRecordingFileOnce(const std::string & path) {
