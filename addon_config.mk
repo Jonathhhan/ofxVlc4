@@ -20,6 +20,7 @@ meta:
 	ADDON_AUTHOR = Jonathan Frank
 	ADDON_TAGS = "video,vlc,media,player,recording,midi"
 	ADDON_URL = https://github.com/Jonathhhan/ofxVlc4
+	ADDON_LICENSE = MIT
 
 common:
 	ADDON_INCLUDES += libs/libvlc/include

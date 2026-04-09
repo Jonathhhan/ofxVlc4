@@ -21,9 +21,13 @@ It is aimed at media-player style apps, video-texture workflows, and hybrid tool
 
 Parts of this addon, its examples, GUI structure, and documentation were developed with AI-assisted help during implementation and refinement.
 
+## License
+
+This addon is released under the [MIT License](LICENSE).
+
 ## Release
 
-- addon release version: `1.0.2`
+- addon release version: `1.0.3`
 - changelog: `CHANGELOG.md`
 
 ## Highlights
@@ -549,7 +553,7 @@ For a focused surface to test that behavior, use `ofxVlc4RecorderExample`.
 
 The addon ships a CMake-based unit-test suite in `tests/`. The tests compile without a real openFrameworks, GLFW, or VLC installation — stubs in `tests/stubs/` and `tests/stubs_gl/` supply the minimal type definitions required.
 
-Six test binaries are built:
+Eight test binaries are built:
 
 - `test_ringbuffer` — ring-buffer push/pop, wrap-around, and audio callback helpers (`src/support/ofxVlc4RingBuffer.cpp`)
 - `test_midi_analysis` — MIDI file/event parsing and timecode utilities (`src/midi/ofxVlc4MidiAnalysis.cpp`)
@@ -557,6 +561,8 @@ Six test binaries are built:
 - `test_mux_helpers` — filesystem and string helpers from `src/support/ofxVlc4MuxHelpers.h`
 - `test_playlist` — in-memory playlist add/remove/move logic mirroring `MediaLibrary`'s locked operations; no OF/GLFW/VLC dependency
 - `test_gl` — `hasCurrentGlContext()` and `clearAllocatedFbo()` from `ofxVlc4Utils.h`, using controllable GL stubs in `tests/stubs_gl/`
+- `test_midi_bridge` — MIDI event/channel-message conversion, filtering, and describe helpers (`src/midi/ofxVlc4MidiBridge.cpp`)
+- `test_midi_playback` — MIDI playback session load/clear, play/pause/stop, seek, update dispatch, tempo, sync, and loop (`src/midi/ofxVlc4MidiPlayback.cpp`)
 
 To build and run all tests:
 

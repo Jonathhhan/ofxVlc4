@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.3
 
 - **tests: playlist manipulation unit tests** — `tests/test_playlist.cpp` adds a self-contained `Playlist` fixture that mirrors `MediaLibrary`'s locked add/remove/move operations; covers single-item add, duplicate path rejection, remove by index, move-single forward/backward, move-multiple, `currentIndex` tracking across all mutations, and edge cases (empty list, out-of-range indices, no-op moves); no OF, GLFW, or VLC dependencies required
 
