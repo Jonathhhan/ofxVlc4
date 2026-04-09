@@ -6,6 +6,8 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -288,6 +290,313 @@ static void testNormalizeOptionalPath() {
 }
 
 // ---------------------------------------------------------------------------
+// mediaLabelForPath
+// ---------------------------------------------------------------------------
+
+static void testMediaLabelForPath() {
+	beginSuite("mediaLabelForPath");
+
+	using ofxVlc4Utils::mediaLabelForPath;
+
+	// Empty path → empty label.
+	CHECK_EQ(mediaLabelForPath(""), "");
+
+	// URI → extracts filename from URI.
+	CHECK_EQ(mediaLabelForPath("http://example.com/video.mp4"), "video.mp4");
+	CHECK_EQ(mediaLabelForPath("rtsp://camera/stream.ts"), "stream.ts");
+
+	// URI with query → strips query, extracts filename.
+	CHECK_EQ(mediaLabelForPath("http://example.com/video.mp4?token=abc"), "video.mp4");
+
+	// URI ending in slash → returns full URI as fallback.
+	CHECK_EQ(mediaLabelForPath("http://example.com/"), "http://example.com/");
+
+	// Local path → extracts filename.
+	CHECK_EQ(mediaLabelForPath("/home/user/video.mp4"), "video.mp4");
+	CHECK_EQ(mediaLabelForPath("video.mp4"), "video.mp4");
+	CHECK_EQ(mediaLabelForPath("/path/to/my-song.wav"), "my-song.wav");
+}
+
+// ---------------------------------------------------------------------------
+// isStoppedOrIdleState
+// ---------------------------------------------------------------------------
+
+static void testIsStoppedOrIdleState() {
+	beginSuite("isStoppedOrIdleState");
+
+	using ofxVlc4Utils::isStoppedOrIdleState;
+
+	CHECK(isStoppedOrIdleState(libvlc_Stopped));
+	CHECK(isStoppedOrIdleState(libvlc_NothingSpecial));
+	CHECK(!isStoppedOrIdleState(libvlc_Playing));
+	CHECK(!isStoppedOrIdleState(libvlc_Paused));
+	CHECK(!isStoppedOrIdleState(libvlc_Opening));
+	CHECK(!isStoppedOrIdleState(libvlc_Buffering));
+	CHECK(!isStoppedOrIdleState(libvlc_Error));
+	CHECK(!isStoppedOrIdleState(libvlc_Stopping));
+}
+
+// ---------------------------------------------------------------------------
+// isTransientPlaybackState
+// ---------------------------------------------------------------------------
+
+static void testIsTransientPlaybackState() {
+	beginSuite("isTransientPlaybackState");
+
+	using ofxVlc4Utils::isTransientPlaybackState;
+
+	CHECK(isTransientPlaybackState(libvlc_Opening));
+	CHECK(isTransientPlaybackState(libvlc_Buffering));
+	CHECK(isTransientPlaybackState(libvlc_Stopping));
+	CHECK(!isTransientPlaybackState(libvlc_Playing));
+	CHECK(!isTransientPlaybackState(libvlc_Paused));
+	CHECK(!isTransientPlaybackState(libvlc_Stopped));
+	CHECK(!isTransientPlaybackState(libvlc_NothingSpecial));
+	CHECK(!isTransientPlaybackState(libvlc_Error));
+}
+
+// ---------------------------------------------------------------------------
+// setInputHandlingEnabled
+// ---------------------------------------------------------------------------
+
+static void testSetInputHandlingEnabled() {
+	beginSuite("setInputHandlingEnabled");
+
+	using ofxVlc4Utils::setInputHandlingEnabled;
+
+	// Case 1: value changes from false to true → returns true.
+	{
+		bool currentValue = false;
+		unsigned lastApplied = 99;
+		std::string lastLog;
+
+		auto apply = [](libvlc_media_player_t *, unsigned v) {
+			// Would apply to real media player; no-op in test.
+			(void)v;
+		};
+
+		const bool changed = setInputHandlingEnabled(
+			nullptr, currentValue, true, "Keyboard handling ",
+			apply,
+			[&](const std::string & msg) { lastLog = msg; });
+
+		CHECK(changed);
+		CHECK(currentValue == true);
+		CHECK(lastLog.find("enabled") != std::string::npos);
+	}
+
+	// Case 2: value is already the same → returns false (no-op).
+	{
+		bool currentValue = true;
+		std::string lastLog;
+
+		auto apply = [](libvlc_media_player_t *, unsigned) {};
+
+		const bool changed = setInputHandlingEnabled(
+			nullptr, currentValue, true, "Keyboard handling ",
+			apply,
+			[&](const std::string & msg) { lastLog = msg; });
+
+		CHECK(!changed);
+		CHECK(lastLog.empty()); // log not called
+	}
+
+	// Case 3: value changes from true to false → returns true, log says "disabled".
+	{
+		bool currentValue = true;
+		std::string lastLog;
+
+		auto apply = [](libvlc_media_player_t *, unsigned) {};
+
+		const bool changed = setInputHandlingEnabled(
+			nullptr, currentValue, false, "Mouse handling ",
+			apply,
+			[&](const std::string & msg) { lastLog = msg; });
+
+		CHECK(changed);
+		CHECK(currentValue == false);
+		CHECK(lastLog.find("disabled") != std::string::npos);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// readTextFileIfPresent
+// ---------------------------------------------------------------------------
+
+static void testReadTextFileIfPresent() {
+	beginSuite("readTextFileIfPresent");
+
+	using ofxVlc4Utils::readTextFileIfPresent;
+
+	// Non-existent file → empty string.
+	CHECK_EQ(readTextFileIfPresent("/tmp/ofxvlc4_nonexistent_file_12345.txt"), "");
+
+	// Write a test file, read it back.
+	{
+		const std::string path = "/tmp/ofxvlc4_test_readtext.txt";
+		{
+			std::ofstream f(path);
+			f << "Hello, World!";
+		}
+		const std::string content = readTextFileIfPresent(path);
+		CHECK_EQ(content, "Hello, World!");
+		std::remove(path.c_str());
+	}
+
+	// Empty file → empty string.
+	{
+		const std::string path = "/tmp/ofxvlc4_test_readtext_empty.txt";
+		{
+			std::ofstream f(path);
+			// write nothing
+		}
+		const std::string content = readTextFileIfPresent(path);
+		CHECK_EQ(content, "");
+		std::remove(path.c_str());
+	}
+
+	// Multiline content.
+	{
+		const std::string path = "/tmp/ofxvlc4_test_readtext_multi.txt";
+		{
+			std::ofstream f(path);
+			f << "Line1\nLine2\nLine3";
+		}
+		const std::string content = readTextFileIfPresent(path);
+		CHECK_EQ(content, "Line1\nLine2\nLine3");
+		std::remove(path.c_str());
+	}
+}
+
+// ---------------------------------------------------------------------------
+// isUri: additional edge cases
+// ---------------------------------------------------------------------------
+
+static void testIsUriEdgeCases() {
+	beginSuite("isUri: edge cases");
+
+	using ofxVlc4Utils::isUri;
+
+	// "://" at position 0 (scheme is empty) → not a URI
+	CHECK(!isUri("://host/path"));
+
+	// Scheme with digits (h264://...) → valid
+	CHECK(isUri("h264://example.com"));
+
+	// Scheme with plus/dash/dot (custom+scheme-1.0://...) → valid per RFC 3986
+	CHECK(isUri("custom+scheme-1.0://example.com"));
+
+	// Scheme starting with a digit → invalid
+	CHECK(!isUri("3com://host"));
+
+	// Path separator before "://" → not a URI (local path containing "://")
+	CHECK(!isUri("/path/to/file://something"));
+
+	// Scheme with underscore → invalid (underscore not allowed in schemes)
+	CHECK(!isUri("my_scheme://host"));
+
+	// Just "://" → not a URI (empty scheme)
+	CHECK(!isUri("://"));
+
+	// Single letter scheme → valid
+	CHECK(isUri("x://host"));
+}
+
+// ---------------------------------------------------------------------------
+// fileNameFromUri: additional edge cases
+// ---------------------------------------------------------------------------
+
+static void testFileNameFromUriEdgeCases() {
+	beginSuite("fileNameFromUri: edge cases");
+
+	using ofxVlc4Utils::fileNameFromUri;
+
+	// Empty string → returns empty.
+	CHECK_EQ(fileNameFromUri(""), "");
+
+	// No slash at all → returns the whole string.
+	CHECK_EQ(fileNameFromUri("file"), "file");
+
+	// Fragment and query combined.
+	CHECK_EQ(fileNameFromUri("http://example.com/video.mp4?a=1#frag"), "video.mp4");
+
+	// Only fragment, no query.
+	CHECK_EQ(fileNameFromUri("http://example.com/video.mp4#t=10"), "video.mp4");
+
+	// Deeply nested path.
+	CHECK_EQ(fileNameFromUri("http://a.com/1/2/3/4/deep.ts"), "deep.ts");
+}
+
+// ---------------------------------------------------------------------------
+// sanitizeFileStem: additional edge cases
+// ---------------------------------------------------------------------------
+
+static void testSanitizeFileStemEdgeCases() {
+	beginSuite("sanitizeFileStem: edge cases");
+
+	using ofxVlc4Utils::sanitizeFileStem;
+
+	// All forbidden characters → all replaced, result is non-empty.
+	CHECK_EQ(sanitizeFileStem("<>:\"/\\|?*"), "_________");
+
+	// Mixed valid and forbidden.
+	CHECK_EQ(sanitizeFileStem("my:video<1>"), "my_video_1_");
+
+	// Already clean → unchanged.
+	CHECK_EQ(sanitizeFileStem("clean_name"), "clean_name");
+
+	// All whitespace after sanitization → "snapshot".
+	CHECK_EQ(sanitizeFileStem("\t\r\n"), "snapshot");
+}
+
+// ---------------------------------------------------------------------------
+// nearlyEqual: custom epsilon
+// ---------------------------------------------------------------------------
+
+static void testNearlyEqualCustomEpsilon() {
+	beginSuite("nearlyEqual: custom epsilon");
+
+	using ofxVlc4Utils::nearlyEqual;
+
+	// With a large epsilon, values further apart should match.
+	CHECK(nearlyEqual(1.0f, 1.5f, 1.0f));
+	CHECK(!nearlyEqual(1.0f, 3.0f, 1.0f));
+
+	// Very small epsilon.
+	CHECK(!nearlyEqual(1.0f, 1.00001f, 0.000001f));
+	CHECK(nearlyEqual(1.0f, 1.0000001f, 0.000001f));
+
+	// Negative values with custom epsilon.
+	CHECK(nearlyEqual(-1.0f, -1.05f, 0.1f));
+	CHECK(!nearlyEqual(-1.0f, -1.15f, 0.1f));
+}
+
+// ---------------------------------------------------------------------------
+// formatAdjustmentValue: edge cases
+// ---------------------------------------------------------------------------
+
+static void testFormatAdjustmentValueEdgeCases() {
+	beginSuite("formatAdjustmentValue: edge cases");
+
+	using ofxVlc4Utils::formatAdjustmentValue;
+
+	// Null suffix pointer → no suffix appended.
+	CHECK_EQ(formatAdjustmentValue(1.0f, 1, nullptr), "1.0");
+
+	// Empty string suffix → no suffix appended.
+	CHECK_EQ(formatAdjustmentValue(1.0f, 1, ""), "1.0");
+
+	// Negative values.
+	CHECK_EQ(formatAdjustmentValue(-3.5f, 1), "-3.5");
+
+	// High precision.
+	CHECK_EQ(formatAdjustmentValue(1.123456f, 4), "1.1235");
+
+	// Zero precision.
+	CHECK_EQ(formatAdjustmentValue(42.7f, 0), "43");
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -302,6 +611,16 @@ int main() {
 	testFallbackIndexedLabel();
 	testFormatProgramName();
 	testNormalizeOptionalPath();
+	testMediaLabelForPath();
+	testIsStoppedOrIdleState();
+	testIsTransientPlaybackState();
+	testSetInputHandlingEnabled();
+	testReadTextFileIfPresent();
+	testIsUriEdgeCases();
+	testFileNameFromUriEdgeCases();
+	testSanitizeFileStemEdgeCases();
+	testNearlyEqualCustomEpsilon();
+	testFormatAdjustmentValueEdgeCases();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

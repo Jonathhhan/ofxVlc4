@@ -582,6 +582,232 @@ static void testDispatchIndexTracking() {
 }
 
 // ---------------------------------------------------------------------------
+// Seek while playing
+// ---------------------------------------------------------------------------
+
+static void testSeekWhilePlaying() {
+	beginSuite("seek: while playing adjusts playhead");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(10.0), makeMessages(10, 1.0));
+	session.setMessageCallback([](const MidiChannelMessage &) {});
+
+	session.play(0.0);
+	session.update(2.0); // play for 2 seconds
+
+	// Seek to a different position while still playing.
+	session.seek(7.0, 2.0);
+	CHECK(session.isPlaying());
+	CHECK_NEAR(session.getPositionSeconds(), 7.0);
+
+	// After updating, playback should continue from the new position.
+	session.update(3.0); // 1 more wall second at 1x → position 8.0
+	CHECK(session.getPositionSeconds() > 7.0);
+}
+
+// ---------------------------------------------------------------------------
+// SeekFraction while playing
+// ---------------------------------------------------------------------------
+
+static void testSeekFractionWhilePlaying() {
+	beginSuite("seekFraction: while playing");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(10.0), makeMessages(4));
+	session.setMessageCallback([](const MidiChannelMessage &) {});
+
+	session.play(0.0);
+	session.update(1.0);
+
+	session.seekFraction(0.8, 1.0);
+	CHECK(session.isPlaying());
+	CHECK_NEAR(session.getPositionSeconds(), 8.0);
+}
+
+// ---------------------------------------------------------------------------
+// Double play (play when already playing)
+// ---------------------------------------------------------------------------
+
+static void testDoublePlaying() {
+	beginSuite("play: called twice is safe");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(5.0), makeMessages(4));
+	session.setMessageCallback([](const MidiChannelMessage &) {});
+
+	session.play(0.0);
+	CHECK(session.isPlaying());
+
+	// Second play call should be safe (no-op or restart).
+	session.play(1.0);
+	CHECK(session.isPlaying());
+}
+
+// ---------------------------------------------------------------------------
+// Pause then stop sequence
+// ---------------------------------------------------------------------------
+
+static void testPauseStopSequence() {
+	beginSuite("pause → stop: proper cleanup");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(5.0), makeMessages(4));
+	session.setMessageCallback([](const MidiChannelMessage &) {});
+
+	session.play(0.0);
+	session.update(1.0);
+
+	session.pause(1.0);
+	CHECK(session.isPaused());
+	CHECK(!session.isPlaying());
+
+	session.stop();
+	CHECK(!session.isPlaying());
+	// After stop(), isPaused() is true because the session is loaded, not
+	// playing, and not finished.  isStopped() is the correct way to detect
+	// the stopped state (loaded && !playing && playhead at 0).
+	CHECK(session.isStopped());
+	CHECK_NEAR(session.getPositionSeconds(), 0.0);
+}
+
+// ---------------------------------------------------------------------------
+// Multiple seek calls
+// ---------------------------------------------------------------------------
+
+static void testMultipleSeeks() {
+	beginSuite("seek: multiple consecutive seeks");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(10.0), makeMessages(10, 1.0));
+
+	session.seek(3.0);
+	CHECK_NEAR(session.getPositionSeconds(), 3.0);
+
+	session.seek(7.0);
+	CHECK_NEAR(session.getPositionSeconds(), 7.0);
+
+	session.seek(0.0);
+	CHECK_NEAR(session.getPositionSeconds(), 0.0);
+
+	session.seek(10.0);
+	CHECK_NEAR(session.getPositionSeconds(), 10.0);
+}
+
+// ---------------------------------------------------------------------------
+// Clear while playing
+// ---------------------------------------------------------------------------
+
+static void testClearWhilePlaying() {
+	beginSuite("clear: while playing stops and resets");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(5.0), makeMessages(4));
+	session.setMessageCallback([](const MidiChannelMessage &) {});
+
+	session.play(0.0);
+	session.update(1.0);
+	CHECK(session.isPlaying());
+
+	session.clear();
+	CHECK(!session.isPlaying());
+	CHECK(!session.isLoaded());
+	CHECK_NEAR(session.getPositionSeconds(), 0.0);
+	CHECK_NEAR(session.getDurationSeconds(), 0.0);
+}
+
+// ---------------------------------------------------------------------------
+// Reload after clear
+// ---------------------------------------------------------------------------
+
+static void testReloadAfterClear() {
+	beginSuite("load: after clear works correctly");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(5.0), makeMessages(4));
+	session.play(0.0);
+	session.update(1.0);
+	session.clear();
+
+	// Reload with different data.
+	const auto report2 = makeReport(8.0);
+	const auto messages2 = makeMessages(6, 1.0);
+	const bool loaded = session.load("/tmp/test2.mid", report2, messages2);
+
+	CHECK(loaded);
+	CHECK(session.isLoaded());
+	CHECK_EQ(session.getMessages().size(), 6u);
+	CHECK_NEAR(session.getDurationSeconds(), 8.0);
+	CHECK_EQ(session.getPath(), "/tmp/test2.mid");
+}
+
+// ---------------------------------------------------------------------------
+// Tempo multiplier during playback
+// ---------------------------------------------------------------------------
+
+static void testTempoMultiplierDuringPlayback() {
+	beginSuite("setTempoMultiplier: during playback");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(10.0), makeMessages(10, 1.0));
+	session.setMessageCallback([](const MidiChannelMessage &) {});
+
+	session.play(0.0);
+	session.update(1.0); // play 1 second at 1x
+
+	session.setTempoMultiplier(2.0, 1.0);
+	CHECK_NEAR(session.getTempoMultiplier(), 2.0);
+
+	// After 1 more wall second at 2x, playhead should advance by ~2 seconds.
+	session.update(2.0);
+	CHECK(session.getPositionSeconds() > 2.5); // Should be around 3.0
+}
+
+// ---------------------------------------------------------------------------
+// Loop with seek
+// ---------------------------------------------------------------------------
+
+static void testLoopAfterSeekToEnd() {
+	beginSuite("loop: seek to end then update triggers loop");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(2.0), makeMessages(4, 0.5));
+	session.setLoopEnabled(true);
+	session.setMessageCallback([](const MidiChannelMessage &) {});
+
+	session.seek(1.9);
+	session.play(0.0);
+	session.update(0.5); // advance past end
+
+	CHECK(!session.isFinished());
+	CHECK(session.isPlaying());
+}
+
+// ---------------------------------------------------------------------------
+// Dispatch index tracking after seek
+// ---------------------------------------------------------------------------
+
+static void testDispatchTrackingAfterSeek() {
+	beginSuite("dispatch tracking: after seek");
+
+	MidiPlaybackSession session;
+	session.load("/tmp/test.mid", makeReport(5.0), makeMessages(10, 0.5));
+	session.setMessageCallback([](const MidiChannelMessage &) {});
+
+	session.play(0.0);
+	session.update(1.0); // dispatch messages up to t=1.0
+	const size_t countBefore = session.getDispatchedCount();
+	CHECK(countBefore > 0u);
+
+	// Seek back to start → dispatch count should reset or be tracked.
+	session.seek(0.0, 1.0);
+
+	// Continue playing from new position.
+	session.update(1.5);
+	// Should dispatch more messages from the new position.
+	CHECK(session.getDispatchedCount() > 0u);
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -614,6 +840,16 @@ int main() {
 	testLoopEnabled();
 	testPlayAfterFinish();
 	testDispatchIndexTracking();
+	testSeekWhilePlaying();
+	testSeekFractionWhilePlaying();
+	testDoublePlaying();
+	testPauseStopSequence();
+	testMultipleSeeks();
+	testClearWhilePlaying();
+	testReloadAfterClear();
+	testTempoMultiplierDuringPlayback();
+	testLoopAfterSeekToEnd();
+	testDispatchTrackingAfterSeek();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;
