@@ -2992,7 +2992,7 @@ bool ofxVlc4::applyPendingVideoResize() {
 
 bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, libvlc_video_output_cfg_t * render_cfg) {
 	ofxVlc4 * that = static_cast<ofxVlc4 *>(data);
-	if (!that) {
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return false;
 	}
 	return that->videoComponent->videoResize(cfg, render_cfg);
@@ -3000,7 +3000,7 @@ bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, li
 
 void ofxVlc4::videoSwap(void * data) {
 	ofxVlc4 * that = static_cast<ofxVlc4 *>(data);
-	if (!that) {
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 	that->videoComponent->videoSwap();
@@ -3008,7 +3008,7 @@ void ofxVlc4::videoSwap(void * data) {
 
 bool ofxVlc4::make_current(void * data, bool current) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) {
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return false;
 	}
 	return that->videoComponent->makeCurrent(current);
@@ -3016,7 +3016,7 @@ bool ofxVlc4::make_current(void * data, bool current) {
 
 void * ofxVlc4::get_proc_address(void * data, const char * name) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) {
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return nullptr;
 	}
 
@@ -3029,7 +3029,7 @@ bool ofxVlc4::videoOutputSetup(
 	libvlc_video_setup_device_info_t * out) {
 #ifdef TARGET_WIN32
 	auto * that = (data && *data) ? static_cast<ofxVlc4 *>(*data) : nullptr;
-	if (!that) {
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return false;
 	}
 	return that->videoComponent->videoOutputSetup(cfg, out);
@@ -3043,7 +3043,7 @@ bool ofxVlc4::videoOutputSetup(
 
 void ofxVlc4::videoOutputCleanup(void * data) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) {
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 	that->videoComponent->videoOutputCleanup();
@@ -3051,7 +3051,7 @@ void ofxVlc4::videoOutputCleanup(void * data) {
 
 void ofxVlc4::videoFrameMetadata(void * data, libvlc_video_metadata_type_t type, const void * metadata) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that) {
+	if (!that || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 	that->videoComponent->videoFrameMetadata(type, metadata);

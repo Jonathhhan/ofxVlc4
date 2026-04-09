@@ -1168,7 +1168,7 @@ void ofxVlc4::MediaComponent::appendLibVlcLog(const LibVlcLogEntry & entry) {
 
 void ofxVlc4::libVlcLogStatic(void * data, int level, const libvlc_log_t * ctx, const char * fmt, va_list args) {
 	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player || !ctx) {
+	if (!player || !ctx || player->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
@@ -2142,35 +2142,35 @@ void ofxVlc4::applyWatchTimeObserver() {
 
 void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data) {
 	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player || !value) {
+	if (!player || !value || player->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
 	WatchTimeCallback callback;
 	WatchTimeInfo info;
 	{
-		std::lock_guard<std::mutex> lock(player->watchTimeMutex);
-		player->lastWatchTimePoint = *value;
-		player->watchTimePointAvailable = true;
-		player->watchTimePaused = value->system_date_us == INT64_MAX;
-		player->watchTimeSeeking = false;
-		player->watchTimeLastEventType = WatchTimeEventType::Update;
-		++player->watchTimeUpdateSequence;
-		if (!player->watchTimePaused) {
-			player->watchTimePauseSystemDateUs = 0;
+		std::lock_guard<std::mutex> lock(player->m_impl->synchronizationRuntime.watchTimeMutex);
+		player->m_impl->watchTimeRuntime.lastPoint = *value;
+		player->m_impl->watchTimeRuntime.pointAvailable = true;
+		player->m_impl->watchTimeRuntime.paused = value->system_date_us == INT64_MAX;
+		player->m_impl->watchTimeRuntime.seeking = false;
+		player->m_impl->watchTimeRuntime.lastEventType = WatchTimeEventType::Update;
+		++player->m_impl->watchTimeRuntime.updateSequence;
+		if (!player->m_impl->watchTimeRuntime.paused) {
+			player->m_impl->watchTimeRuntime.pauseSystemDateUs = 0;
 		}
-		callback = player->watchTimeCallback;
+		callback = player->m_impl->watchTimeRuntime.callback;
 		info = buildWatchTimeInfoSnapshot(
 			*value,
-			player->watchTimeEnabled,
-			player->watchTimeRegistered,
-			player->watchTimePointAvailable,
-			player->watchTimePaused,
-			player->watchTimeSeeking,
-			player->watchTimeMinPeriodUs,
-			player->watchTimePauseSystemDateUs,
-			player->watchTimeLastEventType,
-			player->watchTimeUpdateSequence,
+			player->m_impl->watchTimeRuntime.enabled,
+			player->m_impl->watchTimeRuntime.registered,
+			player->m_impl->watchTimeRuntime.pointAvailable,
+			player->m_impl->watchTimeRuntime.paused,
+			player->m_impl->watchTimeRuntime.seeking,
+			player->m_impl->watchTimeRuntime.minPeriodUs,
+			player->m_impl->watchTimeRuntime.pauseSystemDateUs,
+			player->m_impl->watchTimeRuntime.lastEventType,
+			player->m_impl->watchTimeRuntime.updateSequence,
 			false);
 	}
 	if (callback) {
@@ -2180,31 +2180,31 @@ void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * val
 
 void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
 	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player) {
+	if (!player || player->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
 	WatchTimeCallback callback;
 	WatchTimeInfo info;
 	{
-		std::lock_guard<std::mutex> lock(player->watchTimeMutex);
-		player->watchTimePaused = true;
-		player->watchTimePauseSystemDateUs = system_date_us;
-		player->watchTimeSeeking = false;
-		player->watchTimeLastEventType = WatchTimeEventType::Paused;
-		++player->watchTimeUpdateSequence;
-		callback = player->watchTimeCallback;
+		std::lock_guard<std::mutex> lock(player->m_impl->synchronizationRuntime.watchTimeMutex);
+		player->m_impl->watchTimeRuntime.paused = true;
+		player->m_impl->watchTimeRuntime.pauseSystemDateUs = system_date_us;
+		player->m_impl->watchTimeRuntime.seeking = false;
+		player->m_impl->watchTimeRuntime.lastEventType = WatchTimeEventType::Paused;
+		++player->m_impl->watchTimeRuntime.updateSequence;
+		callback = player->m_impl->watchTimeRuntime.callback;
 		info = buildWatchTimeInfoSnapshot(
-			player->lastWatchTimePoint,
-			player->watchTimeEnabled,
-			player->watchTimeRegistered,
-			player->watchTimePointAvailable,
-			player->watchTimePaused,
-			player->watchTimeSeeking,
-			player->watchTimeMinPeriodUs,
-			player->watchTimePauseSystemDateUs,
-			player->watchTimeLastEventType,
-			player->watchTimeUpdateSequence,
+			player->m_impl->watchTimeRuntime.lastPoint,
+			player->m_impl->watchTimeRuntime.enabled,
+			player->m_impl->watchTimeRuntime.registered,
+			player->m_impl->watchTimeRuntime.pointAvailable,
+			player->m_impl->watchTimeRuntime.paused,
+			player->m_impl->watchTimeRuntime.seeking,
+			player->m_impl->watchTimeRuntime.minPeriodUs,
+			player->m_impl->watchTimeRuntime.pauseSystemDateUs,
+			player->m_impl->watchTimeRuntime.lastEventType,
+			player->m_impl->watchTimeRuntime.updateSequence,
 			false);
 	}
 	if (callback) {
@@ -2214,37 +2214,37 @@ void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
 
 void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value, void * data) {
 	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player) {
+	if (!player || player->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
 	WatchTimeCallback callback;
 	WatchTimeInfo info;
 	{
-		std::lock_guard<std::mutex> lock(player->watchTimeMutex);
-		player->watchTimeSeeking = value != nullptr;
-		player->watchTimeLastEventType = value ? WatchTimeEventType::Seek : WatchTimeEventType::SeekEnd;
-		++player->watchTimeUpdateSequence;
+		std::lock_guard<std::mutex> lock(player->m_impl->synchronizationRuntime.watchTimeMutex);
+		player->m_impl->watchTimeRuntime.seeking = value != nullptr;
+		player->m_impl->watchTimeRuntime.lastEventType = value ? WatchTimeEventType::Seek : WatchTimeEventType::SeekEnd;
+		++player->m_impl->watchTimeRuntime.updateSequence;
 		if (value) {
-			player->lastWatchTimePoint = *value;
-			player->watchTimePointAvailable = true;
-			player->watchTimePaused = value->system_date_us == INT64_MAX;
-			if (!player->watchTimePaused) {
-				player->watchTimePauseSystemDateUs = 0;
+			player->m_impl->watchTimeRuntime.lastPoint = *value;
+			player->m_impl->watchTimeRuntime.pointAvailable = true;
+			player->m_impl->watchTimeRuntime.paused = value->system_date_us == INT64_MAX;
+			if (!player->m_impl->watchTimeRuntime.paused) {
+				player->m_impl->watchTimeRuntime.pauseSystemDateUs = 0;
 			}
 		}
-		callback = player->watchTimeCallback;
+		callback = player->m_impl->watchTimeRuntime.callback;
 		info = buildWatchTimeInfoSnapshot(
-			player->lastWatchTimePoint,
-			player->watchTimeEnabled,
-			player->watchTimeRegistered,
-			player->watchTimePointAvailable,
-			player->watchTimePaused,
-			player->watchTimeSeeking,
-			player->watchTimeMinPeriodUs,
-			player->watchTimePauseSystemDateUs,
-			player->watchTimeLastEventType,
-			player->watchTimeUpdateSequence,
+			player->m_impl->watchTimeRuntime.lastPoint,
+			player->m_impl->watchTimeRuntime.enabled,
+			player->m_impl->watchTimeRuntime.registered,
+			player->m_impl->watchTimeRuntime.pointAvailable,
+			player->m_impl->watchTimeRuntime.paused,
+			player->m_impl->watchTimeRuntime.seeking,
+			player->m_impl->watchTimeRuntime.minPeriodUs,
+			player->m_impl->watchTimeRuntime.pauseSystemDateUs,
+			player->m_impl->watchTimeRuntime.lastEventType,
+			player->m_impl->watchTimeRuntime.updateSequence,
 			false);
 	}
 	if (callback) {
@@ -3279,24 +3279,33 @@ void ofxVlc4::mediaDiscovererMediaListEventStatic(const libvlc_event_t * event, 
 	if (!data) {
 		return;
 	}
-
-	static_cast<ofxVlc4 *>(data)->mediaDiscovererMediaListEvent(event);
+	auto * that = static_cast<ofxVlc4 *>(data);
+	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
+	that->mediaDiscovererMediaListEvent(event);
 }
 
 void ofxVlc4::rendererDiscovererEventStatic(const libvlc_event_t * event, void * data) {
 	if (!data) {
 		return;
 	}
-
-	static_cast<ofxVlc4 *>(data)->rendererDiscovererEvent(event);
+	auto * that = static_cast<ofxVlc4 *>(data);
+	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
+	that->rendererDiscovererEvent(event);
 }
 
 void ofxVlc4::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
 	if (!data) {
 		return;
 	}
-
-	static_cast<ofxVlc4 *>(data)->vlcMediaEvent(event);
+	auto * that = static_cast<ofxVlc4 *>(data);
+	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
+	that->vlcMediaEvent(event);
 }
 
 void ofxVlc4::mediaDiscovererMediaListEvent(const libvlc_event_t * event) {
@@ -3552,6 +3561,10 @@ void ofxVlc4::dialogDisplayLoginStatic(
 	if (!data || !id) {
 		return;
 	}
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -3561,7 +3574,7 @@ void ofxVlc4::dialogDisplayLoginStatic(
 	dialog.defaultUsername = defaultUsername ? defaultUsername : "";
 	dialog.askStore = askStore;
 	dialog.cancellable = true;
-	static_cast<ofxVlc4 *>(data)->upsertDialog(dialog);
+	owner->upsertDialog(dialog);
 }
 
 void ofxVlc4::dialogDisplayQuestionStatic(
@@ -3576,6 +3589,10 @@ void ofxVlc4::dialogDisplayQuestionStatic(
 	if (!data || !id) {
 		return;
 	}
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -3587,7 +3604,7 @@ void ofxVlc4::dialogDisplayQuestionStatic(
 	dialog.action1Label = action1 ? action1 : "";
 	dialog.action2Label = action2 ? action2 : "";
 	dialog.cancellable = !dialog.cancelLabel.empty();
-	static_cast<ofxVlc4 *>(data)->upsertDialog(dialog);
+	owner->upsertDialog(dialog);
 }
 
 void ofxVlc4::dialogDisplayProgressStatic(
@@ -3601,6 +3618,10 @@ void ofxVlc4::dialogDisplayProgressStatic(
 	if (!data || !id) {
 		return;
 	}
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -3611,15 +3632,18 @@ void ofxVlc4::dialogDisplayProgressStatic(
 	dialog.progressPosition = ofClamp(position, 0.0f, 1.0f);
 	dialog.cancelLabel = cancel ? cancel : "";
 	dialog.cancellable = !dialog.cancelLabel.empty();
-	static_cast<ofxVlc4 *>(data)->upsertDialog(dialog);
+	owner->upsertDialog(dialog);
 }
 
 void ofxVlc4::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
 	if (!data || !id) {
 		return;
 	}
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
 
-	ofxVlc4 * owner = static_cast<ofxVlc4 *>(data);
 	const std::uintptr_t token = reinterpret_cast<std::uintptr_t>(id);
 	owner->removeDialog(token);
 	libvlc_dialog_dismiss(id);
@@ -3631,6 +3655,9 @@ void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, flo
 	}
 
 	ofxVlc4 * owner = static_cast<ofxVlc4 *>(data);
+	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
 	dialog.type = DialogType::Progress;
@@ -3638,12 +3665,12 @@ void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, flo
 	dialog.text = text ? text : "";
 
 	{
-		std::lock_guard<std::mutex> lock(owner->dialogMutex);
+		std::lock_guard<std::mutex> lock(owner->m_impl->synchronizationRuntime.dialogMutex);
 		const auto it = std::find_if(
-			owner->activeDialogs.begin(),
-			owner->activeDialogs.end(),
+			owner->m_impl->diagnosticsRuntime.activeDialogs.begin(),
+			owner->m_impl->diagnosticsRuntime.activeDialogs.end(),
 			[&dialog](const DialogInfo & existing) { return existing.token == dialog.token; });
-		if (it != owner->activeDialogs.end()) {
+		if (it != owner->m_impl->diagnosticsRuntime.activeDialogs.end()) {
 			dialog.title = it->title;
 			dialog.cancelLabel = it->cancelLabel;
 			dialog.cancellable = it->cancellable;
@@ -3662,11 +3689,14 @@ void ofxVlc4::dialogErrorStatic(void * data, const char * title, const char * te
 	}
 
 	ofxVlc4 * owner = static_cast<ofxVlc4 *>(data);
+	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
 	{
-		std::lock_guard<std::mutex> lock(owner->dialogMutex);
-		owner->lastDialogError.available = true;
-		owner->lastDialogError.title = title ? title : "";
-		owner->lastDialogError.text = text ? text : "";
+		std::lock_guard<std::mutex> lock(owner->m_impl->synchronizationRuntime.dialogMutex);
+		owner->m_impl->diagnosticsRuntime.lastDialogError.available = true;
+		owner->m_impl->diagnosticsRuntime.lastDialogError.title = title ? title : "";
+		owner->m_impl->diagnosticsRuntime.lastDialogError.text = text ? text : "";
 	}
 
 	if (text && *text) {
