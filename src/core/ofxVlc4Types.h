@@ -193,3 +193,36 @@ struct ofxVlc4AudioVisualizerSettings {
 	int projectMMeshX = 0;       // --projectm-meshx (horizontal mesh density)
 	int projectMMeshY = 0;       // --projectm-meshy (vertical mesh density)
 };
+
+// ---------------------------------------------------------------------------
+// Recorder performance info (public POD moved here so that the heavy
+// ofxVlc4Recorder.h header is not required by consumers of ofxVlc4.h).
+// ---------------------------------------------------------------------------
+
+struct ofxVlc4RecorderPerformanceInfo {
+	bool asyncVideoReadbackEnabled = false;
+	bool asyncVideoReadbackPrimed = false;
+	ofxVlc4VideoReadbackPolicy readbackPolicy = ofxVlc4VideoReadbackPolicy::DropLateFrames;
+	size_t readbackBufferCount = 0;
+	uint64_t captureStartTimeUs = 0;
+	uint64_t submittedFrameCount = 0;
+	uint64_t readyFrameCount = 0;
+	uint64_t synchronousFrameCount = 0;
+	uint64_t fallbackFrameCount = 0;
+	uint64_t droppedFrameCount = 0;
+	uint64_t policyDroppedFrameCount = 0;
+	uint64_t mapFailureCount = 0;
+	uint64_t pendingFrameCount = 0;
+	uint64_t maxPendingFrameCount = 0;
+	uint64_t lastCaptureMicros = 0;
+	uint64_t averageCaptureMicros = 0;
+	uint64_t maxCaptureMicros = 0;
+	uint64_t lastReadbackLatencyMicros = 0;
+	uint64_t averageReadbackLatencyMicros = 0;
+	uint64_t maxReadbackLatencyMicros = 0;
+	uint64_t waitCount = 0;
+	uint64_t averageWaitMicros = 0;
+	uint64_t maxWaitMicros = 0;
+	double submittedFramesPerSecond = 0.0;
+	double readyFramesPerSecond = 0.0;
+};

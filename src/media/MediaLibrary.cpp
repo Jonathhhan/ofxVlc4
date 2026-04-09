@@ -631,6 +631,11 @@ std::vector<std::pair<std::string, std::string>> MediaLibrary::buildMetadataForM
 	return metadata;
 }
 
+std::vector<std::string> MediaLibrary::getPlaylist() const {
+	std::lock_guard<std::mutex> lock(owner.m_impl->mediaLibrary.playlistMutex);
+	return owner.m_impl->mediaLibrary.playlist;
+}
+
 std::vector<ofxVlc4::PlaylistItemInfo> MediaLibrary::getPlaylistItems() const {
 	std::vector<std::string> paths;
 	int currentIndex = -1;
