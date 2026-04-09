@@ -105,7 +105,11 @@ auto r = ggml.compute(graph);
 
 - **ofxGgmlExample** — Matrix multiplication with console output.
 - **ofxGgmlNeuralExample** — Simple feedforward neural network visualized in the OF window.
-- **ofxGgmlGuiExample** — Full ImGui-based AI Studio with tabs for Chat, Scripting, Summarize, Writing, and Custom prompts.  Uses ofxImGui for the GUI and demonstrates the complete ofxGgml compute pipeline in each mode.
+- **ofxGgmlGuiExample** — Full ImGui-based AI Studio with five modes (Chat, Script, Summarize, Write, Custom).  Features include:
+  - **Model preselection** — choose from 6 recommended GGUF models (TinyLlama, Phi-2, CodeLlama, DeepSeek Coder, Gemma) via a sidebar combo.
+  - **Script language selector** — 8 language presets (C++, Python, JavaScript, Rust, GLSL, Go, Bash, TypeScript) that set language-specific system prompts.
+  - **Script source browser** — connect to a **local folder** or **GitHub repository** to browse, load, and save script files directly from the scripting panel.
+  - **Session persistence** — auto-saves on exit, auto-loads on startup.  Full File → Save/Load Session support.  Saves all inputs, outputs, chat history, settings, model/language selections, and script source state.
 
 ## Build Scripts
 
@@ -128,18 +132,31 @@ Clone, compile, and install the ggml library from source:
 
 ### `scripts/download-model.sh`
 
-Download a GGUF model file for inference:
+Download a GGUF model file for inference.  Supports model presets:
 
 ```bash
 # Download default model (TinyLlama 1.1B Chat Q4_0, ~600 MB)
 ./scripts/download-model.sh
 
-# List recommended models
+# Select by preset number
+./scripts/download-model.sh --preset 4    # CodeLlama 7B — best for scripting
+
+# List all presets with details
 ./scripts/download-model.sh --list
 
-# Download a specific model
+# Download a specific model by URL
 ./scripts/download-model.sh --model https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_0.gguf
 ```
+
+Available presets:
+| # | Model | Size | Best for |
+|---|-------|------|----------|
+| 1 | TinyLlama 1.1B Chat Q4_0 | ~600 MB | chat, general |
+| 2 | TinyLlama 1.1B Chat Q8_0 | ~1.1 GB | chat, general (higher quality) |
+| 3 | Phi-2 Q4_0 | ~1.6 GB | reasoning, code, chat |
+| 4 | CodeLlama 7B Instruct Q4_0 | ~3.8 GB | scripting, code generation |
+| 5 | DeepSeek Coder 1.3B Q4_0 | ~0.8 GB | scripting, code |
+| 6 | Gemma 2B Instruct Q4_0 | ~1.4 GB | chat, summarize, writing |
 
 ## License
 

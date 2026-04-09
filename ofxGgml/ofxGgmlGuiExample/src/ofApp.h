@@ -57,6 +57,26 @@ struct ScriptLanguage {
 };
 
 // ---------------------------------------------------------------------------
+// ScriptSourceType — where script files come from.
+// ---------------------------------------------------------------------------
+
+enum class ScriptSourceType {
+	None,
+	LocalFolder,
+	GitHubRepo
+};
+
+// ---------------------------------------------------------------------------
+// ScriptFileEntry — a file discovered from local or GitHub source.
+// ---------------------------------------------------------------------------
+
+struct ScriptFileEntry {
+	std::string name;         // file name
+	std::string fullPath;     // local path (or URL for GitHub)
+	bool isDirectory = false;
+};
+
+// ---------------------------------------------------------------------------
 // ofApp — ofxGgml AI Studio with ofxImGui
 // ---------------------------------------------------------------------------
 
@@ -126,6 +146,22 @@ private:
 	int selectedLanguageIndex = 0;
 	void initScriptLanguages();
 
+	// -- script source (local folder / GitHub) --
+	ScriptSourceType scriptSourceType = ScriptSourceType::None;
+	std::string scriptSourcePath;                    // local folder path
+	char scriptSourceGitHub[512] = {};               // "owner/repo" input
+	char scriptSourceBranch[128] = {};               // branch name, default "main"
+	std::vector<ScriptFileEntry> scriptSourceFiles;  // discovered files
+	int selectedScriptFileIndex = -1;
+	std::string scriptSourceStatus;
+	bool showScriptSourcePanel = false;
+
+	void scanLocalFolder(const std::string & path);
+	void scanGitHubRepo(const std::string & ownerRepo, const std::string & branch);
+	void loadScriptFile(int index);
+	void saveScriptToSource(const std::string & filename, const std::string & content);
+	std::string buildScriptFilename() const;
+
 	// -- session persistence --
 	std::string sessionDir;
 	std::string lastSessionPath;
@@ -147,6 +183,7 @@ private:
 	void drawMainPanel();
 	void drawChatPanel();
 	void drawScriptPanel();
+	void drawScriptSourcePanel();
 	void drawSummarizePanel();
 	void drawWritePanel();
 	void drawCustomPanel();

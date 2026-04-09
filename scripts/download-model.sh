@@ -3,28 +3,68 @@
 # download-model.sh — Download a GGUF model for use with ofxGgml.
 #
 # Usage:
-#   ./scripts/download-model.sh [--model URL] [--output DIR] [--name FILE]
+#   ./scripts/download-model.sh [--model URL] [--preset N] [--output DIR] [--name FILE]
 #
 # Options:
 #   --model  URL   Direct URL to a GGUF model file.
 #                  Default: TinyLlama 1.1B Chat Q4_0
+#   --preset N     Select a model by preset number (see --list)
 #   --output DIR   Directory to save the model (default: bin/data/models/)
 #   --name   FILE  Output file name (default: derived from URL)
-#   --list         List recommended models and exit
+#   --list         List recommended models with preset numbers and exit
 #   --help         Show this help message
 #
 # Recommended models (small enough for development):
-#   TinyLlama 1.1B Chat Q4_0  (~600 MB)
-#   Phi-2 Q4_0                 (~1.6 GB)
-#   Gemma 2B Q4_0              (~1.4 GB)
+#   1. TinyLlama 1.1B Chat Q4_0   (~600 MB)  — chat, general
+#   2. TinyLlama 1.1B Chat Q8_0   (~1.1 GB)  — chat, general (higher quality)
+#   3. Phi-2 Q4_0                  (~1.6 GB)  — reasoning, code, chat
+#   4. CodeLlama 7B Instruct Q4_0  (~3.8 GB)  — scripting, code generation
+#   5. DeepSeek Coder 1.3B Q4_0    (~0.8 GB)  — scripting, code
+#   6. Gemma 2B Instruct Q4_0      (~1.4 GB)  — chat, summarize, writing
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
-# Default: TinyLlama 1.1B Chat in Q4_0 quantization (~600 MB)
-DEFAULT_MODEL_URL="https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_0.gguf"
+# ---------------------------------------------------------------------------
+# Model presets — same list as the GUI example
+# ---------------------------------------------------------------------------
+
+PRESET_NAMES=(
+	"TinyLlama 1.1B Chat Q4_0"
+	"TinyLlama 1.1B Chat Q8_0"
+	"Phi-2 Q4_0"
+	"CodeLlama 7B Instruct Q4_0"
+	"DeepSeek Coder 1.3B Instruct Q4_0"
+	"Gemma 2B Instruct Q4_0"
+)
+PRESET_URLS=(
+	"https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_0.gguf"
+	"https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q8_0.gguf"
+	"https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_0.gguf"
+	"https://huggingface.co/TheBloke/CodeLlama-7B-Instruct-GGUF/resolve/main/codellama-7b-instruct.Q4_0.gguf"
+	"https://huggingface.co/TheBloke/deepseek-coder-1.3b-instruct-GGUF/resolve/main/deepseek-coder-1.3b-instruct.Q4_0.gguf"
+	"https://huggingface.co/second-state/Gemma-2b-it-GGUF/resolve/main/gemma-2b-it-Q4_0.gguf"
+)
+PRESET_SIZES=(
+	"~600 MB"
+	"~1.1 GB"
+	"~1.6 GB"
+	"~3.8 GB"
+	"~0.8 GB"
+	"~1.4 GB"
+)
+PRESET_BESTFOR=(
+	"chat, general"
+	"chat, general (higher quality)"
+	"reasoning, code, chat"
+	"scripting, code generation"
+	"scripting, code"
+	"chat, summarize, writing"
+)
+
 MODEL_URL=""
 OUTPUT_DIR=""
 OUTPUT_NAME=""
+PRESET_INDEX=""
 
 write_step() {
 	printf '==> %s\n' "$1"
@@ -41,24 +81,18 @@ usage() {
 }
 
 list_models() {
-	cat <<'EOF'
-Recommended GGUF models for development / testing:
-
-  TinyLlama 1.1B Chat Q4_0  (~600 MB)
-    https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_0.gguf
-
-  TinyLlama 1.1B Chat Q8_0  (~1.1 GB, higher quality)
-    https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q8_0.gguf
-
-  Phi-2 Q4_0  (~1.6 GB)
-    https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_0.gguf
-
-  Gemma 2B Instruct Q4_0  (~1.4 GB)
-    https://huggingface.co/second-state/Gemma-2b-it-GGUF/resolve/main/gemma-2b-it-Q4_0.gguf
-
-Usage:
-  ./scripts/download-model.sh --model <URL>
-EOF
+	echo "Recommended GGUF models for development / testing:"
+	echo ""
+	for i in "${!PRESET_NAMES[@]}"; do
+		local n=$((i + 1))
+		printf "  %d. %-40s %s\n" "$n" "${PRESET_NAMES[$i]}" "${PRESET_SIZES[$i]}"
+		printf "     Best for: %s\n" "${PRESET_BESTFOR[$i]}"
+		printf "     %s\n\n" "${PRESET_URLS[$i]}"
+	done
+	echo "Usage:"
+	echo "  ./scripts/download-model.sh --preset 1      # TinyLlama (default)"
+	echo "  ./scripts/download-model.sh --preset 4      # CodeLlama for scripting"
+	echo "  ./scripts/download-model.sh --model <URL>   # custom URL"
 	exit 0
 }
 
@@ -70,6 +104,10 @@ while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--model)
 			MODEL_URL="$2"
+			shift 2
+			;;
+		--preset)
+			PRESET_INDEX="$2"
 			shift 2
 			;;
 		--output)
@@ -92,10 +130,20 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
+# Resolve preset.
+if [[ -n "$PRESET_INDEX" ]]; then
+	idx=$((PRESET_INDEX - 1))
+	if [[ $idx -lt 0 ]] || [[ $idx -ge ${#PRESET_URLS[@]} ]]; then
+		die "Invalid preset number: $PRESET_INDEX (valid: 1-${#PRESET_URLS[@]})"
+	fi
+	MODEL_URL="${PRESET_URLS[$idx]}"
+	write_step "Preset $PRESET_INDEX selected: ${PRESET_NAMES[$idx]} (${PRESET_SIZES[$idx]})"
+fi
+
 # Defaults.
 if [[ -z "$MODEL_URL" ]]; then
-	MODEL_URL="$DEFAULT_MODEL_URL"
-	write_step "No --model specified, using default: TinyLlama 1.1B Chat Q4_0"
+	MODEL_URL="${PRESET_URLS[0]}"
+	write_step "No --model or --preset specified, using default: ${PRESET_NAMES[0]}"
 fi
 
 if [[ -z "$OUTPUT_DIR" ]]; then
