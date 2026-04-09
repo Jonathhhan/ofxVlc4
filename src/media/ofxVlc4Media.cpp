@@ -1046,22 +1046,22 @@ void ofxVlc4::applyMediaPlayerRole() {
 
 
 void ofxVlc4::detachEvents() {
-	auto & cs = m_impl->subsystemRuntime.coreSession;
-	auto & er = m_impl->subsystemRuntime.eventRouter;
+	auto & coreSession = m_impl->subsystemRuntime.coreSession;
+	auto & eventRouter = m_impl->subsystemRuntime.eventRouter;
 
-	if (cs && cs->playerEvents()) {
-		if (er) {
-			cs->detachPlayerEvents(er.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
+	if (coreSession && coreSession->playerEvents()) {
+		if (eventRouter) {
+			coreSession->detachPlayerEvents(eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
 		} else {
-			cs->setPlayerEvents(nullptr);
+			coreSession->setPlayerEvents(nullptr);
 		}
 	}
 
-	if (cs && cs->mediaEvents()) {
-		if (er) {
-			cs->detachMediaEvents(er.get(), VlcEventRouter::vlcMediaEventStatic);
+	if (coreSession && coreSession->mediaEvents()) {
+		if (eventRouter) {
+			coreSession->detachMediaEvents(eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
 		} else {
-			cs->setMediaEvents(nullptr);
+			coreSession->setMediaEvents(nullptr);
 		}
 	}
 }
