@@ -1692,9 +1692,12 @@ void ofxVlc4::VideoComponent::setVideoOutputBackend(VideoOutputBackend backend) 
 	clearVideoHdrMetadata();
 
 	if (owner.sessionPlayer()) {
-		owner.logWarning(std::string("Video output backend changes apply on the next player initialization: ") +
-			videoOutputBackendLabel(backend) + ".");
-		owner.setStatus("Video output backend updated for the next init.");
+		if (media().reinitAndReapplyCurrentMedia("Video output backend")) {
+			return;
+		}
+		owner.logNotice(std::string("Video output backend set to ") +
+			videoOutputBackendLabel(backend) + ". Reinit to apply.");
+		owner.setStatus("Video output backend updated. Reinit to apply.");
 		return;
 	}
 

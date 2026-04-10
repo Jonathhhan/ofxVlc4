@@ -1196,6 +1196,14 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMTextureSize = std::max(0, settings.projectMTextureSize);
 	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMMeshX = std::max(0, settings.projectMMeshX);
 	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMMeshY = std::max(0, settings.projectMMeshY);
+	if (sessionPlayer()) {
+		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
+			return;
+		}
+		logNotice("Audio visualizer settings updated. Reinit to apply.");
+		setStatus("Audio visualizer settings updated. Reinit to apply.");
+		return;
+	}
 	setStatus("Audio visualizer settings updated for the next init.");
 }
 

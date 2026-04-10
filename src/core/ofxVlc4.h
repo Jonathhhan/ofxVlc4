@@ -916,6 +916,7 @@ private:
 	void clearWatchTimeState();
 	bool isPlaybackLocallyStopped() const;
 	bool reapplyCurrentMediaForFilterChainChange(const std::string & label);
+	bool reinitAndReapplyCurrentMedia(const std::string & label);
 	void applySafeLoadedMediaPlayerSettings();
 	void applyCurrentMediaPlayerSettings();
 	void applyCurrentVolumeToPlayer();
