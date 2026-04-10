@@ -94,9 +94,8 @@ static void testFileNameFromUri() {
 	CHECK_EQ(fileNameFromUri("http://example.com/video.mp4?token=abc"), "video.mp4");
 	// Fragment stripped
 	CHECK_EQ(fileNameFromUri("http://example.com/video.mp4#00:01:00"), "video.mp4");
-	// URI ending in slash → nothing after the slash; function returns the
-	// whole URI (without query) as a fallback.
-	CHECK_EQ(fileNameFromUri("http://example.com/"), "http://example.com/");
+	// URI ending in slash → no filename after the slash; return empty.
+	CHECK_EQ(fileNameFromUri("http://example.com/"), "");
 	// No path component
 	CHECK_EQ(fileNameFromUri("http://example.com"), "example.com");
 }
@@ -526,6 +525,10 @@ static void testFileNameFromUriEdgeCases() {
 
 	// Deeply nested path.
 	CHECK_EQ(fileNameFromUri("http://a.com/1/2/3/4/deep.ts"), "deep.ts");
+
+	// Trailing slash → no filename → returns empty.
+	CHECK_EQ(fileNameFromUri("http://example.com/path/"), "");
+	CHECK_EQ(fileNameFromUri("/"), "");
 }
 
 // ---------------------------------------------------------------------------

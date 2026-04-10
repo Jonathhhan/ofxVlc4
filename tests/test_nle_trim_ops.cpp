@@ -224,6 +224,16 @@ static void testTrimRoll() {
 		track.addSegment(makeSeg("R", 10, 30, 30));
 		CHECK(trimRoll(track, 0, 0));
 	}
+
+	// Roll that would make right segment timelineStart negative → fail.
+	// Left starts at 0 with duration 5; rolling left by 10 would push
+	// right segment start to 5 + (-10) = -5.
+	{
+		Track track(TrackType::Video, "V1");
+		track.addSegment(makeSeg("L", 0, 5, 0));
+		track.addSegment(makeSeg("R", 100, 30, 5));
+		CHECK(!trimRoll(track, 0, -10));
+	}
 }
 
 // ---------------------------------------------------------------------------

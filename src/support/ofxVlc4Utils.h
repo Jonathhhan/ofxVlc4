@@ -48,8 +48,11 @@ inline std::string fileNameFromUri(const std::string & uri) {
 	const size_t queryPos = uri.find_first_of("?#");
 	const std::string withoutQuery = uri.substr(0, queryPos);
 	const size_t slashPos = withoutQuery.find_last_of('/');
-	if (slashPos == std::string::npos || slashPos + 1 >= withoutQuery.size()) {
+	if (slashPos == std::string::npos) {
 		return withoutQuery;
+	}
+	if (slashPos + 1 >= withoutQuery.size()) {
+		return {};
 	}
 	return withoutQuery.substr(slashPos + 1);
 }

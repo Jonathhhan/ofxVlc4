@@ -34,8 +34,8 @@ public:
 	size_t getNumReadableSamples() const;
 	size_t getNumWritableSamples() const;
 
-	uint64_t getOverrunCount() const { return _overruns.load(std::memory_order_relaxed); }
-	uint64_t getUnderrunCount() const { return _underruns.load(std::memory_order_relaxed); }
+	uint64_t getOverrunCount() const { return _overruns.load(std::memory_order_acquire); }
+	uint64_t getUnderrunCount() const { return _underruns.load(std::memory_order_acquire); }
 
 private:
 	size_t writeBegin(float *& first, size_t & firstCount, float *& second, size_t & secondCount);

@@ -889,7 +889,9 @@ MidiAnalysisReport MidiFileAnalyzer::analyzeFile(const std::string & path) const
 				[](const MidiTempoChange & a, const MidiTempoChange & b) { return a.tick == b.tick; }),
 				tempoChanges.end());
 
-			tempoChanges.front().seconds = 0.0;
+			if (!tempoChanges.empty()) {
+				tempoChanges.front().seconds = 0.0;
+			}
 			for (size_t i = 1; i < tempoChanges.size(); ++i) {
 				const MidiTempoChange & previousTempo = tempoChanges[i - 1];
 				tempoChanges[i].seconds = previousTempo.seconds +

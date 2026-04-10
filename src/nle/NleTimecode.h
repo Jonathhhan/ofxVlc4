@@ -12,6 +12,7 @@
 // ---------------------------------------------------------------------------
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -172,8 +173,8 @@ public:
 		if (isDropFrame(rate)) {
 			// Standard drop-frame conversion: SMPTE → absolute frame count.
 			const int d = droppedFramesPerMinute(rate); // 2 or 4
-			const int totalMinutes = hours * 60 + minutes;
-			const int dropCorrection = d * (totalMinutes - totalMinutes / 10);
+			const int64_t totalMinutes = static_cast<int64_t>(hours) * 60 + minutes;
+			const int64_t dropCorrection = static_cast<int64_t>(d) * (totalMinutes - totalMinutes / 10);
 
 			totalFrames =
 				static_cast<int64_t>(hours) * 3600 * fps +
@@ -257,20 +258,24 @@ public:
 	// -- Arithmetic --
 
 	Timecode operator+(const Timecode & rhs) const {
+		assert(m_rate == rhs.m_rate && "Timecode arithmetic requires matching frame rates");
 		return Timecode(m_frames + rhs.m_frames, m_rate);
 	}
 
 	Timecode operator-(const Timecode & rhs) const {
+		assert(m_rate == rhs.m_rate && "Timecode arithmetic requires matching frame rates");
 		const int64_t diff = m_frames - rhs.m_frames;
 		return Timecode(diff < 0 ? 0 : diff, m_rate);
 	}
 
 	Timecode & operator+=(const Timecode & rhs) {
+		assert(m_rate == rhs.m_rate && "Timecode arithmetic requires matching frame rates");
 		m_frames += rhs.m_frames;
 		return *this;
 	}
 
 	Timecode & operator-=(const Timecode & rhs) {
+		assert(m_rate == rhs.m_rate && "Timecode arithmetic requires matching frame rates");
 		m_frames -= rhs.m_frames;
 		if (m_frames < 0) m_frames = 0;
 		return *this;

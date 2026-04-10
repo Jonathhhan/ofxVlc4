@@ -99,7 +99,7 @@ inline bool trimRoll(Track & track, size_t leftSegIndex, int64_t deltaFrames)
 	int64_t newRightStart = right.timelineStart.totalFrames() + deltaFrames;
 	int64_t newRightDur = right.duration.totalFrames() - deltaFrames;
 
-	if (newRightSourceIn < 0 || newRightDur <= 0) return false;
+	if (newRightSourceIn < 0 || newRightDur <= 0 || newRightStart < 0) return false;
 
 	left.duration = Timecode(newLeftDur, rate);
 	right.sourceIn = Timecode(newRightSourceIn, rate);

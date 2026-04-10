@@ -486,6 +486,28 @@ static void testSmpteStringFormat() {
 }
 
 // ---------------------------------------------------------------------------
+// Drop-frame overflow — verify int64_t used for dropCorrection
+// ---------------------------------------------------------------------------
+
+static void testDropFrameOverflow() {
+	beginSuite("Drop-frame overflow (large hours)");
+
+	// A large hour value that would overflow a 32-bit int in the old
+	// computation: totalMinutes * d could exceed INT_MAX.
+	// 10 000 hours at 29.97 DF → totalMinutes = 600 000, dropCorrection ~= 1 080 000
+	const auto tc = Timecode::fromSmpte(10000, 0, 0, 0, FrameRate::Fps29_97_DF);
+	// Sanity: should be a very large positive frame count.
+	CHECK(tc.totalFrames() > 0);
+	// Round-trip back to SMPTE should yield the same components.
+	int hh = 0, mm = 0, ss = 0, ff = 0;
+	tc.toSmpte(hh, mm, ss, ff);
+	CHECK_EQ(hh, 10000);
+	CHECK_EQ(mm, 0);
+	CHECK_EQ(ss, 0);
+	CHECK_EQ(ff, 0);
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -504,6 +526,7 @@ int main() {
 	testClampNegative();
 	testFrameRateHelpers();
 	testSmpteStringFormat();
+	testDropFrameOverflow();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

@@ -1094,6 +1094,10 @@ std::vector<float> ofxVlc4::AudioComponent::getEqualizerSpectrumLevels(size_t po
 	fftInPlace(spectrumFftInput);
 
 	spectrumMagnitudes.assign((kSpectrumFftSize / 2u) + 1u, 0.0f);
+	if (spectrumMagnitudes.size() < 2) {
+		clearSpectrumAnalysisCache();
+		return levels;
+	}
 	for (size_t binIndex = 1; binIndex < spectrumMagnitudes.size(); ++binIndex) {
 		spectrumMagnitudes[binIndex] = std::abs(spectrumFftInput[binIndex]);
 	}
@@ -1125,8 +1129,9 @@ std::vector<float> ofxVlc4::AudioComponent::getEqualizerSpectrumLevels(size_t po
 
 		int lowBin = static_cast<int>(std::floor((lowFrequency / static_cast<float>(rate)) * static_cast<float>(kSpectrumFftSize)));
 		int highBin = static_cast<int>(std::ceil((highFrequency / static_cast<float>(rate)) * static_cast<float>(kSpectrumFftSize)));
-		lowBin = std::clamp(lowBin, 1, static_cast<int>(spectrumMagnitudes.size()) - 1);
-		highBin = std::clamp(highBin, lowBin, static_cast<int>(spectrumMagnitudes.size()) - 1);
+		const int maxBin = static_cast<int>(spectrumMagnitudes.size()) - 1;
+		lowBin = std::clamp(lowBin, 1, maxBin);
+		highBin = std::clamp(highBin, lowBin, maxBin);
 
 		float powerSum = 0.0f;
 		int sampleCount = 0;

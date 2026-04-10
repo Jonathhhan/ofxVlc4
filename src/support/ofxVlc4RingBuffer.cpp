@@ -131,7 +131,7 @@ size_t ofxVlc4RingBuffer::write(const float * src, size_t wanted) {
 	const size_t writable = writeBegin(dst[0], count[0], dst[1], count[1]);
 	const size_t consumed = std::min(wanted, writable);
 	if (consumed == 0) {
-		_overruns.fetch_add(1, std::memory_order_relaxed);
+		_overruns.fetch_add(1, std::memory_order_release);
 		return 0;
 	}
 
@@ -145,7 +145,7 @@ size_t ofxVlc4RingBuffer::write(const float * src, size_t wanted) {
 	writeEnd(consumed);
 
 	if (consumed < wanted) {
-		_overruns.fetch_add(1, std::memory_order_relaxed);
+		_overruns.fetch_add(1, std::memory_order_release);
 	}
 
 	return consumed;
@@ -172,7 +172,7 @@ size_t ofxVlc4RingBuffer::read(float * dst, size_t wanted) {
 
 	if (filled < wanted) {
 		std::memset(dst + filled, 0, (wanted - filled) * sizeof(float));
-		_underruns.fetch_add(1, std::memory_order_relaxed);
+		_underruns.fetch_add(1, std::memory_order_release);
 	}
 
 	return filled;

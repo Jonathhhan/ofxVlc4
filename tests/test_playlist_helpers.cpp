@@ -60,6 +60,11 @@ static void testXmlUnescape() {
 	CHECK_EQ(xmlUnescape(""), "");
 	// Lone ampersand passes through
 	CHECK_EQ(xmlUnescape("a&b"), "a&b");
+	// Trailing ampersand with insufficient characters for any entity.
+	CHECK_EQ(xmlUnescape("test&"), "test&");
+	CHECK_EQ(xmlUnescape("&"), "&");
+	CHECK_EQ(xmlUnescape("&&"), "&&");
+	CHECK_EQ(xmlUnescape("foo&am"), "foo&am");
 }
 
 static void testXmlRoundTrip() {

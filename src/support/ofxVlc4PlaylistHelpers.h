@@ -38,17 +38,19 @@ inline std::string xmlEscape(const std::string & input) {
 inline std::string xmlUnescape(const std::string & input) {
 	std::string out;
 	out.reserve(input.size());
-	for (size_t i = 0; i < input.size(); ++i) {
+	const size_t len = input.size();
+	for (size_t i = 0; i < len; ++i) {
 		if (input[i] == '&') {
-			if (input.compare(i, 5, "&amp;") == 0) {
+			const size_t remaining = len - i;
+			if (remaining >= 5 && input.compare(i, 5, "&amp;") == 0) {
 				out += '&'; i += 4;
-			} else if (input.compare(i, 4, "&lt;") == 0) {
+			} else if (remaining >= 4 && input.compare(i, 4, "&lt;") == 0) {
 				out += '<'; i += 3;
-			} else if (input.compare(i, 4, "&gt;") == 0) {
+			} else if (remaining >= 4 && input.compare(i, 4, "&gt;") == 0) {
 				out += '>'; i += 3;
-			} else if (input.compare(i, 6, "&quot;") == 0) {
+			} else if (remaining >= 6 && input.compare(i, 6, "&quot;") == 0) {
 				out += '"'; i += 5;
-			} else if (input.compare(i, 6, "&apos;") == 0) {
+			} else if (remaining >= 6 && input.compare(i, 6, "&apos;") == 0) {
 				out += '\''; i += 5;
 			} else {
 				out += '&';
