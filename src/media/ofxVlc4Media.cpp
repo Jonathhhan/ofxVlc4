@@ -11,6 +11,7 @@
 #include "core/VlcEventRouter.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdarg>
 #include <cctype>
@@ -19,6 +20,7 @@
 #include <iomanip>
 #include <set>
 #include <sstream>
+#include <thread>
 
 using ofxVlc4Utils::clearAllocatedFbo;
 using ofxVlc4Utils::fallbackIndexedLabel;
@@ -490,6 +492,26 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 		directMediaOptions = playback().playbackTransport.activeDirectMediaOptions;
 		directMediaIsLocation = playback().playbackTransport.activeDirectMediaIsLocation;
 		directMediaParseAsNetwork = playback().playbackTransport.activeDirectMediaParseAsNetwork;
+	}
+
+	// Stop active playback before reinit so VLC's rendering threads (especially the
+	// OpenGL video output) have a chance to shut down cleanly.  Without this, the
+	// subsequent releaseVlcResources() inside init() can tear down GL resources
+	// while the vout is still using them, triggering a GL_INVALID_OPERATION assert
+	// inside VLC's vout_helper.c.
+	if (libvlc_media_player_is_playing(player) ||
+		libvlc_media_player_get_state(player) == libvlc_Paused) {
+		libvlc_media_player_stop_async(player);
+
+		constexpr int kReinitStopPollMs = 4;
+		constexpr int kReinitStopMaxWaitMs = 200;
+		for (int waitedMs = 0; waitedMs < kReinitStopMaxWaitMs; waitedMs += kReinitStopPollMs) {
+			const libvlc_state_t state = libvlc_media_player_get_state(player);
+			if (ofxVlc4Utils::isStoppedOrIdleState(state) || state == libvlc_Stopping) {
+				break;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(kReinitStopPollMs));
+		}
 	}
 
 	// Reinitialize the VLC instance and player with the updated settings.
