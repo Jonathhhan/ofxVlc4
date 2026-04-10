@@ -96,17 +96,24 @@ private:
 	TrimMode currentTrimMode = TrimMode::None;
 
 	// -- Export state --
+	//
+	// The timeline is rendered as a single output file.  A recording session
+	// is opened once at the start of export and kept running while each
+	// segment is played sequentially through the source player.  When the
+	// last segment finishes, the recording session is stopped, producing
+	// one continuous file that contains the entire sequence.
 	enum class ExportState {
 		Idle,
-		PreparingSegment,
-		RecordingSegment,
-		WaitingForMux,
+		StartingSession,   ///< Open recording session, load first segment
+		PreparingSegment,  ///< Load source media for the current segment
+		RecordingSegment,  ///< Playing/recording the current segment
+		FinishingSession,  ///< Stop recording, wait for mux
 		Done,
 		Failed
 	};
 	ExportState exportState = ExportState::Idle;
 	int exportSegmentIndex = -1;
-	bool exportClipStarted = false;
+	bool exportRecordingActive = false;  ///< True while the single recording session is open
 	std::string exportOutputDir;
 	std::string exportError;
 	std::string exportLastFile;
