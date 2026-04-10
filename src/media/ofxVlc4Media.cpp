@@ -488,10 +488,10 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 	bool directMediaIsLocation = true;
 	bool directMediaParseAsNetwork = false;
 	if (hadDirectMedia) {
-		directMediaSource = playback().playbackTransport.activeDirectMediaSource;
-		directMediaOptions = playback().playbackTransport.activeDirectMediaOptions;
-		directMediaIsLocation = playback().playbackTransport.activeDirectMediaIsLocation;
-		directMediaParseAsNetwork = playback().playbackTransport.activeDirectMediaParseAsNetwork;
+		directMediaSource = playback().getActiveDirectMediaSource();
+		directMediaOptions = playback().getActiveDirectMediaOptions();
+		directMediaIsLocation = playback().getActiveDirectMediaIsLocation();
+		directMediaParseAsNetwork = playback().getActiveDirectMediaParseAsNetwork();
 	}
 
 	// Stop active playback before reinit so VLC's rendering threads (especially the

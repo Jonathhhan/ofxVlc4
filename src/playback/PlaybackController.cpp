@@ -1300,3 +1300,19 @@ bool PlaybackController::reloadActiveDirectMedia() {
 		playbackTransport.activeDirectMediaOptions,
 		playbackTransport.activeDirectMediaParseAsNetwork);
 }
+
+const std::string & PlaybackController::getActiveDirectMediaSource() const {
+	return playbackTransport.activeDirectMediaSource;
+}
+
+const std::vector<std::string> & PlaybackController::getActiveDirectMediaOptions() const {
+	return playbackTransport.activeDirectMediaOptions;
+}
+
+bool PlaybackController::getActiveDirectMediaIsLocation() const {
+	return playbackTransport.activeDirectMediaIsLocation;
+}
+
+bool PlaybackController::getActiveDirectMediaParseAsNetwork() const {
+	return playbackTransport.activeDirectMediaParseAsNetwork;
+}
