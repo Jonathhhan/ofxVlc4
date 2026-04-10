@@ -12,6 +12,7 @@ public:
 	void applySafeLoadedMediaPlayerSettings();
 	void prepareStartupMediaResources();
 	bool reapplyCurrentMediaForFilterChainChange(const std::string & label);
+	bool reinitAndReapplyCurrentMedia(const std::string & label);
 	ofxVlc4::MediaPlayerRole getMediaPlayerRole() const;
 	void setMediaPlayerRole(ofxVlc4::MediaPlayerRole role);
 	bool isWatchTimeEnabled() const;

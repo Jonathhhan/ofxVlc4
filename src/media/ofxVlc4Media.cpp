@@ -11,6 +11,7 @@
 #include "core/VlcEventRouter.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdarg>
 #include <cctype>
@@ -19,6 +20,7 @@
 #include <iomanip>
 #include <set>
 #include <sstream>
+#include <thread>
 
 using ofxVlc4Utils::clearAllocatedFbo;
 using ofxVlc4Utils::fallbackIndexedLabel;
@@ -466,6 +468,98 @@ bool ofxVlc4::MediaComponent::reapplyCurrentMediaForFilterChainChange(const std:
 	return true;
 }
 
+bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & label) {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	libvlc_media_t * currentMedia = owner.sessionMedia();
+	if (!player || !currentMedia || playback().hasPendingManualStopEvents()) {
+		return false;
+	}
+
+	// Capture playback state before reinit destroys the player.
+	const int64_t resumeTimeMs = std::max<int64_t>(0, playback().getTime());
+	const bool wasPlaying = libvlc_media_player_is_playing(player);
+	const bool wasPaused = libvlc_media_player_get_state(player) == libvlc_Paused;
+
+	// Capture media source before reinit clears playback transport state.
+	const int savedIndex = getCurrentIndex();
+	const bool hadDirectMedia = playback().hasActiveDirectMedia();
+	std::string directMediaSource;
+	std::vector<std::string> directMediaOptions;
+	bool directMediaIsLocation = true;
+	bool directMediaParseAsNetwork = false;
+	if (hadDirectMedia) {
+		directMediaSource = playback().playbackTransport.activeDirectMediaSource;
+		directMediaOptions = playback().playbackTransport.activeDirectMediaOptions;
+		directMediaIsLocation = playback().playbackTransport.activeDirectMediaIsLocation;
+		directMediaParseAsNetwork = playback().playbackTransport.activeDirectMediaParseAsNetwork;
+	}
+
+	// Stop active playback before reinit so VLC's rendering threads (especially the
+	// OpenGL video output) have a chance to shut down cleanly.  Without this, the
+	// subsequent releaseVlcResources() inside init() can tear down GL resources
+	// while the vout is still using them, triggering a GL_INVALID_OPERATION assert
+	// inside VLC's vout_helper.c.
+	if (libvlc_media_player_is_playing(player) ||
+		libvlc_media_player_get_state(player) == libvlc_Paused) {
+		libvlc_media_player_stop_async(player);
+
+		constexpr int kReinitStopPollMs = 4;
+		constexpr int kReinitStopMaxWaitMs = 200;
+		for (int waitedMs = 0; waitedMs < kReinitStopMaxWaitMs; waitedMs += kReinitStopPollMs) {
+			const libvlc_state_t state = libvlc_media_player_get_state(player);
+			if (ofxVlc4Utils::isStoppedOrIdleState(state) || state == libvlc_Stopping) {
+				break;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(kReinitStopPollMs));
+		}
+	}
+
+	// Reinitialize the VLC instance and player with the updated settings.
+	owner.init(0, nullptr);
+	if (!owner.sessionPlayer()) {
+		owner.logWarning(label + " reinit failed; player is not available.");
+		return false;
+	}
+
+	// Reload the previously-active media.
+	bool reloaded = false;
+	if (savedIndex >= 0) {
+		reloaded = loadMediaAtIndex(savedIndex);
+	} else if (hadDirectMedia && !directMediaSource.empty()) {
+		reloaded = owner.loadMediaSource(directMediaSource, directMediaIsLocation, directMediaOptions, directMediaParseAsNetwork);
+	}
+
+	if (!reloaded) {
+		owner.logWarning(label + " applied but media could not be reloaded.");
+		owner.setStatus(label + " applied. Reload media manually.");
+		return false;
+	}
+
+	// Restore playback position and state.
+	libvlc_media_player_t * newPlayer = owner.sessionPlayer();
+	if (resumeTimeMs > 0 && newPlayer && libvlc_media_player_is_seekable(newPlayer)) {
+		if (libvlc_media_player_set_time(newPlayer, resumeTimeMs, true) != 0) {
+			owner.logWarning("libvlc_media_player_set_time failed while reapplying " + label + ".");
+		}
+	}
+
+	if (wasPlaying || wasPaused) {
+		audio().applyEqualizerSettings();
+		audio().clearPendingEqualizerApplyOnPlay();
+		video().clearPendingVideoAdjustApplyOnPlay();
+		if (newPlayer && libvlc_media_player_play(newPlayer) != 0) {
+			owner.logWarning("libvlc_media_player_play failed while reapplying " + label + ".");
+		}
+		if (wasPaused && newPlayer) {
+			libvlc_media_player_set_pause(newPlayer, 1);
+		}
+	}
+
+	owner.setStatus(label + " applied to current media.");
+	owner.logNotice(label + " applied to current media.");
+	return true;
+}
+
 void ofxVlc4::prepareStartupPlaybackState() {
 	m_impl->subsystemRuntime.mediaComponent->prepareStartupPlaybackState();
 }
@@ -480,6 +574,10 @@ void ofxVlc4::applySafeLoadedMediaPlayerSettings() {
 
 bool ofxVlc4::reapplyCurrentMediaForFilterChainChange(const std::string & label) {
 	return m_impl->subsystemRuntime.mediaComponent->reapplyCurrentMediaForFilterChainChange(label);
+}
+
+bool ofxVlc4::reinitAndReapplyCurrentMedia(const std::string & label) {
+	return m_impl->subsystemRuntime.mediaComponent->reinitAndReapplyCurrentMedia(label);
 }
 
 bool ofxVlc4::loadMediaSource(
