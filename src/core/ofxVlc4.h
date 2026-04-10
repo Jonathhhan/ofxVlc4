@@ -952,7 +952,6 @@ private:
 	void ensureVideoRenderTargetCapacity(unsigned requiredWidth, unsigned requiredHeight);
 	void ensureExposedTextureFboCapacity(unsigned requiredWidth, unsigned requiredHeight);
 	bool loadMediaAtIndex(int index);
-	void activatePlaylistIndex(int index, bool shouldPlay);
 	void activatePlaylistIndexImmediate(int index, bool shouldPlay);
 	void addToPlaylistInternal(const std::string & path, bool preloadMetadata);
 	void clearCurrentMedia(bool clearVideoResources = true);
@@ -1307,6 +1306,7 @@ public:
 	int addPathToPlaylist(const std::string & path, std::initializer_list<std::string> extensions);
 	void clearPlaylist();
 	void playIndex(int index);
+	void activatePlaylistIndex(int index, bool shouldPlay);
 	void nextMediaListItem();
 	void previousMediaListItem();
 	void removeFromPlaylist(int index);

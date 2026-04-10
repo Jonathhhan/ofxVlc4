@@ -241,6 +241,82 @@ static void testPlaybackDeleteDecisionHelpers() {
 	CHECK(!shouldClearCurrentMediaAfterPlaylistMutation(true, false));
 	CHECK(!shouldClearCurrentMediaAfterPlaylistMutation(false, true));
 	CHECK(!shouldClearCurrentMediaAfterPlaylistMutation(true, true));
+
+	{
+		const DeferredManualStopDecision decision = evaluateDeferredManualStop(
+			false, true, false, false, false, true, false, 100, 260, false);
+		CHECK(decision.shouldResetManualStop);
+		CHECK(!decision.shouldFinalizeManualStop);
+		CHECK(!decision.shouldRetryStopAsync);
+	}
+
+	{
+		const DeferredManualStopDecision decision = evaluateDeferredManualStop(
+			false, true, false, false, true, true, true, 100, 120, false);
+		CHECK(!decision.shouldResetManualStop);
+		CHECK(decision.shouldFinalizeManualStop);
+		CHECK(!decision.shouldRetryStopAsync);
+	}
+
+	{
+		const DeferredManualStopDecision decision = evaluateDeferredManualStop(
+			false, true, false, false, true, true, false, 100, 300, false);
+		CHECK(!decision.shouldResetManualStop);
+		CHECK(!decision.shouldFinalizeManualStop);
+		CHECK(decision.shouldRetryStopAsync);
+	}
+
+	{
+		const DeferredManualStopDecision decision = evaluateDeferredManualStop(
+			false, true, false, false, true, true, false, 100, 1700, false);
+		CHECK(!decision.shouldResetManualStop);
+		CHECK(decision.shouldFinalizeManualStop);
+		CHECK(decision.shouldRetryStopAsync);
+	}
+
+	{
+		const DeferredManualStopDecision decision = evaluateDeferredManualStop(
+			false, true, true, false, true, true, true, 100, 1700, false);
+		CHECK(!decision.shouldResetManualStop);
+		CHECK(!decision.shouldFinalizeManualStop);
+		CHECK(!decision.shouldRetryStopAsync);
+	}
+
+	{
+		const StoppedPlaybackEventDecision decision = evaluateStoppedPlaybackEvent(
+			1, false, false, true, false);
+		CHECK(decision.keepManualStopInProgress);
+		CHECK(decision.shouldFinalizeManualStop);
+		CHECK(!decision.shouldActivatePendingRequest);
+		CHECK(!decision.shouldQueuePlaybackAdvance);
+	}
+
+	{
+		const StoppedPlaybackEventDecision decision = evaluateStoppedPlaybackEvent(
+			1, true, false, true, false);
+		CHECK(decision.keepManualStopInProgress);
+		CHECK(!decision.shouldFinalizeManualStop);
+		CHECK(decision.shouldActivatePendingRequest);
+		CHECK(!decision.shouldQueuePlaybackAdvance);
+	}
+
+	{
+		const StoppedPlaybackEventDecision decision = evaluateStoppedPlaybackEvent(
+			0, false, false, true, true);
+		CHECK(!decision.keepManualStopInProgress);
+		CHECK(!decision.shouldFinalizeManualStop);
+		CHECK(!decision.shouldActivatePendingRequest);
+		CHECK(decision.shouldQueuePlaybackAdvance);
+	}
+
+	{
+		const StoppedPlaybackEventDecision decision = evaluateStoppedPlaybackEvent(
+			0, false, false, false, true);
+		CHECK(!decision.keepManualStopInProgress);
+		CHECK(!decision.shouldFinalizeManualStop);
+		CHECK(!decision.shouldActivatePendingRequest);
+		CHECK(!decision.shouldQueuePlaybackAdvance);
+	}
 }
 
 // ---------------------------------------------------------------------------

@@ -470,10 +470,7 @@ void ofApp::setup() {
 	ofSetFrameRate(60);
 	ofSetVerticalSync(true);
 	ofDisableArbTex();
-	const std::string crashTraceLogPath = ofToDataPath("ofxVlc4-delete-crash.log", true);
-	ofLogToFile(crashTraceLogPath, true);
 	ofSetLogLevel("ofxVlc4", OF_LOG_NOTICE);
-	ofLogNotice("ofxVlc4") << "[delete-trace] writing log to " << crashTraceLogPath;
 
 	ofSoundStreamSettings settings;
 	settings.setOutListener(this);
@@ -501,7 +498,7 @@ void ofApp::setup() {
 void ofApp::initializePlayer(
 	const std::vector<std::string> * playlistOverride,
 	int restoreIndex,
-	bool resumePlayback,
+	RestorePlaybackState restorePlaybackState,
 	int restoreTimeMs,
 	int restoreVolume,
 	ofxVlc4::PlaybackMode restoreMode) {
@@ -541,12 +538,9 @@ void ofApp::initializePlayer(
 			}
 		}
 		if (restoreIndex >= 0 && restoreIndex < static_cast<int>(playlistOverride->size())) {
-			player.playIndex(restoreIndex);
+			player.activatePlaylistIndex(restoreIndex, restorePlaybackState == RestorePlaybackState::Playing);
 			if (restoreTimeMs > 0) {
 				player.setTime(restoreTimeMs);
-			}
-			if (!resumePlayback) {
-				player.pause();
 			}
 		}
 	} else {
@@ -557,11 +551,16 @@ void ofApp::initializePlayer(
 void ofApp::applyAudioVisualizerSettings() {
 	const std::vector<std::string> playlist = player.getPlaylist();
 	const int currentIndex = player.getCurrentIndex();
-	const bool resumePlayback = player.isPlaying();
+	RestorePlaybackState restorePlaybackState = RestorePlaybackState::Stopped;
+	if (player.isPlaying()) {
+		restorePlaybackState = RestorePlaybackState::Playing;
+	} else if (!player.isStopped()) {
+		restorePlaybackState = RestorePlaybackState::Paused;
+	}
 	const int restoreTimeMs = std::max(0, player.getTime());
 	const int restoreVolume = player.getVolume();
 	const ofxVlc4::PlaybackMode restoreMode = player.getPlaybackMode();
-	initializePlayer(&playlist, currentIndex, resumePlayback, restoreTimeMs, restoreVolume, restoreMode);
+	initializePlayer(&playlist, currentIndex, restorePlaybackState, restoreTimeMs, restoreVolume, restoreMode);
 }
 
 //--------------------------------------------------------------

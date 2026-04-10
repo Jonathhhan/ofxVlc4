@@ -1798,6 +1798,8 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->videoResourceRuntime.vlcFramebufferId != 0 ||
 		m_impl->videoResourceRuntime.videoTexture.isAllocated() ||
 		m_impl->videoResourceRuntime.exposedTextureFbo.isAllocated() ||
+		m_impl->videoResourceRuntime.videoAdjustShaderReady ||
+		m_impl->videoResourceRuntime.videoAdjustShader.isLoaded() ||
 		m_impl->windowCaptureRuntime.captureFbo.isAllocated() ||
 		recorderNeedsCleanup;
 
@@ -1829,6 +1831,10 @@ void ofxVlc4::releaseVlcResources() {
 		if (m_impl->videoResourceRuntime.vlcWindow) {
 			ofxVlc4GlOps::deleteFbo(m_impl->videoResourceRuntime.vlcFramebufferId);
 		}
+		if (m_impl->videoResourceRuntime.videoAdjustShader.isLoaded()) {
+			m_impl->videoResourceRuntime.videoAdjustShader.unload();
+		}
+		m_impl->videoResourceRuntime.videoAdjustShaderReady = false;
 		m_impl->videoResourceRuntime.videoTexture.clear();
 		clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
 	}

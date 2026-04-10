@@ -88,8 +88,6 @@ struct Playlist {
 		} else {
 			if (index < currentIndex) {
 				--currentIndex;
-			} else if (index == result.wasCurrent ? index : -1) {
-				// wasCurrent case handled below
 			}
 			// Re-implement the exact MediaLibrary logic:
 			// Already adjusted for index < currentIndex above.

@@ -123,6 +123,79 @@ inline bool shouldClearCurrentMediaAfterPlaylistMutation(
 	return !manualStopPending && !hasPendingManualStopEvents;
 }
 
+struct DeferredManualStopDecision {
+	bool shouldResetManualStop = false;
+	bool shouldFinalizeManualStop = false;
+	bool shouldRetryStopAsync = false;
+};
+
+inline DeferredManualStopDecision evaluateDeferredManualStop(
+	bool pendingManualStopFinalize,
+	bool manualStopInProgress,
+	bool playbackWanted,
+	bool pauseRequested,
+	bool hasCurrentMedia,
+	bool hasPlayer,
+	bool playerStoppedOrIdle,
+	uint64_t stopRequestTimeMs,
+	uint64_t nowMs,
+	bool manualStopRetryIssued,
+	uint64_t retryDelayMs = 150,
+	uint64_t fallbackDelayMs = 1500) {
+	DeferredManualStopDecision decision;
+	if (pendingManualStopFinalize || !manualStopInProgress || playbackWanted || pauseRequested) {
+		return decision;
+	}
+
+	if (!hasCurrentMedia) {
+		decision.shouldResetManualStop = true;
+		return decision;
+	}
+
+	if (!hasPlayer || playerStoppedOrIdle) {
+		decision.shouldFinalizeManualStop = true;
+		return decision;
+	}
+
+	if (stopRequestTimeMs == 0 || nowMs < stopRequestTimeMs) {
+		return decision;
+	}
+
+	if (!manualStopRetryIssued && nowMs >= stopRequestTimeMs + retryDelayMs) {
+		decision.shouldRetryStopAsync = true;
+	}
+	if (nowMs >= stopRequestTimeMs + fallbackDelayMs) {
+		decision.shouldFinalizeManualStop = true;
+	}
+	return decision;
+}
+
+struct StoppedPlaybackEventDecision {
+	bool keepManualStopInProgress = false;
+	bool shouldFinalizeManualStop = false;
+	bool shouldActivatePendingRequest = false;
+	bool shouldQueuePlaybackAdvance = false;
+};
+
+inline StoppedPlaybackEventDecision evaluateStoppedPlaybackEvent(
+	int pendingManualStopsBeforeDecrement,
+	bool hasPendingActivation,
+	bool hasPendingDirectMedia,
+	bool playerStoppedOrIdle,
+	bool playbackWanted) {
+	StoppedPlaybackEventDecision decision;
+	if (pendingManualStopsBeforeDecrement > 0) {
+		decision.keepManualStopInProgress = true;
+		decision.shouldActivatePendingRequest = hasPendingActivation || hasPendingDirectMedia;
+		decision.shouldFinalizeManualStop = !decision.shouldActivatePendingRequest;
+		return decision;
+	}
+
+	decision.shouldQueuePlaybackAdvance =
+		shouldQueuePlaybackAdvanceAfterStop(playerStoppedOrIdle, playbackWanted);
+	return decision;
+}
+
 // ---------------------------------------------------------------------------
 // WAV header writing
 // ---------------------------------------------------------------------------
