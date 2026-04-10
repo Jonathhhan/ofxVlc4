@@ -504,13 +504,18 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 		libvlc_media_player_stop_async(player);
 
 		constexpr int kReinitStopPollMs = 4;
-		constexpr int kReinitStopMaxWaitMs = 200;
+		constexpr int kReinitStopMaxWaitMs = 500;
+		bool stoppedOrIdle = false;
 		for (int waitedMs = 0; waitedMs < kReinitStopMaxWaitMs; waitedMs += kReinitStopPollMs) {
 			const libvlc_state_t state = libvlc_media_player_get_state(player);
-			if (ofxVlc4Utils::isStoppedOrIdleState(state) || state == libvlc_Stopping) {
+			if (ofxVlc4Utils::isStoppedOrIdleState(state)) {
+				stoppedOrIdle = true;
 				break;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(kReinitStopPollMs));
+		}
+		if (!stoppedOrIdle) {
+			owner.logWarning("Timed out waiting for player stop before reinit; continuing with teardown.");
 		}
 	}
 
