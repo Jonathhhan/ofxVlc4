@@ -132,7 +132,7 @@ Clone, compile, and install the ggml library from source:
 
 ### `scripts/download-model.sh`
 
-Download a GGUF model file for inference.  Supports model presets:
+Download a GGUF model file for inference.  Supports model presets and task-based selection:
 
 ```bash
 # Download default model (TinyLlama 1.1B Chat Q4_0, ~600 MB)
@@ -140,6 +140,11 @@ Download a GGUF model file for inference.  Supports model presets:
 
 # Select by preset number
 ./scripts/download-model.sh --preset 4    # CodeLlama 7B — best for scripting
+
+# Select the preferred model for a task (matches GUI example modes)
+./scripts/download-model.sh --task script     # CodeLlama 7B
+./scripts/download-model.sh --task chat       # TinyLlama 1.1B
+./scripts/download-model.sh --task summarize  # Gemma 2B
 
 # List all presets with details
 ./scripts/download-model.sh --list
@@ -157,6 +162,15 @@ Available presets:
 | 4 | CodeLlama 7B Instruct Q4_0 | ~3.8 GB | scripting, code generation |
 | 5 | DeepSeek Coder 1.3B Q4_0 | ~0.8 GB | scripting, code |
 | 6 | Gemma 2B Instruct Q4_0 | ~1.4 GB | chat, summarize, writing |
+
+Preferred models per example task (`--task NAME`):
+| Task | Preset | Model |
+|------|--------|-------|
+| chat | 1 | TinyLlama 1.1B Chat Q4_0 |
+| script | 4 | CodeLlama 7B Instruct Q4_0 |
+| summarize | 6 | Gemma 2B Instruct Q4_0 |
+| write | 6 | Gemma 2B Instruct Q4_0 |
+| custom | 3 | Phi-2 Q4_0 |
 
 ## License
 

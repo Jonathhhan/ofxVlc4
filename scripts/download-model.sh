@@ -3,12 +3,15 @@
 # download-model.sh — Download a GGUF model for use with ofxGgml.
 #
 # Usage:
-#   ./scripts/download-model.sh [--model URL] [--preset N] [--output DIR] [--name FILE]
+#   ./scripts/download-model.sh [--model URL] [--preset N] [--task NAME]
+#                               [--output DIR] [--name FILE]
 #
 # Options:
 #   --model  URL   Direct URL to a GGUF model file.
 #                  Default: TinyLlama 1.1B Chat Q4_0
 #   --preset N     Select a model by preset number (see --list)
+#   --task   NAME  Select the preferred model for a task: chat, script,
+#                  summarize, write, custom  (matches the GUI example modes)
 #   --output DIR   Directory to save the model (default: bin/data/models/)
 #   --name   FILE  Output file name (default: derived from URL)
 #   --list         List recommended models with preset numbers and exit
@@ -21,6 +24,13 @@
 #   4. CodeLlama 7B Instruct Q4_0  (~3.8 GB)  — scripting, code generation
 #   5. DeepSeek Coder 1.3B Q4_0    (~0.8 GB)  — scripting, code
 #   6. Gemma 2B Instruct Q4_0      (~1.4 GB)  — chat, summarize, writing
+#
+# Preferred models per example task:
+#   chat       → preset 1  TinyLlama 1.1B Chat Q4_0
+#   script     → preset 4  CodeLlama 7B Instruct Q4_0
+#   summarize  → preset 6  Gemma 2B Instruct Q4_0
+#   write      → preset 6  Gemma 2B Instruct Q4_0
+#   custom     → preset 3  Phi-2 Q4_0
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -61,10 +71,22 @@ PRESET_BESTFOR=(
 	"chat, summarize, writing"
 )
 
+# ---------------------------------------------------------------------------
+# Task → preferred preset mapping (matches GUI example AiMode enum)
+# ---------------------------------------------------------------------------
+
+declare -A TASK_PRESET
+TASK_PRESET[chat]=1
+TASK_PRESET[script]=4
+TASK_PRESET[summarize]=6
+TASK_PRESET[write]=6
+TASK_PRESET[custom]=3
+
 MODEL_URL=""
 OUTPUT_DIR=""
 OUTPUT_NAME=""
 PRESET_INDEX=""
+TASK_NAME=""
 
 write_step() {
 	printf '==> %s\n' "$1"
@@ -89,9 +111,19 @@ list_models() {
 		printf "     Best for: %s\n" "${PRESET_BESTFOR[$i]}"
 		printf "     %s\n\n" "${PRESET_URLS[$i]}"
 	done
+	echo "Preferred models per example task (--task NAME):"
+	echo ""
+	for task in chat script summarize write custom; do
+		local p="${TASK_PRESET[$task]}"
+		local idx=$((p - 1))
+		printf "  %-12s → preset %d  %s\n" "$task" "$p" "${PRESET_NAMES[$idx]}"
+	done
+	echo ""
 	echo "Usage:"
 	echo "  ./scripts/download-model.sh --preset 1      # TinyLlama (default)"
 	echo "  ./scripts/download-model.sh --preset 4      # CodeLlama for scripting"
+	echo "  ./scripts/download-model.sh --task script   # same as --preset 4"
+	echo "  ./scripts/download-model.sh --task chat     # TinyLlama for chat"
 	echo "  ./scripts/download-model.sh --model <URL>   # custom URL"
 	exit 0
 }
@@ -108,6 +140,10 @@ while [[ $# -gt 0 ]]; do
 			;;
 		--preset)
 			PRESET_INDEX="$2"
+			shift 2
+			;;
+		--task)
+			TASK_NAME="$2"
 			shift 2
 			;;
 		--output)
@@ -129,6 +165,19 @@ while [[ $# -gt 0 ]]; do
 			;;
 	esac
 done
+
+# Resolve --task to a preset number.
+if [[ -n "$TASK_NAME" ]]; then
+	TASK_NAME="${TASK_NAME,,}"   # lowercase
+	if [[ -z "${TASK_PRESET[$TASK_NAME]+x}" ]]; then
+		die "Unknown task: $TASK_NAME (valid: chat, script, summarize, write, custom)"
+	fi
+	if [[ -n "$PRESET_INDEX" ]]; then
+		die "Cannot use both --task and --preset"
+	fi
+	PRESET_INDEX="${TASK_PRESET[$TASK_NAME]}"
+	write_step "Task '$TASK_NAME' → preset $PRESET_INDEX"
+fi
 
 # Resolve preset.
 if [[ -n "$PRESET_INDEX" ]]; then
