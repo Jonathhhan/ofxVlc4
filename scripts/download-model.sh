@@ -11,7 +11,8 @@
 #                  Default: TinyLlama 1.1B Chat Q4_0
 #   --preset N     Select a model by preset number (see --list)
 #   --task   NAME  Select the preferred model for a task: chat, script,
-#                  summarize, write, custom  (matches the GUI example modes)
+#                  summarize, write, translate, custom  (matches the GUI
+#                  example modes)
 #   --output DIR   Directory to save the model (default: bin/data/models/)
 #   --name   FILE  Output file name (default: derived from URL)
 #   --list         List recommended models with preset numbers and exit
@@ -30,6 +31,7 @@
 #   script     → preset 4  CodeLlama 7B Instruct Q4_0
 #   summarize  → preset 6  Gemma 2B Instruct Q4_0
 #   write      → preset 6  Gemma 2B Instruct Q4_0
+#   translate  → preset 6  Gemma 2B Instruct Q4_0
 #   custom     → preset 3  Phi-2 Q4_0
 # ---------------------------------------------------------------------------
 set -euo pipefail
@@ -80,6 +82,7 @@ TASK_PRESET[chat]=1
 TASK_PRESET[script]=4
 TASK_PRESET[summarize]=6
 TASK_PRESET[write]=6
+TASK_PRESET[translate]=6
 TASK_PRESET[custom]=3
 
 MODEL_URL=""
@@ -113,7 +116,7 @@ list_models() {
 	done
 	echo "Preferred models per example task (--task NAME):"
 	echo ""
-	for task in chat script summarize write custom; do
+	for task in chat script summarize write translate custom; do
 		local p="${TASK_PRESET[$task]}"
 		local idx=$((p - 1))
 		printf "  %-12s → preset %d  %s\n" "$task" "$p" "${PRESET_NAMES[$idx]}"
@@ -170,7 +173,7 @@ done
 if [[ -n "$TASK_NAME" ]]; then
 	TASK_NAME="${TASK_NAME,,}"   # lowercase
 	if [[ -z "${TASK_PRESET[$TASK_NAME]+x}" ]]; then
-		die "Unknown task: $TASK_NAME (valid: chat, script, summarize, write, custom)"
+		die "Unknown task: $TASK_NAME (valid: chat, script, summarize, write, translate, custom)"
 	fi
 	if [[ -n "$PRESET_INDEX" ]]; then
 		die "Cannot use both --task and --preset"

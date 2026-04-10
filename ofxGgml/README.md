@@ -105,7 +105,7 @@ auto r = ggml.compute(graph);
 
 - **ofxGgmlExample** — Matrix multiplication with console output.
 - **ofxGgmlNeuralExample** — Simple feedforward neural network visualized in the OF window.
-- **ofxGgmlGuiExample** — Full ImGui-based AI Studio with five modes (Chat, Script, Summarize, Write, Custom).  Features include:
+- **ofxGgmlGuiExample** — Full ImGui-based AI Studio with six modes (Chat, Script, Summarize, Write, Translate, Custom).  Features include:
   - **Model preselection** — choose from 6 recommended GGUF models (TinyLlama, Phi-2, CodeLlama, DeepSeek Coder, Gemma) via a sidebar combo.
   - **Script language selector** — 8 language presets (C++, Python, JavaScript, Rust, GLSL, Go, Bash, TypeScript) that set language-specific system prompts.
   - **Script source browser** — connect to a **local folder** or **GitHub repository** to browse, load, and save script files directly from the scripting panel.
@@ -170,6 +170,7 @@ Preferred models per example task (`--task NAME`):
 | script | 4 | CodeLlama 7B Instruct Q4_0 |
 | summarize | 6 | Gemma 2B Instruct Q4_0 |
 | write | 6 | Gemma 2B Instruct Q4_0 |
+| translate | 6 | Gemma 2B Instruct Q4_0 |
 | custom | 3 | Phi-2 Q4_0 |
 
 ## License

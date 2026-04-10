@@ -20,6 +20,7 @@ enum class AiMode {
 	Script,
 	Summarize,
 	Write,
+	Translate,
 	Custom
 };
 
@@ -118,7 +119,7 @@ private:
 
 	// -- mode --
 	AiMode activeMode = AiMode::Chat;
-	static constexpr int kModeCount = 5;
+	static constexpr int kModeCount = 6;
 	static const char * modeLabels[kModeCount];
 
 	// -- input buffers --
@@ -126,6 +127,9 @@ private:
 	char scriptInput[8192] = {};
 	char summarizeInput[8192] = {};
 	char writeInput[4096] = {};
+	char translateInput[4096] = {};
+	int translateSourceLang = 0;        // index into translateLanguages
+	int translateTargetLang = 1;        // index into translateLanguages
 	char customInput[4096] = {};
 	char customSystemPrompt[2048] = {};
 
@@ -134,6 +138,7 @@ private:
 	std::string scriptOutput;
 	std::string summarizeOutput;
 	std::string writeOutput;
+	std::string translateOutput;
 	std::string customOutput;
 
 	// -- generation state --
@@ -233,6 +238,7 @@ private:
 	void drawScriptSourcePanel();
 	void drawSummarizePanel();
 	void drawWritePanel();
+	void drawTranslatePanel();
 	void drawCustomPanel();
 	void drawStatusBar();
 	void drawDeviceInfoWindow();

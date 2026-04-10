@@ -16,7 +16,7 @@
 // ---------------------------------------------------------------------------
 
 const char * ofApp::modeLabels[kModeCount] = {
-"Chat", "Script", "Summarize", "Write", "Custom"
+"Chat", "Script", "Summarize", "Write", "Translate", "Custom"
 };
 
 // ---------------------------------------------------------------------------
@@ -331,6 +331,7 @@ chatMessages.clear();
 scriptOutput.clear();
 summarizeOutput.clear();
 writeOutput.clear();
+translateOutput.clear();
 customOutput.clear();
 }
 ImGui::Separator();
@@ -506,6 +507,7 @@ case AiMode::Chat:      drawChatPanel();      break;
 case AiMode::Script:    drawScriptPanel();    break;
 case AiMode::Summarize: drawSummarizePanel(); break;
 case AiMode::Write:     drawWritePanel();     break;
+case AiMode::Translate: drawTranslatePanel(); break;
 case AiMode::Custom:    drawCustomPanel();    break;
 }
 }
@@ -1162,6 +1164,70 @@ ImGui::EndChild();
 }
 
 // ---------------------------------------------------------------------------
+// Translate panel
+// ---------------------------------------------------------------------------
+
+static const char * kTranslateLanguages[] = {
+"English", "Spanish", "French", "German", "Italian",
+"Portuguese", "Chinese", "Japanese", "Korean", "Russian",
+"Arabic", "Hindi", "Dutch", "Swedish", "Polish"
+};
+static constexpr int kTranslateLangCount = 15;
+
+void ofApp::drawTranslatePanel() {
+ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "Translate");
+ImGui::SameLine();
+ImGui::TextDisabled("(translate text between languages)");
+ImGui::Separator();
+
+ImGui::Text("Source language:");
+ImGui::SameLine();
+ImGui::SetNextItemWidth(160);
+ImGui::Combo("##SrcLang", &translateSourceLang, kTranslateLanguages, kTranslateLangCount);
+ImGui::SameLine();
+ImGui::Text("  Target language:");
+ImGui::SameLine();
+ImGui::SetNextItemWidth(160);
+ImGui::Combo("##TgtLang", &translateTargetLang, kTranslateLanguages, kTranslateLangCount);
+
+ImGui::Text("Enter text to translate:");
+ImGui::InputTextMultiline("##TransIn", translateInput, sizeof(translateInput),
+ImVec2(-1, 120));
+
+ImGui::BeginDisabled(generating.load() || std::strlen(translateInput) == 0);
+if (ImGui::Button("Translate", ImVec2(110, 0))) {
+std::string prompt = std::string("Translate the following from ")
++ kTranslateLanguages[translateSourceLang] + " to "
++ kTranslateLanguages[translateTargetLang] + ":\n" + translateInput;
+runInference(AiMode::Translate, prompt);
+}
+ImGui::SameLine();
+if (ImGui::Button("Detect Language", ImVec2(140, 0))) {
+std::string prompt = std::string("Detect the language of the following text and explain:\n") + translateInput;
+runInference(AiMode::Translate, prompt);
+}
+ImGui::SameLine();
+if (ImGui::Button("Swap Languages", ImVec2(140, 0))) {
+std::swap(translateSourceLang, translateTargetLang);
+}
+ImGui::EndDisabled();
+
+ImGui::Separator();
+ImGui::Text("Translation:");
+if (!translateOutput.empty()) {
+ImGui::SameLine();
+if (ImGui::SmallButton("Copy##TransCopy")) copyToClipboard(translateOutput);
+ImGui::SameLine();
+if (ImGui::SmallButton("Clear##TransClear")) translateOutput.clear();
+ImGui::SameLine();
+ImGui::TextDisabled("(%d chars)", static_cast<int>(translateOutput.size()));
+}
+ImGui::BeginChild("##TransOut", ImVec2(0, 0), true);
+ImGui::TextWrapped("%s", translateOutput.empty() ? "(no output yet)" : translateOutput.c_str());
+ImGui::EndChild();
+}
+
+// ---------------------------------------------------------------------------
 // Custom panel
 // ---------------------------------------------------------------------------
 
@@ -1399,6 +1465,9 @@ out << "chatInput=" << escapeSessionText(chatInput) << "\n";
 out << "scriptInput=" << escapeSessionText(scriptInput) << "\n";
 out << "summarizeInput=" << escapeSessionText(summarizeInput) << "\n";
 out << "writeInput=" << escapeSessionText(writeInput) << "\n";
+out << "translateInput=" << escapeSessionText(translateInput) << "\n";
+out << "translateSourceLang=" << translateSourceLang << "\n";
+out << "translateTargetLang=" << translateTargetLang << "\n";
 out << "customInput=" << escapeSessionText(customInput) << "\n";
 out << "customSystemPrompt=" << escapeSessionText(customSystemPrompt) << "\n";
 
@@ -1406,6 +1475,7 @@ out << "customSystemPrompt=" << escapeSessionText(customSystemPrompt) << "\n";
 out << "scriptOutput=" << escapeSessionText(scriptOutput) << "\n";
 out << "summarizeOutput=" << escapeSessionText(summarizeOutput) << "\n";
 out << "writeOutput=" << escapeSessionText(writeOutput) << "\n";
+out << "translateOutput=" << escapeSessionText(translateOutput) << "\n";
 out << "customOutput=" << escapeSessionText(customOutput) << "\n";
 
 // Chat messages.
@@ -1484,11 +1554,15 @@ else if (key == "chatInput") copyToBuf(chatInput, sizeof(chatInput), value);
 else if (key == "scriptInput") copyToBuf(scriptInput, sizeof(scriptInput), value);
 else if (key == "summarizeInput") copyToBuf(summarizeInput, sizeof(summarizeInput), value);
 else if (key == "writeInput") copyToBuf(writeInput, sizeof(writeInput), value);
+else if (key == "translateInput") copyToBuf(translateInput, sizeof(translateInput), value);
+else if (key == "translateSourceLang") translateSourceLang = std::clamp(std::stoi(value), 0, kTranslateLangCount - 1);
+else if (key == "translateTargetLang") translateTargetLang = std::clamp(std::stoi(value), 0, kTranslateLangCount - 1);
 else if (key == "customInput") copyToBuf(customInput, sizeof(customInput), value);
 else if (key == "customSystemPrompt") copyToBuf(customSystemPrompt, sizeof(customSystemPrompt), value);
 else if (key == "scriptOutput") scriptOutput = unescapeSessionText(value);
 else if (key == "summarizeOutput") summarizeOutput = unescapeSessionText(value);
 else if (key == "writeOutput") writeOutput = unescapeSessionText(value);
+else if (key == "translateOutput") translateOutput = unescapeSessionText(value);
 else if (key == "customOutput") customOutput = unescapeSessionText(value);
 else if (key == "msg") {
 // Parse: role|timestamp|text
@@ -1585,6 +1659,9 @@ break;
 case AiMode::Write:
 writeOutput = pendingOutput;
 break;
+case AiMode::Translate:
+translateOutput = pendingOutput;
+break;
 case AiMode::Custom:
 customOutput = pendingOutput;
 break;
@@ -1660,9 +1737,10 @@ case AiMode::Chat:      modeValue = 1.0f; break;
 case AiMode::Script:    modeValue = 2.0f; break;
 case AiMode::Summarize: modeValue = 3.0f; break;
 case AiMode::Write:     modeValue = 4.0f; break;
-case AiMode::Custom:    modeValue = 5.0f; break;
+case AiMode::Translate: modeValue = 5.0f; break;
+case AiMode::Custom:    modeValue = 6.0f; break;
 }
-features[7] = modeValue / 5.0f;
+features[7] = modeValue / 6.0f;
 
 // Random weights seeded from input hash.
 std::hash<std::string> hasher;
@@ -1759,6 +1837,17 @@ oss << ofToString(probs[static_cast<size_t>(i)], 4);
 }
 oss << "]\n\nTo rewrite/expand text, a full language model is needed. "
 << "Run scripts/download-model.sh to get one.";
+break;
+
+case AiMode::Translate:
+oss << "Translation request: " << inputLen << " characters.\n";
+oss << "Feature vector: [";
+for (int i = 0; i < outputDim; i++) {
+if (i > 0) oss << ", ";
+oss << ofToString(probs[static_cast<size_t>(i)], 4);
+}
+oss << "]\n\nFor real translation, load a multilingual model. "
+<< "Run scripts/download-model.sh --task translate to get one.";
 break;
 
 case AiMode::Custom:
