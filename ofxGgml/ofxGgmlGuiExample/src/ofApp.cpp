@@ -113,13 +113,20 @@ std::error_code ec;
 std::filesystem::create_directories(sessionDir, ec);
 lastSessionPath = ofFilePath::join(sessionDir, "autosave.session");
 
-// Initialize ggml.
+// Initialize ggml with the selected backend preference.
 ofxGgmlSettings settings;
 settings.threads = numThreads;
+if (selectedBackendIndex == 2) {
+settings.preferredBackend = ofxGgmlBackendType::Gpu;
+} else if (selectedBackendIndex == 1) {
+settings.preferredBackend = ofxGgmlBackendType::Cpu;
+}
+settings.graphSize = static_cast<size_t>(contextSize);
 engineReady = ggml.setup(settings);
 if (engineReady) {
 engineStatus = "Ready (" + ggml.getBackendName() + ")";
 devices = ggml.listDevices();
+lastBackendUsed = ggml.getBackendName();
 } else {
 engineStatus = "Failed to initialize ggml engine";
 }
@@ -136,6 +143,9 @@ logMessages.pop_front();
 // Pre-fill example system prompt.
 std::strncpy(customSystemPrompt,
 "You are a helpful assistant. Respond concisely.", sizeof(customSystemPrompt) - 1);
+
+// Apply default theme.
+applyTheme(themeIndex);
 
 // Auto-load last session if available.
 autoLoadSession();
@@ -174,6 +184,7 @@ drawStatusBar();
 // Optional floating windows.
 if (showDeviceInfo) drawDeviceInfoWindow();
 if (showLog) drawLogWindow();
+if (showPerformance) drawPerformanceWindow();
 
 gui.end();
 }
@@ -192,6 +203,7 @@ void ofApp::keyPressed(int key) {
 // Global shortcuts.
 if (key == OF_KEY_F1) showDeviceInfo = !showDeviceInfo;
 if (key == OF_KEY_F2) showLog = !showLog;
+if (key == OF_KEY_F3) showPerformance = !showPerformance;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,7 +228,7 @@ loadSession(result.getPath());
 }
 }
 ImGui::Separator();
-if (ImGui::MenuItem("Clear Output")) {
+if (ImGui::MenuItem("Clear All Output")) {
 chatMessages.clear();
 scriptOutput.clear();
 summarizeOutput.clear();
@@ -230,15 +242,41 @@ ofExit(0);
 ImGui::EndMenu();
 }
 if (ImGui::BeginMenu("View")) {
-ImGui::MenuItem("Device Info (F1)", nullptr, &showDeviceInfo);
-ImGui::MenuItem("Engine Log  (F2)", nullptr, &showLog);
+ImGui::MenuItem("Device Info    (F1)", nullptr, &showDeviceInfo);
+ImGui::MenuItem("Engine Log     (F2)", nullptr, &showLog);
+ImGui::MenuItem("Performance    (F3)", nullptr, &showPerformance);
 ImGui::MenuItem("Script Source Panel", nullptr, &showScriptSourcePanel);
 ImGui::EndMenu();
 }
 if (ImGui::BeginMenu("Settings")) {
-ImGui::SliderInt("Max Tokens", &maxTokens, 32, 2048);
+ImGui::SeparatorText("Generation");
+ImGui::SliderInt("Max Tokens", &maxTokens, 32, 4096);
 ImGui::SliderFloat("Temperature", &temperature, 0.0f, 2.0f, "%.2f");
-ImGui::SliderInt("Threads", &numThreads, 1, 16);
+ImGui::SliderFloat("Top-P", &topP, 0.0f, 1.0f, "%.2f");
+ImGui::SliderFloat("Repeat Penalty", &repeatPenalty, 1.0f, 2.0f, "%.2f");
+ImGui::SliderInt("Seed", &seed, -1, 99999);
+if (ImGui::IsItemHovered()) {
+ImGui::SetTooltip("-1 = random seed each run");
+}
+
+ImGui::SeparatorText("Engine");
+ImGui::SliderInt("Threads", &numThreads, 1, 32);
+ImGui::SliderInt("Context Size", &contextSize, 256, 16384);
+ImGui::SliderInt("Batch Size", &batchSize, 32, 4096);
+ImGui::SliderInt("GPU Layers", &gpuLayers, 0, 128);
+if (ImGui::IsItemHovered()) {
+ImGui::SetTooltip("Number of model layers to offload to GPU\n0 = all on CPU");
+}
+
+const char * backendLabels[] = { "Auto", "CPU", "GPU" };
+ImGui::Combo("Backend", &selectedBackendIndex, backendLabels, 3);
+
+ImGui::SeparatorText("Appearance");
+const char * themeLabels[] = { "Dark", "Light", "Classic" };
+if (ImGui::Combo("Theme", &themeIndex, themeLabels, 3)) {
+applyTheme(themeIndex);
+}
+
 ImGui::EndMenu();
 }
 ImGui::EndMainMenuBar();
@@ -301,9 +339,23 @@ ImGui::Spacing();
 ImGui::Text("Quick Settings");
 ImGui::Spacing();
 ImGui::SetNextItemWidth(-1);
-ImGui::SliderInt("##MaxTok", &maxTokens, 32, 2048, "Tokens: %d");
+ImGui::SliderInt("##MaxTok", &maxTokens, 32, 4096, "Tokens: %d");
 ImGui::SetNextItemWidth(-1);
 ImGui::SliderFloat("##Temp", &temperature, 0.0f, 2.0f, "Temp: %.2f");
+ImGui::SetNextItemWidth(-1);
+ImGui::SliderFloat("##TopP", &topP, 0.0f, 1.0f, "Top-P: %.2f");
+ImGui::SetNextItemWidth(-1);
+ImGui::SliderInt("##GPULayers", &gpuLayers, 0, 128, "GPU Layers: %d");
+
+ImGui::Spacing();
+ImGui::Separator();
+ImGui::Spacing();
+
+// Backend preference.
+ImGui::Text("Backend:");
+const char * backendLabels[] = { "Auto", "CPU", "GPU" };
+ImGui::SetNextItemWidth(-1);
+ImGui::Combo("##Backend", &selectedBackendIndex, backendLabels, 3);
 
 ImGui::Spacing();
 ImGui::Separator();
@@ -388,6 +440,21 @@ std::string userText(chatInput);
 chatMessages.push_back({"user", userText, ofGetElapsedTimef()});
 std::memset(chatInput, 0, sizeof(chatInput));
 runInference(AiMode::Chat, userText);
+}
+
+// Copy / Clear row.
+if (!chatMessages.empty()) {
+if (ImGui::SmallButton("Copy Chat")) {
+std::string all;
+for (const auto & m : chatMessages) {
+all += m.role + ": " + m.text + "\n\n";
+}
+copyToClipboard(all);
+}
+ImGui::SameLine();
+if (ImGui::SmallButton("Clear Chat")) {
+chatMessages.clear();
+}
 }
 }
 
@@ -512,6 +579,14 @@ saveScriptToSource(filename, scriptOutput);
 
 ImGui::Separator();
 ImGui::Text("Output:");
+if (!scriptOutput.empty()) {
+ImGui::SameLine();
+if (ImGui::SmallButton("Copy##ScriptCopy")) copyToClipboard(scriptOutput);
+ImGui::SameLine();
+if (ImGui::SmallButton("Clear##ScriptClear")) scriptOutput.clear();
+ImGui::SameLine();
+ImGui::TextDisabled("(%d chars)", static_cast<int>(scriptOutput.size()));
+}
 ImGui::BeginChild("##ScriptOut", ImVec2(0, 0), true);
 ImGui::TextWrapped("%s", scriptOutput.empty() ? "(no output yet)" : scriptOutput.c_str());
 ImGui::EndChild();
@@ -851,6 +926,14 @@ ImGui::EndDisabled();
 
 ImGui::Separator();
 ImGui::Text("Summary:");
+if (!summarizeOutput.empty()) {
+ImGui::SameLine();
+if (ImGui::SmallButton("Copy##SumCopy")) copyToClipboard(summarizeOutput);
+ImGui::SameLine();
+if (ImGui::SmallButton("Clear##SumClear")) summarizeOutput.clear();
+ImGui::SameLine();
+ImGui::TextDisabled("(%d chars)", static_cast<int>(summarizeOutput.size()));
+}
 ImGui::BeginChild("##SumOut", ImVec2(0, 0), true);
 ImGui::TextWrapped("%s", summarizeOutput.empty() ? "(no output yet)" : summarizeOutput.c_str());
 ImGui::EndChild();
@@ -899,6 +982,14 @@ ImGui::EndDisabled();
 
 ImGui::Separator();
 ImGui::Text("Output:");
+if (!writeOutput.empty()) {
+ImGui::SameLine();
+if (ImGui::SmallButton("Copy##WriteCopy")) copyToClipboard(writeOutput);
+ImGui::SameLine();
+if (ImGui::SmallButton("Clear##WriteClear")) writeOutput.clear();
+ImGui::SameLine();
+ImGui::TextDisabled("(%d chars)", static_cast<int>(writeOutput.size()));
+}
 ImGui::BeginChild("##WriteOut", ImVec2(0, 0), true);
 ImGui::TextWrapped("%s", writeOutput.empty() ? "(no output yet)" : writeOutput.c_str());
 ImGui::EndChild();
@@ -930,6 +1021,14 @@ ImGui::EndDisabled();
 
 ImGui::Separator();
 ImGui::Text("Output:");
+if (!customOutput.empty()) {
+ImGui::SameLine();
+if (ImGui::SmallButton("Copy##CustCopy")) copyToClipboard(customOutput);
+ImGui::SameLine();
+if (ImGui::SmallButton("Clear##CustClear")) customOutput.clear();
+ImGui::SameLine();
+ImGui::TextDisabled("(%d chars)", static_cast<int>(customOutput.size()));
+}
 ImGui::BeginChild("##CustOut", ImVec2(0, 0), true);
 ImGui::TextWrapped("%s", customOutput.empty() ? "(no output yet)" : customOutput.c_str());
 ImGui::EndChild();
@@ -957,10 +1056,17 @@ ImGui::SameLine();
 ImGui::Text(" | Lang: %s", scriptLanguages[static_cast<size_t>(selectedLanguageIndex)].name.c_str());
 }
 ImGui::SameLine();
-ImGui::Text(" | Tokens: %d  Temp: %.2f", maxTokens, temperature);
+ImGui::Text(" | Tokens: %d  Temp: %.2f  Top-P: %.2f", maxTokens, temperature, topP);
+if (gpuLayers > 0) {
+ImGui::SameLine();
+ImGui::Text(" | GPU: %d layers", gpuLayers);
+}
 if (generating.load()) {
 ImGui::SameLine();
 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), " | Generating...");
+} else if (lastComputeMs > 0.0f) {
+ImGui::SameLine();
+ImGui::TextDisabled(" | Last: %.1f ms", lastComputeMs);
 }
 ImGui::SameLine();
 ImGui::Text(" | FPS: %.0f", ofGetFrameRate());
@@ -1079,7 +1185,15 @@ out << "model=" << selectedModelIndex << "\n";
 out << "language=" << selectedLanguageIndex << "\n";
 out << "maxTokens=" << maxTokens << "\n";
 out << "temperature=" << ofToString(temperature, 4) << "\n";
+out << "topP=" << ofToString(topP, 4) << "\n";
+out << "repeatPenalty=" << ofToString(repeatPenalty, 4) << "\n";
+out << "contextSize=" << contextSize << "\n";
+out << "batchSize=" << batchSize << "\n";
+out << "gpuLayers=" << gpuLayers << "\n";
+out << "seed=" << seed << "\n";
 out << "numThreads=" << numThreads << "\n";
+out << "selectedBackend=" << selectedBackendIndex << "\n";
+out << "theme=" << themeIndex << "\n";
 
 // Script source.
 out << "scriptSourceType=" << static_cast<int>(scriptSourceType) << "\n";
@@ -1152,9 +1266,20 @@ else if (key == "language") {
 	int maxIdx = static_cast<int>(scriptLanguages.size()) - 1;
 	selectedLanguageIndex = std::clamp(std::stoi(value), 0, maxIdx);
 }
-else if (key == "maxTokens") maxTokens = std::clamp(std::stoi(value), 32, 2048);
+else if (key == "maxTokens") maxTokens = std::clamp(std::stoi(value), 32, 4096);
 else if (key == "temperature") temperature = std::clamp(std::stof(value), 0.0f, 2.0f);
-else if (key == "numThreads") numThreads = std::clamp(std::stoi(value), 1, 16);
+else if (key == "topP") topP = std::clamp(std::stof(value), 0.0f, 1.0f);
+else if (key == "repeatPenalty") repeatPenalty = std::clamp(std::stof(value), 1.0f, 2.0f);
+else if (key == "contextSize") contextSize = std::clamp(std::stoi(value), 256, 16384);
+else if (key == "batchSize") batchSize = std::clamp(std::stoi(value), 32, 4096);
+else if (key == "gpuLayers") gpuLayers = std::clamp(std::stoi(value), 0, 128);
+else if (key == "seed") seed = std::clamp(std::stoi(value), -1, 99999);
+else if (key == "numThreads") numThreads = std::clamp(std::stoi(value), 1, 32);
+else if (key == "selectedBackend") selectedBackendIndex = std::clamp(std::stoi(value), 0, 2);
+else if (key == "theme") {
+	themeIndex = std::clamp(std::stoi(value), 0, 2);
+	applyTheme(themeIndex);
+}
 else if (key == "scriptSourceType") scriptSourceType = static_cast<ScriptSourceType>(std::stoi(value));
 else if (key == "scriptSourcePath") scriptSourcePath = unescapeSessionText(value);
 else if (key == "scriptSourceGitHub") copyToBuf(scriptSourceGitHub, sizeof(scriptSourceGitHub), value);
@@ -1332,7 +1457,10 @@ features[7] = modeValue / 5.0f;
 
 // Random weights seeded from input hash.
 std::hash<std::string> hasher;
-std::mt19937 rng(static_cast<unsigned>(hasher(input + systemPrompt)));
+unsigned rngSeed = (seed >= 0)
+? static_cast<unsigned>(seed)
+: static_cast<unsigned>(hasher(input + systemPrompt));
+std::mt19937 rng(rngSeed);
 std::normal_distribution<float> dist(0.0f, 0.5f);
 
 std::vector<float> wData(featureDim * outputDim);
@@ -1350,6 +1478,11 @@ auto result = ggml.compute(graph);
 if (!result.success) {
 return "[Error] Computation failed: " + result.error;
 }
+
+// Track performance metrics.
+lastComputeMs = result.elapsedMs;
+lastNodeCount = graph.getNumNodes();
+lastBackendUsed = ggml.getBackendName();
 
 // Read output probabilities.
 std::vector<float> probs(outputDim);
@@ -1432,4 +1565,90 @@ break;
 }
 
 return oss.str();
+}
+
+// ---------------------------------------------------------------------------
+// Performance metrics window
+// ---------------------------------------------------------------------------
+
+void ofApp::drawPerformanceWindow() {
+ImGui::SetNextWindowSize(ImVec2(380, 220), ImGuiCond_FirstUseEver);
+if (ImGui::Begin("Performance Metrics", &showPerformance)) {
+ImGui::Text("Last Computation:");
+ImGui::Separator();
+ImGui::Text("  Elapsed:    %.2f ms", lastComputeMs);
+ImGui::Text("  Nodes:      %d", lastNodeCount);
+ImGui::Text("  Backend:    %s", lastBackendUsed.empty() ? "(none)" : lastBackendUsed.c_str());
+ImGui::Spacing();
+
+ImGui::Text("Configuration:");
+ImGui::Separator();
+const char * backendLabels[] = { "Auto", "CPU", "GPU" };
+ImGui::Text("  Preference: %s", backendLabels[selectedBackendIndex]);
+ImGui::Text("  Threads:    %d", numThreads);
+ImGui::Text("  Context:    %d", contextSize);
+ImGui::Text("  Batch:      %d", batchSize);
+ImGui::Text("  GPU Layers: %d", gpuLayers);
+ImGui::Text("  Seed:       %s", seed < 0 ? "random" : ofToString(seed).c_str());
+ImGui::Spacing();
+
+ImGui::Text("Sampling:");
+ImGui::Separator();
+ImGui::Text("  Tokens:     %d", maxTokens);
+ImGui::Text("  Temp:       %.2f", temperature);
+ImGui::Text("  Top-P:      %.2f", topP);
+ImGui::Text("  Repeat Pen: %.2f", repeatPenalty);
+ImGui::Spacing();
+
+// Device memory summary.
+if (!devices.empty()) {
+ImGui::Text("Devices:");
+ImGui::Separator();
+for (const auto & d : devices) {
+ImGui::Text("  %s (%s)", d.name.c_str(),
+ofxGgmlHelpers::backendTypeName(d.type).c_str());
+if (d.memoryTotal > 0) {
+float usedPct = 1.0f - static_cast<float>(d.memoryFree) /
+static_cast<float>(d.memoryTotal);
+ImGui::SameLine();
+ImGui::ProgressBar(usedPct, ImVec2(100, 14),
+ofxGgmlHelpers::formatBytes(d.memoryTotal).c_str());
+}
+}
+}
+
+if (ImGui::Button("Refresh Devices")) {
+devices = ggml.listDevices();
+}
+}
+ImGui::End();
+}
+
+// ---------------------------------------------------------------------------
+// Theme application
+// ---------------------------------------------------------------------------
+
+void ofApp::applyTheme(int index) {
+switch (index) {
+case 0:  // Dark
+ImGui::StyleColorsDark();
+break;
+case 1:  // Light
+ImGui::StyleColorsLight();
+break;
+case 2:  // Classic
+ImGui::StyleColorsClassic();
+break;
+default:
+ImGui::StyleColorsDark();
+break;
+}
+}
+
+// ---------------------------------------------------------------------------
+// Clipboard helper
+// ---------------------------------------------------------------------------
+
+void ofApp::copyToClipboard(const std::string & text) {
+ImGui::SetClipboardText(text.c_str());
 }

@@ -130,11 +130,25 @@ private:
 	// -- settings --
 	int maxTokens = 256;
 	float temperature = 0.7f;
+	float topP = 0.9f;
+	float repeatPenalty = 1.1f;
+	int contextSize = 2048;
+	int batchSize = 512;
+	int gpuLayers = 0;
+	int seed = -1;                                   // -1 = random
 	int numThreads = 4;
+	int selectedBackendIndex = 0;                    // 0=Auto, 1=CPU, 2=GPU
+	int themeIndex = 0;                              // 0=Dark, 1=Light, 2=Classic
 	bool showDeviceInfo = false;
 	bool showLog = false;
+	bool showPerformance = false;
 	std::deque<std::string> logMessages;
 	std::mutex logMutex;
+
+	// -- performance tracking --
+	float lastComputeMs = 0.0f;
+	int lastNodeCount = 0;
+	std::string lastBackendUsed;
 
 	// -- model presets --
 	std::vector<ModelPreset> modelPresets;
@@ -190,6 +204,9 @@ private:
 	void drawStatusBar();
 	void drawDeviceInfoWindow();
 	void drawLogWindow();
+	void drawPerformanceWindow();
+	void applyTheme(int index);
+	void copyToClipboard(const std::string & text);
 
 	// -- ggml demo computation --
 	std::string runDemoComputation(const std::string & input, AiMode mode,

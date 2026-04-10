@@ -438,3 +438,20 @@ target_include_directories(test_ggml_lifecycle PRIVATE
 )
 
 add_test(NAME ggml_lifecycle COMMAND test_ggml_lifecycle)
+
+# ---------------------------------------------------------------------------
+# test_ggml_gui_settings
+# Tests the GUI settings defaults, range clamping, session serialization
+# round-trip, seed behavior, and GPU layers / backend interaction.
+# No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ggml_gui_settings
+    test_ggml_gui_settings.cpp
+)
+
+target_include_directories(test_ggml_gui_settings PRIVATE
+    "${GGML_SRC_DIR}/support"
+)
+
+add_test(NAME ggml_gui_settings COMMAND test_ggml_gui_settings)
