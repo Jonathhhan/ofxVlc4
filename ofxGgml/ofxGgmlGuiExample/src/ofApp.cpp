@@ -88,6 +88,104 @@ scriptLanguages = {
 }
 
 // ---------------------------------------------------------------------------
+// Presets — code templates (per-language quick-start skeletons)
+// ---------------------------------------------------------------------------
+
+void ofApp::initCodeTemplates() {
+codeTemplates.resize(scriptLanguages.size());
+
+// C++ templates
+codeTemplates[0] = {
+{"Hello World", "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, World!\" << std::endl;\n    return 0;\n}\n"},
+{"Class Definition", "#pragma once\n\n#include <string>\n\nclass MyClass {\npublic:\n    MyClass() = default;\n    ~MyClass() = default;\n\n    void doSomething();\n    const std::string & getName() const { return m_name; }\n\nprivate:\n    std::string m_name;\n};\n"},
+{"Unit Test", "#include <cassert>\n#include <cstdio>\n\nstatic int passed = 0;\n\nvoid testExample() {\n    assert(1 + 1 == 2);\n    passed++;\n}\n\nint main() {\n    testExample();\n    std::printf(\"%d tests passed.\\n\", passed);\n    return 0;\n}\n"},
+};
+
+// Python templates
+codeTemplates[1] = {
+{"Hello World", "def main():\n    print(\"Hello, World!\")\n\nif __name__ == \"__main__\":\n    main()\n"},
+{"Class Definition", "class MyClass:\n    def __init__(self, name: str = \"\"):\n        self._name = name\n\n    @property\n    def name(self) -> str:\n        return self._name\n\n    def do_something(self) -> None:\n        pass\n"},
+{"FastAPI Server", "from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/\")\nasync def root():\n    return {\"message\": \"Hello, World!\"}\n\n@app.get(\"/items/{item_id}\")\nasync def read_item(item_id: int):\n    return {\"item_id\": item_id}\n"},
+};
+
+// JavaScript templates
+codeTemplates[2] = {
+{"Hello World", "console.log('Hello, World!');\n"},
+{"Express Server", "const express = require('express');\nconst app = express();\nconst port = 3000;\n\napp.get('/', (req, res) => {\n    res.json({ message: 'Hello, World!' });\n});\n\napp.listen(port, () => {\n    console.log(`Server running on port ${port}`);\n});\n"},
+{"Async/Await", "async function fetchData(url) {\n    try {\n        const response = await fetch(url);\n        const data = await response.json();\n        return data;\n    } catch (error) {\n        console.error('Fetch failed:', error);\n        throw error;\n    }\n}\n"},
+};
+
+// Rust templates
+codeTemplates[3] = {
+{"Hello World", "fn main() {\n    println!(\"Hello, World!\");\n}\n"},
+{"Struct + Impl", "pub struct MyStruct {\n    name: String,\n    value: i32,\n}\n\nimpl MyStruct {\n    pub fn new(name: &str, value: i32) -> Self {\n        Self {\n            name: name.to_string(),\n            value,\n        }\n    }\n\n    pub fn name(&self) -> &str {\n        &self.name\n    }\n}\n"},
+{"Error Handling", "use std::io;\nuse std::fs;\n\nfn read_config(path: &str) -> Result<String, io::Error> {\n    let content = fs::read_to_string(path)?;\n    Ok(content)\n}\n\nfn main() {\n    match read_config(\"config.toml\") {\n        Ok(content) => println!(\"Config: {}\", content),\n        Err(e) => eprintln!(\"Error: {}\", e),\n    }\n}\n"},
+};
+
+// GLSL templates
+codeTemplates[4] = {
+{"Vertex Shader", "#version 330 core\n\nlayout(location = 0) in vec3 aPosition;\nlayout(location = 1) in vec2 aTexCoord;\n\nout vec2 vTexCoord;\n\nuniform mat4 uModelViewProjection;\n\nvoid main() {\n    vTexCoord = aTexCoord;\n    gl_Position = uModelViewProjection * vec4(aPosition, 1.0);\n}\n"},
+{"Fragment Shader", "#version 330 core\n\nin vec2 vTexCoord;\nout vec4 fragColor;\n\nuniform sampler2D uTexture;\nuniform float uTime;\n\nvoid main() {\n    vec4 color = texture(uTexture, vTexCoord);\n    fragColor = color;\n}\n"},
+};
+
+// Go templates
+codeTemplates[5] = {
+{"Hello World", "package main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello, World!\")\n}\n"},
+{"HTTP Server", "package main\n\nimport (\n    \"fmt\"\n    \"net/http\"\n)\n\nfunc handler(w http.ResponseWriter, r *http.Request) {\n    fmt.Fprintf(w, \"Hello, World!\")\n}\n\nfunc main() {\n    http.HandleFunc(\"/\", handler)\n    fmt.Println(\"Server starting on :8080\")\n    http.ListenAndServe(\":8080\", nil)\n}\n"},
+};
+
+// Bash templates
+codeTemplates[6] = {
+{"Hello World", "#!/usr/bin/env bash\nset -euo pipefail\n\necho \"Hello, World!\"\n"},
+{"Script with Args", "#!/usr/bin/env bash\nset -euo pipefail\n\nusage() {\n    echo \"Usage: $0 [-h] [-v] <input>\"\n    exit 1\n}\n\nVERBOSE=false\nwhile getopts \"hv\" opt; do\n    case $opt in\n        h) usage ;;\n        v) VERBOSE=true ;;\n        *) usage ;;\n    esac\ndone\nshift $((OPTIND - 1))\n\n[[ $# -lt 1 ]] && usage\n\nINPUT=\"$1\"\nif $VERBOSE; then\n    echo \"Processing: $INPUT\"\nfi\n"},
+};
+
+// TypeScript templates
+codeTemplates[7] = {
+{"Hello World", "const greeting: string = 'Hello, World!';\nconsole.log(greeting);\n"},
+{"Interface + Class", "interface IUser {\n    id: number;\n    name: string;\n    email: string;\n}\n\nclass UserService {\n    private users: IUser[] = [];\n\n    addUser(user: IUser): void {\n        this.users.push(user);\n    }\n\n    findById(id: number): IUser | undefined {\n        return this.users.find(u => u.id === id);\n    }\n\n    getAll(): readonly IUser[] {\n        return this.users;\n    }\n}\n"},
+};
+}
+
+// ---------------------------------------------------------------------------
+// Presets — prompt templates for Custom panel
+// ---------------------------------------------------------------------------
+
+void ofApp::initPromptTemplates() {
+promptTemplates = {
+{"Code Reviewer",
+"You are an expert code reviewer. Analyze the provided code for bugs, "
+"security issues, performance problems, and style improvements. "
+"Provide specific, actionable feedback with line references."},
+{"Technical Writer",
+"You are a technical documentation writer. Generate clear, well-structured "
+"documentation with examples, parameters, return values, and usage notes."},
+{"Data Analyst",
+"You are a data analysis expert. Help interpret data, suggest statistical "
+"methods, write queries, and explain results in plain language."},
+{"System Architect",
+"You are a software architect. Design systems with clear component "
+"boundaries, data flows, and technology choices. Consider scalability, "
+"reliability, and maintainability."},
+{"Debugger",
+"You are an expert debugger. Analyze error messages, stack traces, and "
+"code to identify root causes. Suggest specific fixes and explain why "
+"the bug occurs."},
+{"Test Engineer",
+"You are a test engineering expert. Generate comprehensive test cases "
+"including unit tests, edge cases, error paths, and integration scenarios. "
+"Use the appropriate testing framework for the language."},
+{"Translator",
+"You are a code translator. Convert code between programming languages "
+"while preserving logic, idioms, and best practices of the target language."},
+{"Optimizer",
+"You are a performance optimization expert. Analyze code for bottlenecks, "
+"memory issues, and algorithmic improvements. Suggest concrete optimizations "
+"with expected impact."},
+};
+}
+
+// ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
 
@@ -102,6 +200,8 @@ ImGui::GetIO().IniFilename = "imgui_ggml_studio.ini";
 // Initialize presets.
 initModelPresets();
 initScriptLanguages();
+initCodeTemplates();
+initPromptTemplates();
 
 // Default branch for GitHub.
 std::strncpy(scriptSourceBranch, "main", sizeof(scriptSourceBranch) - 1);
@@ -191,10 +291,7 @@ gui.end();
 
 void ofApp::exit() {
 autoSaveSession();
-if (workerThread.joinable()) {
-generating.store(false);
-workerThread.join();
-}
+stopGeneration();
 ggml.close();
 gui.exit();
 }
@@ -204,6 +301,7 @@ void ofApp::keyPressed(int key) {
 if (key == OF_KEY_F1) showDeviceInfo = !showDeviceInfo;
 if (key == OF_KEY_F2) showLog = !showLog;
 if (key == OF_KEY_F3) showPerformance = !showPerformance;
+if (key == 27) stopGeneration();  // Escape cancels generation
 }
 
 // ---------------------------------------------------------------------------
@@ -257,6 +355,20 @@ ImGui::SliderFloat("Repeat Penalty", &repeatPenalty, 1.0f, 2.0f, "%.2f");
 ImGui::SliderInt("Seed", &seed, -1, 99999);
 if (ImGui::IsItemHovered()) {
 ImGui::SetTooltip("-1 = random seed each run");
+}
+
+ImGui::SeparatorText("Mirostat Sampling");
+const char * mirostatLabels[] = { "Off", "Mirostat", "Mirostat 2.0" };
+ImGui::Combo("Mirostat Mode", &mirostatMode, mirostatLabels, 3);
+if (ImGui::IsItemHovered()) {
+ImGui::SetTooltip("Mirostat controls perplexity during generation\n"
+"Off = use standard Top-P sampling");
+}
+if (mirostatMode > 0) {
+ImGui::SliderFloat("Mirostat Tau", &mirostatTau, 0.0f, 10.0f, "%.1f");
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("Target entropy (lower = more focused)");
+ImGui::SliderFloat("Mirostat Eta", &mirostatEta, 0.0f, 1.0f, "%.2f");
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("Learning rate for Mirostat adjustment");
 }
 
 ImGui::SeparatorText("Engine");
@@ -372,6 +484,9 @@ ImGui::Text("Backend: %s", ggml.getBackendName().c_str());
 if (generating.load()) {
 ImGui::Spacing();
 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Generating...");
+if (ImGui::Button("Stop", ImVec2(-1, 0))) {
+stopGeneration();
+}
 }
 }
 ImGui::End();
@@ -442,7 +557,7 @@ std::memset(chatInput, 0, sizeof(chatInput));
 runInference(AiMode::Chat, userText);
 }
 
-// Copy / Clear row.
+// Copy / Clear / Export row.
 if (!chatMessages.empty()) {
 if (ImGui::SmallButton("Copy Chat")) {
 std::string all;
@@ -454,6 +569,14 @@ copyToClipboard(all);
 ImGui::SameLine();
 if (ImGui::SmallButton("Clear Chat")) {
 chatMessages.clear();
+}
+ImGui::SameLine();
+if (ImGui::SmallButton("Export Chat")) {
+ofFileDialogResult result = ofSystemSaveDialog(
+"chat_export.md", "Export Chat History");
+if (result.bSuccess) {
+exportChatHistory(result.getPath());
+}
 }
 }
 }
@@ -548,8 +671,36 @@ ImGui::Text("Describe what you want:");
 ImGui::InputTextMultiline("##ScriptIn", scriptInput, sizeof(scriptInput),
 ImVec2(-1, 100));
 
+// Code template selector.
+if (selectedLanguageIndex >= 0 &&
+selectedLanguageIndex < static_cast<int>(codeTemplates.size()) &&
+!codeTemplates[static_cast<size_t>(selectedLanguageIndex)].empty()) {
+const auto & templates = codeTemplates[static_cast<size_t>(selectedLanguageIndex)];
+ImGui::Text("Template:");
+ImGui::SameLine();
+ImGui::SetNextItemWidth(200);
+const char * preview = (selectedTemplateIndex >= 0 &&
+selectedTemplateIndex < static_cast<int>(templates.size()))
+? templates[static_cast<size_t>(selectedTemplateIndex)].name.c_str()
+: "(select template)";
+if (ImGui::BeginCombo("##TplSel", preview)) {
+for (int i = 0; i < static_cast<int>(templates.size()); i++) {
+bool sel = (selectedTemplateIndex == i);
+if (ImGui::Selectable(templates[static_cast<size_t>(i)].name.c_str(), sel)) {
+selectedTemplateIndex = i;
+const auto & code = templates[static_cast<size_t>(i)].code;
+size_t maxLen = sizeof(scriptInput) - 1;
+std::strncpy(scriptInput, code.c_str(), maxLen);
+scriptInput[maxLen] = '\0';
+}
+if (sel) ImGui::SetItemDefaultFocus();
+}
+ImGui::EndCombo();
+}
+}
+
 ImGui::BeginDisabled(generating.load() || std::strlen(scriptInput) == 0);
-if (ImGui::Button("Generate Code", ImVec2(140, 0))) {
+if (ImGui::Button("Generate Code", ImVec2(120, 0))) {
 std::string langPrompt;
 if (!scriptLanguages.empty()) {
 langPrompt = scriptLanguages[static_cast<size_t>(selectedLanguageIndex)].systemPrompt + "\n";
@@ -557,13 +708,28 @@ langPrompt = scriptLanguages[static_cast<size_t>(selectedLanguageIndex)].systemP
 runInference(AiMode::Script, langPrompt + scriptInput);
 }
 ImGui::SameLine();
-if (ImGui::Button("Explain Code", ImVec2(140, 0))) {
+if (ImGui::Button("Explain Code", ImVec2(110, 0))) {
 std::string prompt = std::string("Explain the following code:\n") + scriptInput;
 runInference(AiMode::Script, prompt);
 }
 ImGui::SameLine();
-if (ImGui::Button("Debug Code", ImVec2(140, 0))) {
+if (ImGui::Button("Debug Code", ImVec2(100, 0))) {
 std::string prompt = std::string("Find bugs in the following code:\n") + scriptInput;
+runInference(AiMode::Script, prompt);
+}
+ImGui::SameLine();
+if (ImGui::Button("Optimize", ImVec2(80, 0))) {
+std::string prompt = std::string("Optimize the following code for performance. Show the improved version and explain what changed:\n") + scriptInput;
+runInference(AiMode::Script, prompt);
+}
+ImGui::SameLine();
+if (ImGui::Button("Refactor", ImVec2(80, 0))) {
+std::string prompt = std::string("Refactor the following code to improve readability, maintainability, and structure. Show the refactored version:\n") + scriptInput;
+runInference(AiMode::Script, prompt);
+}
+ImGui::SameLine();
+if (ImGui::Button("Review", ImVec2(70, 0))) {
+std::string prompt = std::string("Review the following code for bugs, security issues, and style. Provide specific feedback:\n") + scriptInput;
 runInference(AiMode::Script, prompt);
 }
 ImGui::EndDisabled();
@@ -1005,6 +1171,30 @@ ImGui::SameLine();
 ImGui::TextDisabled("(configure system prompt + user input)");
 ImGui::Separator();
 
+// Prompt template selector.
+if (!promptTemplates.empty()) {
+ImGui::Text("Prompt Template:");
+ImGui::SameLine();
+ImGui::SetNextItemWidth(200);
+const char * preview = (selectedPromptTemplateIndex >= 0 &&
+selectedPromptTemplateIndex < static_cast<int>(promptTemplates.size()))
+? promptTemplates[static_cast<size_t>(selectedPromptTemplateIndex)].name.c_str()
+: "(select template)";
+if (ImGui::BeginCombo("##PromptTpl", preview)) {
+for (int i = 0; i < static_cast<int>(promptTemplates.size()); i++) {
+bool sel = (selectedPromptTemplateIndex == i);
+if (ImGui::Selectable(promptTemplates[static_cast<size_t>(i)].name.c_str(), sel)) {
+selectedPromptTemplateIndex = i;
+const auto & sp = promptTemplates[static_cast<size_t>(i)].systemPrompt;
+std::strncpy(customSystemPrompt, sp.c_str(), sizeof(customSystemPrompt) - 1);
+customSystemPrompt[sizeof(customSystemPrompt) - 1] = '\0';
+}
+if (sel) ImGui::SetItemDefaultFocus();
+}
+ImGui::EndCombo();
+}
+}
+
 ImGui::Text("System prompt:");
 ImGui::InputTextMultiline("##CustSys", customSystemPrompt, sizeof(customSystemPrompt),
 ImVec2(-1, 60));
@@ -1194,6 +1384,9 @@ out << "seed=" << seed << "\n";
 out << "numThreads=" << numThreads << "\n";
 out << "selectedBackend=" << selectedBackendIndex << "\n";
 out << "theme=" << themeIndex << "\n";
+out << "mirostatMode=" << mirostatMode << "\n";
+out << "mirostatTau=" << ofToString(mirostatTau, 4) << "\n";
+out << "mirostatEta=" << ofToString(mirostatEta, 4) << "\n";
 
 // Script source.
 out << "scriptSourceType=" << static_cast<int>(scriptSourceType) << "\n";
@@ -1280,6 +1473,9 @@ else if (key == "theme") {
 	themeIndex = std::clamp(std::stoi(value), 0, 2);
 	applyTheme(themeIndex);
 }
+else if (key == "mirostatMode") mirostatMode = std::clamp(std::stoi(value), 0, 2);
+else if (key == "mirostatTau") mirostatTau = std::clamp(std::stof(value), 0.0f, 10.0f);
+else if (key == "mirostatEta") mirostatEta = std::clamp(std::stof(value), 0.0f, 1.0f);
 else if (key == "scriptSourceType") scriptSourceType = static_cast<ScriptSourceType>(std::stoi(value));
 else if (key == "scriptSourcePath") scriptSourcePath = unescapeSessionText(value);
 else if (key == "scriptSourceGitHub") copyToBuf(scriptSourceGitHub, sizeof(scriptSourceGitHub), value);
@@ -1340,6 +1536,7 @@ const std::string & systemPrompt) {
 if (generating.load() || !engineReady) return;
 
 generating.store(true);
+cancelRequested.store(false);
 
 // Detach previous thread if any.
 if (workerThread.joinable()) {
@@ -1351,12 +1548,24 @@ std::string result = runDemoComputation(userText, mode, systemPrompt);
 
 {
 std::lock_guard<std::mutex> lock(outputMutex);
+if (!cancelRequested.load()) {
 pendingOutput = result;
 pendingRole = "assistant";
 pendingMode = mode;
 }
+}
 generating.store(false);
 });
+}
+
+void ofApp::stopGeneration() {
+if (generating.load()) {
+cancelRequested.store(true);
+}
+if (workerThread.joinable()) {
+workerThread.join();
+}
+generating.store(false);
 }
 
 void ofApp::applyPendingOutput() {

@@ -77,6 +77,24 @@ struct ScriptFileEntry {
 };
 
 // ---------------------------------------------------------------------------
+// CodeTemplate — quick-start code skeleton for each language.
+// ---------------------------------------------------------------------------
+
+struct CodeTemplate {
+	std::string name;       // e.g. "Hello World"
+	std::string code;       // skeleton source
+};
+
+// ---------------------------------------------------------------------------
+// PromptTemplate — predefined system prompt for the Custom panel.
+// ---------------------------------------------------------------------------
+
+struct PromptTemplate {
+	std::string name;           // e.g. "Code Reviewer"
+	std::string systemPrompt;   // the system prompt text
+};
+
+// ---------------------------------------------------------------------------
 // ofApp — ofxGgml AI Studio with ofxImGui
 // ---------------------------------------------------------------------------
 
@@ -120,6 +138,7 @@ private:
 
 	// -- generation state --
 	std::atomic<bool> generating{false};
+	std::atomic<bool> cancelRequested{false};
 	std::string generatingStatus;
 	std::thread workerThread;
 	std::mutex outputMutex;
@@ -139,6 +158,9 @@ private:
 	int numThreads = 4;
 	int selectedBackendIndex = 0;                    // 0=Auto, 1=CPU, 2=GPU
 	int themeIndex = 0;                              // 0=Dark, 1=Light, 2=Classic
+	int mirostatMode = 0;                            // 0=off, 1=Mirostat, 2=Mirostat 2.0
+	float mirostatTau = 5.0f;
+	float mirostatEta = 0.1f;
 	bool showDeviceInfo = false;
 	bool showLog = false;
 	bool showPerformance = false;
@@ -159,6 +181,16 @@ private:
 	std::vector<ScriptLanguage> scriptLanguages;
 	int selectedLanguageIndex = 0;
 	void initScriptLanguages();
+
+	// -- code templates --
+	std::vector<std::vector<CodeTemplate>> codeTemplates;  // per-language
+	int selectedTemplateIndex = -1;
+	void initCodeTemplates();
+
+	// -- prompt templates (Custom panel) --
+	std::vector<PromptTemplate> promptTemplates;
+	int selectedPromptTemplateIndex = -1;
+	void initPromptTemplates();
 
 	// -- script source (local folder / GitHub) --
 	ScriptSourceType scriptSourceType = ScriptSourceType::None;
@@ -190,6 +222,7 @@ private:
 	void runInference(AiMode mode, const std::string & userText,
 		const std::string & systemPrompt = "");
 	void applyPendingOutput();
+	void stopGeneration();
 
 	// -- UI panels --
 	void drawMenuBar();
@@ -207,6 +240,7 @@ private:
 	void drawPerformanceWindow();
 	void applyTheme(int index);
 	void copyToClipboard(const std::string & text);
+	void exportChatHistory(const std::string & path);
 
 	// -- ggml demo computation --
 	std::string runDemoComputation(const std::string & input, AiMode mode,
