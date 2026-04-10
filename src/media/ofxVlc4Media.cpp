@@ -606,6 +606,8 @@ bool ofxVlc4::MediaComponent::loadMediaAtIndex(int index) {
 
 void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 	prepareForMediaDetach();
+	auto * coreSession = owner.m_impl->subsystemRuntime.coreSession.get();
+	auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	libvlc_media_t * currentMedia = owner.sessionMedia();
 
@@ -613,20 +615,20 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 		libvlc_media_player_set_media(player, nullptr);
 	}
 
-	if (owner.m_impl->subsystemRuntime.coreSession->mediaEvents()) {
-		if (currentMedia && owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
-			owner.m_impl->subsystemRuntime.coreSession->detachMediaEvents(
-				owner.m_impl->subsystemRuntime.eventRouter.get(),
+	if (coreSession && coreSession->mediaEvents()) {
+		if (currentMedia && eventRouter) {
+			coreSession->detachMediaEvents(
+				eventRouter,
 				VlcEventRouter::vlcMediaEventStatic);
-			owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(nullptr);
-		} else {
-			owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(nullptr);
 		}
+		coreSession->setMediaEvents(nullptr);
 	}
 
 	if (currentMedia) {
 		libvlc_media_release(currentMedia);
-		owner.m_impl->subsystemRuntime.coreSession->setMedia(nullptr);
+		if (coreSession) {
+			coreSession->setMedia(nullptr);
+		}
 	}
 
 	{

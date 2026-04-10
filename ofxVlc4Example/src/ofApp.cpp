@@ -532,14 +532,19 @@ void ofApp::initializePlayer(
 	player.clearPlaylist();
 
 	if (playlistOverride && !playlistOverride->empty()) {
+		const bool shouldResumePlayback = restorePlaybackState == RestorePlaybackState::Playing;
+		const bool hasActiveLibVlcVisualizer =
+			visualizerSettings.module != ofxVlc4AudioVisualizerModule::None;
 		for (const std::string & item : *playlistOverride) {
 			if (!item.empty()) {
 				player.addToPlaylist(item);
 			}
 		}
 		if (restoreIndex >= 0 && restoreIndex < static_cast<int>(playlistOverride->size())) {
-			player.activatePlaylistIndex(restoreIndex, restorePlaybackState == RestorePlaybackState::Playing);
-			if (restoreTimeMs > 0) {
+			player.activatePlaylistIndex(restoreIndex, shouldResumePlayback);
+			// libVLC visualizers are playback-driven and can crash if we seek them
+			// before the restarted instance has actually begun playback.
+			if (restoreTimeMs > 0 && (shouldResumePlayback || !hasActiveLibVlcVisualizer)) {
 				player.setTime(restoreTimeMs);
 			}
 		}

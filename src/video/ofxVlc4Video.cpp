@@ -422,14 +422,15 @@ void ofxVlc4::VideoComponent::applyCurrentPlayerSettings() {
 }
 
 ofxVlc4::VideoAdjustmentEngine ofxVlc4::VideoComponent::resolveActiveVideoAdjustmentEngine() const {
+	const bool textureVideoOutput = usesTextureVideoOutput();
 	switch (owner.m_impl->effectsRuntime.videoAdjustmentEngine) {
 	case ofxVlc4::VideoAdjustmentEngine::Shader:
-		return usesTextureVideoOutput() ? ofxVlc4::VideoAdjustmentEngine::Shader : ofxVlc4::VideoAdjustmentEngine::LibVlc;
+		return textureVideoOutput ? ofxVlc4::VideoAdjustmentEngine::Shader : ofxVlc4::VideoAdjustmentEngine::LibVlc;
 	case ofxVlc4::VideoAdjustmentEngine::LibVlc:
 		return ofxVlc4::VideoAdjustmentEngine::LibVlc;
 	case ofxVlc4::VideoAdjustmentEngine::Auto:
 	default:
-		return usesTextureVideoOutput() ? ofxVlc4::VideoAdjustmentEngine::Shader : ofxVlc4::VideoAdjustmentEngine::LibVlc;
+		return textureVideoOutput ? ofxVlc4::VideoAdjustmentEngine::Shader : ofxVlc4::VideoAdjustmentEngine::LibVlc;
 	}
 }
 

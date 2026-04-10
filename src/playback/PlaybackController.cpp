@@ -10,29 +10,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iomanip>
-#include <sstream>
 
 using ofxVlc4Utils::isStoppedOrIdleState;
 using ofxVlc4Utils::isTransientPlaybackState;
 using ofxVlc4Utils::trimWhitespace;
-
-namespace {
-
-std::string formatCaptureFloatValue(float value) {
-	std::ostringstream stream;
-	stream << std::fixed << std::setprecision(3) << value;
-	std::string text = stream.str();
-	while (!text.empty() && text.back() == '0') {
-		text.pop_back();
-	}
-	if (!text.empty() && text.back() == '.') {
-		text.pop_back();
-	}
-	return text.empty() ? "0" : text;
-}
-
-}
 
 PlaybackController::PlaybackController(ofxVlc4 & owner)
 	: owner(owner) {
@@ -328,7 +309,7 @@ bool PlaybackController::openDshowCapture(
 		options.emplace_back(":dshow-size=" + ofToString(width) + "x" + ofToString(height));
 	}
 	if (fps > 0.0f) {
-		options.emplace_back(":dshow-fps=" + formatCaptureFloatValue(fps));
+		options.emplace_back(":dshow-fps=" + ofxVlc4MediaHelpers::formatCaptureFloatValue(fps));
 	}
 
 	return requestDirectMediaActivation("dshow://", true, options, true, false, "DirectShow capture opened.");
@@ -352,7 +333,7 @@ bool PlaybackController::openScreenCapture(int width, int height, float fps, int
 		options.emplace_back(":screen-height=" + ofToString(height));
 	}
 	if (fps > 0.0f) {
-		options.emplace_back(":screen-fps=" + formatCaptureFloatValue(fps));
+		options.emplace_back(":screen-fps=" + ofxVlc4MediaHelpers::formatCaptureFloatValue(fps));
 	}
 	if (left != 0) {
 		options.emplace_back(":screen-left=" + ofToString(left));
