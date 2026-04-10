@@ -79,6 +79,10 @@ public:
 	void previousMediaListItem();
 	bool hasActiveDirectMedia() const;
 	bool reloadActiveDirectMedia();
+	const std::string & getActiveDirectMediaSource() const;
+	const std::vector<std::string> & getActiveDirectMediaOptions() const;
+	bool getActiveDirectMediaIsLocation() const;
+	bool getActiveDirectMediaParseAsNetwork() const;
 	float getBufferCache() const;
 	bool isCorked() const;
 	unsigned getCachedVideoOutputCount() const;
