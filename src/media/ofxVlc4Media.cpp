@@ -4,6 +4,7 @@
 #include "media/MediaLibrary.h"
 #include "ofxVlc4Media.h"
 #include "playback/PlaybackController.h"
+#include "support/ofxVlc4MediaHelpers.h"
 #include "video/ofxVlc4Video.h"
 #include "support/ofxVlc4Utils.h"
 #include "core/VlcCoreSession.h"
@@ -33,6 +34,22 @@ using ofxVlc4Utils::trimWhitespace;
 namespace {
 
 constexpr const char * kMediaLogChannel = "ofxVlc4";
+
+std::string formatDeleteTrace(
+	const char * stage,
+	int index,
+	int currentIndex,
+	bool playbackWanted,
+	bool manualStopPending,
+	bool hasPendingManualStops) {
+	return std::string("[delete-trace] ")
+		+ stage
+		+ " index=" + ofToString(index)
+		+ " currentIndex=" + ofToString(currentIndex)
+		+ " playbackWanted=" + ofToString(playbackWanted)
+		+ " manualStopPending=" + ofToString(manualStopPending)
+		+ " pendingManualStops=" + ofToString(hasPendingManualStops);
+}
 
 
 const std::set<std::string> & defaultMediaExtensions() {
@@ -604,23 +621,36 @@ bool ofxVlc4::MediaComponent::loadMediaAtIndex(int index) {
 }
 
 void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
+	owner.logNotice(std::string("[delete-trace] clearCurrentMedia.begin clearVideoResources=")
+		+ ofToString(clearVideoResources)
+		+ " sessionMedia=" + (owner.sessionMedia() ? "yes" : "no")
+		+ " sessionPlayer=" + (owner.sessionPlayer() ? "yes" : "no"));
 	prepareForMediaDetach();
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	libvlc_media_t * currentMedia = owner.sessionMedia();
 
-	if (player) {
+	if (player && currentMedia) {
+		owner.logNotice("[delete-trace] clearCurrentMedia.set-media-null");
 		libvlc_media_player_set_media(player, nullptr);
+	} else if (player) {
+		owner.logNotice("[delete-trace] clearCurrentMedia.skip-set-media-null-no-current-media");
 	}
 
 	if (owner.m_impl->subsystemRuntime.coreSession->mediaEvents()) {
-		if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
-			owner.m_impl->subsystemRuntime.coreSession->detachMediaEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
+		if (currentMedia && owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.eventRouter) {
+			owner.logNotice("[delete-trace] clearCurrentMedia.detach-media-events");
+			owner.m_impl->subsystemRuntime.coreSession->detachMediaEvents(
+				owner.m_impl->subsystemRuntime.eventRouter.get(),
+				VlcEventRouter::vlcMediaEventStatic);
+			owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(nullptr);
 		} else {
+			owner.logNotice("[delete-trace] clearCurrentMedia.drop-stale-media-events");
 			owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(nullptr);
 		}
 	}
 
 	if (currentMedia) {
+		owner.logNotice("[delete-trace] clearCurrentMedia.release-media");
 		libvlc_media_release(currentMedia);
 		owner.m_impl->subsystemRuntime.coreSession->setMedia(nullptr);
 	}
@@ -659,6 +689,7 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 	owner.m_impl->stateCacheRuntime.cachedVideoTrackFps.store(0.0);
 	resetSubtitleStateInfo();
 	resetNavigationStateInfo();
+	owner.logNotice("[delete-trace] clearCurrentMedia.end");
 }
 
 void ofxVlc4::MediaComponent::applyNativeRecording() {
@@ -1378,32 +1409,71 @@ int ofxVlc4::MediaComponent::addPathToPlaylist(
 }
 
 void ofxVlc4::MediaComponent::clearPlaylist() {
+	owner.logNotice(formatDeleteTrace(
+		"clearPlaylist.begin",
+		-1,
+		mediaLibrary().getCurrentIndex(),
+		playback().isPlaybackWanted(),
+		playback().isManualStopPending(),
+		playback().hasPendingManualStopEvents()));
 	playback().stop();
 	playback().invalidateShuffleQueue();
 	mediaLibrary().clearPlaylistState();
-	clearCurrentMedia();
+	if (ofxVlc4MediaHelpers::shouldClearCurrentMediaAfterPlaylistMutation(
+		playback().isManualStopPending(),
+		playback().hasPendingManualStopEvents())) {
+		owner.logNotice("[delete-trace] clearPlaylist.clearCurrentMedia-now");
+		clearCurrentMedia();
+	} else {
+		owner.logNotice("[delete-trace] clearPlaylist.defer-clearCurrentMedia");
+	}
 	owner.setStatus("Playlist cleared.");
 	owner.logNotice("Playlist cleared.");
 }
 
 void ofxVlc4::MediaComponent::removeFromPlaylist(int index) {
-	const MediaLibrary::RemovePlaylistItemResult removal = mediaLibrary().removePlaylistItem(index);
-	if (!removal.removed) {
-		return;
-	}
-
-	playback().invalidateShuffleQueue();
-	const bool shouldPlayReplacement = removal.wasCurrent && playback().isPlaybackWanted();
-	if (removal.wasCurrent) {
+	const int currentIndex = mediaLibrary().getCurrentIndex();
+	const bool removingCurrentItem = (index == currentIndex);
+	const bool shouldPlayReplacement = removingCurrentItem && playback().isPlaybackWanted();
+	owner.logNotice(formatDeleteTrace(
+		"removeFromPlaylist.begin",
+		index,
+		currentIndex,
+		playback().isPlaybackWanted(),
+		playback().isManualStopPending(),
+		playback().hasPendingManualStopEvents()));
+	if (removingCurrentItem) {
+		owner.logNotice("[delete-trace] removeFromPlaylist.stop-current-item");
 		playback().stop();
 		audio().resetBuffer();
 	}
 
+	const MediaLibrary::RemovePlaylistItemResult removal = mediaLibrary().removePlaylistItem(index);
+	if (!removal.removed) {
+		owner.logWarning("[delete-trace] removeFromPlaylist.item-not-removed");
+		return;
+	}
+	owner.logNotice(std::string("[delete-trace] removeFromPlaylist.removed")
+		+ " wasCurrent=" + ofToString(removal.wasCurrent)
+		+ " playlistEmpty=" + ofToString(removal.playlistEmpty)
+		+ " replacementIndex=" + ofToString(removal.replacementIndex)
+		+ " shouldPlayReplacement=" + ofToString(shouldPlayReplacement));
+
+	playback().invalidateShuffleQueue();
+
 	if (removal.playlistEmpty) {
-		clearCurrentMedia();
+		if (ofxVlc4MediaHelpers::shouldClearCurrentMediaAfterPlaylistMutation(
+			playback().isManualStopPending(),
+			playback().hasPendingManualStopEvents())) {
+			owner.logNotice("[delete-trace] removeFromPlaylist.clearCurrentMedia-now");
+			clearCurrentMedia();
+		} else {
+			owner.logNotice("[delete-trace] removeFromPlaylist.defer-clearCurrentMedia");
+		}
 		return;
 	}
 	if (removal.wasCurrent && removal.replacementIndex >= 0) {
+		owner.logNotice("[delete-trace] removeFromPlaylist.activate-replacement");
 		playback().activatePlaylistIndex(removal.replacementIndex, shouldPlayReplacement);
 	}
 }

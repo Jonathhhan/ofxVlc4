@@ -4,6 +4,7 @@
 #include "media/ofxVlc4Media.h"
 #include "ofxVlc4.h"
 #include "ofxVlc4Impl.h"
+#include "support/ofxVlc4MediaHelpers.h"
 #include "support/ofxVlc4Utils.h"
 #include "video/ofxVlc4Video.h"
 
@@ -29,6 +30,27 @@ std::string formatCaptureFloatValue(float value) {
 		text.pop_back();
 	}
 	return text.empty() ? "0" : text;
+}
+
+std::string formatPlaybackStopTrace(
+	const char * stage,
+	libvlc_media_player_t * player,
+	libvlc_media_t * currentMedia,
+	const PlaybackTransportState & transport) {
+	const libvlc_state_t state = player ? libvlc_media_player_get_state(player) : libvlc_Stopped;
+	return std::string("[delete-trace] ")
+		+ stage
+		+ " player=" + (player ? "yes" : "no")
+		+ " currentMedia=" + (currentMedia ? "yes" : "no")
+		+ " state=" + ofToString(static_cast<int>(state))
+		+ " playbackWanted=" + ofToString(transport.playbackWanted.load())
+		+ " pauseRequested=" + ofToString(transport.pauseRequested.load())
+		+ " manualStopInProgress=" + ofToString(transport.manualStopInProgress.load())
+		+ " pendingManualStopFinalize=" + ofToString(transport.pendingManualStopFinalize.load())
+		+ " pendingManualStopEvents=" + ofToString(transport.pendingManualStopEvents.load())
+		+ " pendingActivateIndex=" + ofToString(transport.pendingActivateIndex.load())
+		+ " pendingActivateReady=" + ofToString(transport.pendingActivateReady.load())
+		+ " playNextRequested=" + ofToString(transport.playNextRequested.load());
 }
 
 }
@@ -510,6 +532,7 @@ void PlaybackController::stop() {
 	clearWatchTimeState();
 
 	libvlc_media_player_t * player = owner.sessionPlayer();
+	owner.logNotice(formatPlaybackStopTrace("stop.begin", player, owner.sessionMedia(), playbackTransport));
 	if (!player) {
 		if (!shuttingDown) {
 			owner.stopActiveRecorderSessions();
@@ -530,6 +553,7 @@ void PlaybackController::stop() {
 	const libvlc_state_t state = libvlc_media_player_get_state(player);
 	const bool shouldStopActivePlayback = hasLoadedMedia && !isStoppedOrIdleState(state);
 	if (!shouldStopActivePlayback) {
+		owner.logNotice(formatPlaybackStopTrace("stop.no-active-playback", player, owner.sessionMedia(), playbackTransport));
 		if (!shuttingDown) {
 			owner.stopActiveRecorderSessions();
 		}
@@ -547,8 +571,8 @@ void PlaybackController::stop() {
 		playbackTransport.pendingManualStopFinalize.store(false);
 		playbackTransport.manualStopRequestTimeMs.store(ofGetElapsedTimeMillis());
 		playbackTransport.manualStopRetryIssued.store(false);
+		owner.logNotice(formatPlaybackStopTrace("stop.async-request", player, owner.sessionMedia(), playbackTransport));
 		libvlc_media_player_stop_async(player);
-		clearCurrentMedia();
 	}
 
 	owner.logNotice("Playback stopped.");
@@ -716,8 +740,16 @@ void PlaybackController::processDeferredPlaybackActions() {
 		playbackTransport.manualStopInProgress.load() &&
 		!playbackTransport.playbackWanted.load() &&
 		!playbackTransport.pauseRequested.load()) {
+		if (!currentMedia) {
+			owner.logNotice("[delete-trace] deferred.manual-stop-no-media-reset");
+			playbackTransport.manualStopInProgress.store(false);
+			playbackTransport.pendingManualStopEvents.store(0);
+			playbackTransport.manualStopRequestTimeMs.store(0);
+			playbackTransport.manualStopRetryIssued.store(false);
+		} else {
 		const libvlc_state_t state = player ? libvlc_media_player_get_state(player) : libvlc_Stopped;
 		if (!player || isStoppedOrIdleState(state)) {
+			owner.logNotice(formatPlaybackStopTrace("deferred.manual-stop-finalize", player, currentMedia, playbackTransport));
 			playbackTransport.pendingManualStopEvents.store(0);
 			playbackTransport.manualStopRequestTimeMs.store(0);
 			playbackTransport.manualStopRetryIssued.store(false);
@@ -728,16 +760,19 @@ void PlaybackController::processDeferredPlaybackActions() {
 			if (stopRequestTimeMs > 0) {
 				if (!playbackTransport.manualStopRetryIssued.load() &&
 					nowMs >= stopRequestTimeMs + kManualStopRetryMs) {
+					owner.logNotice(formatPlaybackStopTrace("deferred.manual-stop-retry", player, currentMedia, playbackTransport));
 					libvlc_media_player_stop_async(player);
 					playbackTransport.manualStopRetryIssued.store(true);
 				}
 				if (nowMs >= stopRequestTimeMs + kManualStopFallbackMs) {
+					owner.logWarning(formatPlaybackStopTrace("deferred.manual-stop-fallback", player, currentMedia, playbackTransport));
 					playbackTransport.pendingManualStopEvents.store(0);
 					playbackTransport.manualStopRequestTimeMs.store(0);
 					playbackTransport.manualStopRetryIssued.store(false);
 					playbackTransport.pendingManualStopFinalize.store(true);
 				}
 			}
+		}
 		}
 	}
 
@@ -758,8 +793,12 @@ void PlaybackController::processDeferredPlaybackActions() {
 	}
 
 	if (playbackTransport.pendingManualStopFinalize.exchange(false)) {
+		owner.logNotice(formatPlaybackStopTrace("deferred.clear-current-media", player, currentMedia, playbackTransport));
+		playbackTransport.manualStopInProgress.store(false);
+		playbackTransport.pendingManualStopEvents.store(0);
 		playbackTransport.manualStopRequestTimeMs.store(0);
 		playbackTransport.manualStopRetryIssued.store(false);
+		owner.logNotice("[delete-trace] deferred.clear-current-media.reset-manual-stop");
 		clearCurrentMedia();
 		if (!owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 			owner.stopActiveRecorderSessions();
@@ -783,6 +822,7 @@ void PlaybackController::processDeferredPlaybackActions() {
 	}
 
 	if (playbackTransport.playNextRequested.exchange(false)) {
+		owner.logNotice(formatPlaybackStopTrace("deferred.handle-playback-ended", player, currentMedia, playbackTransport));
 		handlePlaybackEnded();
 	}
 }
@@ -906,6 +946,9 @@ void PlaybackController::onMediaPlayerStopping() {
 }
 
 void PlaybackController::onMediaPlayerStopped() {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	libvlc_media_t * currentMedia = owner.sessionMedia();
+	owner.logNotice(formatPlaybackStopTrace("event.stopped.begin", player, currentMedia, playbackTransport));
 	playbackTransport.audioPausedSignal.store(false);
 	clearAudioPtsState();
 	owner.m_impl->nativeRecordingRuntime.active.store(false);
@@ -919,6 +962,7 @@ void PlaybackController::onMediaPlayerStopped() {
 	playbackTransport.corked.store(false, std::memory_order_relaxed);
 	clearWatchTimeState();
 	const int pendingManualStops = playbackTransport.pendingManualStopEvents.fetch_sub(1);
+	owner.logNotice("[delete-trace] event.stopped.pendingManualStops-before-decrement=" + ofToString(pendingManualStops));
 	if (pendingManualStops > 0) {
 		playbackTransport.manualStopInProgress.store(true);
 		if (playbackTransport.pendingActivateIndex.load() >= 0 || playbackTransport.hasPendingDirectMedia.load()) {
@@ -932,13 +976,15 @@ void PlaybackController::onMediaPlayerStopped() {
 	} else {
 		playbackTransport.manualStopInProgress.store(false);
 		playbackTransport.pendingManualStopEvents.store(0);
-		libvlc_media_player_t * player = owner.sessionPlayer();
 		const libvlc_state_t state = player ? libvlc_media_player_get_state(player) : libvlc_Stopped;
 		const bool stillStopped = !player || isStoppedOrIdleState(state);
-		if (stillStopped) {
+		if (ofxVlc4MediaHelpers::shouldQueuePlaybackAdvanceAfterStop(
+			stillStopped,
+			playbackTransport.playbackWanted.load())) {
 			playbackTransport.playNextRequested.store(true);
 		}
 	}
+	owner.logNotice(formatPlaybackStopTrace("event.stopped.end", player, owner.sessionMedia(), playbackTransport));
 }
 
 void PlaybackController::onMediaPlayerPaused() {

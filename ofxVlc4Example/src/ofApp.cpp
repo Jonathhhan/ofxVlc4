@@ -470,7 +470,10 @@ void ofApp::setup() {
 	ofSetFrameRate(60);
 	ofSetVerticalSync(true);
 	ofDisableArbTex();
+	const std::string crashTraceLogPath = ofToDataPath("ofxVlc4-delete-crash.log", true);
+	ofLogToFile(crashTraceLogPath, true);
 	ofSetLogLevel("ofxVlc4", OF_LOG_NOTICE);
+	ofLogNotice("ofxVlc4") << "[delete-trace] writing log to " << crashTraceLogPath;
 
 	ofSoundStreamSettings settings;
 	settings.setOutListener(this);

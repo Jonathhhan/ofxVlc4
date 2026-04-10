@@ -229,6 +229,20 @@ static void testFormatCaptureFloatValue() {
 	CHECK_EQ(formatCaptureFloatValue(-1.25f), std::string("-1.25"));
 }
 
+static void testPlaybackDeleteDecisionHelpers() {
+	beginSuite("playback/delete decision helpers");
+
+	CHECK(shouldQueuePlaybackAdvanceAfterStop(true, true));
+	CHECK(!shouldQueuePlaybackAdvanceAfterStop(true, false));
+	CHECK(!shouldQueuePlaybackAdvanceAfterStop(false, true));
+	CHECK(!shouldQueuePlaybackAdvanceAfterStop(false, false));
+
+	CHECK(shouldClearCurrentMediaAfterPlaylistMutation(false, false));
+	CHECK(!shouldClearCurrentMediaAfterPlaylistMutation(true, false));
+	CHECK(!shouldClearCurrentMediaAfterPlaylistMutation(false, true));
+	CHECK(!shouldClearCurrentMediaAfterPlaylistMutation(true, true));
+}
+
 // ---------------------------------------------------------------------------
 // writeWavHeader: validates binary output structure
 // ---------------------------------------------------------------------------
@@ -365,6 +379,7 @@ int main() {
 	testFormatFrameRate();
 	testDefaultBookmarkLabel();
 	testFormatCaptureFloatValue();
+	testPlaybackDeleteDecisionHelpers();
 	testWriteWavHeaderBasic();
 	testWriteWavHeaderMono48k();
 	testWriteWavHeaderLargeDataSize();

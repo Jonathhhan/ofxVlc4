@@ -110,6 +110,20 @@ inline std::string formatCaptureFloatValue(float value) {
 }
 
 // ---------------------------------------------------------------------------
+// Playback/delete decision helpers
+// ---------------------------------------------------------------------------
+
+inline bool shouldQueuePlaybackAdvanceAfterStop(bool stillStopped, bool playbackWanted) {
+	return stillStopped && playbackWanted;
+}
+
+inline bool shouldClearCurrentMediaAfterPlaylistMutation(
+	bool manualStopPending,
+	bool hasPendingManualStopEvents) {
+	return !manualStopPending && !hasPendingManualStopEvents;
+}
+
+// ---------------------------------------------------------------------------
 // WAV header writing
 // ---------------------------------------------------------------------------
 
