@@ -1763,11 +1763,11 @@ void ofxVlc4Recorder::textureClose(void * data) {
 }
 
 std::string ofxVlc4::getLastAudioRecordingPath() const {
-	return recorder.getLastFinishedAudioPath();
+	return m_impl->recordingObjectRuntime.recorder.getLastFinishedAudioPath();
 }
 
 std::string ofxVlc4::getLastVideoRecordingPath() const {
-	return recorder.getLastFinishedVideoPath();
+	return m_impl->recordingObjectRuntime.recorder.getLastFinishedVideoPath();
 }
 
 bool ofxVlc4::muxRecordingFiles(
