@@ -988,7 +988,14 @@ std::string ofxVlc4::getDiagnosticsReport() const {
 
 void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	// Re-init starts from a clean VLC state so partial previous setup cannot leak across sessions.
-	releaseVlcResources();
+	const bool hasExistingVlcSession =
+		m_impl->subsystemRuntime.coreSession &&
+		(m_impl->subsystemRuntime.coreSession->instance() != nullptr ||
+			m_impl->subsystemRuntime.coreSession->player() != nullptr ||
+			m_impl->subsystemRuntime.coreSession->media() != nullptr);
+	if (hasExistingVlcSession) {
+		releaseVlcResources();
+	}
 	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
 	m_impl->lifecycleRuntime.closeRequested.store(false);
 	m_impl->lifecycleRuntime.shuttingDown.store(false, std::memory_order_release);
@@ -1067,7 +1074,6 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	for (const std::string & argument : initArgs) {
 		initArgPointers.push_back(argument.c_str());
 	}
-
 	const int runtimeAbi = libvlc_abi_version();
 	if (runtimeAbi != LIBVLC_ABI_VERSION_INT) {
 		logWarning("libVLC ABI mismatch: compiled against "
@@ -1077,7 +1083,6 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			+ ". Unexpected behavior may occur.");
 	}
 
-	libvlc_clearerr();
 	m_impl->subsystemRuntime.coreSession->setInstance(libvlc_new(static_cast<int>(initArgPointers.size()), initArgPointers.data()));
 	if (!m_impl->subsystemRuntime.coreSession->instance()) {
 		const char * error = libvlc_errmsg();
@@ -1090,7 +1095,6 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 
 	m_impl->subsystemRuntime.mediaComponent->applyLibVlcLogging();
 
-	libvlc_clearerr();
 	m_impl->subsystemRuntime.coreSession->setPlayer(libvlc_media_player_new(m_impl->subsystemRuntime.coreSession->instance()));
 	if (!m_impl->subsystemRuntime.coreSession->player()) {
 		const char * error = libvlc_errmsg();
