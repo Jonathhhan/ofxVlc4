@@ -330,3 +330,78 @@ target_include_directories(test_playlist_helpers PRIVATE
 )
 
 add_test(NAME playlist_helpers COMMAND test_playlist_helpers)
+
+# ---------------------------------------------------------------------------
+# ofxGgml tests — pure C++17, no ggml runtime dependency.
+# ---------------------------------------------------------------------------
+
+set(GGML_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ofxGgml/src")
+
+# ---------------------------------------------------------------------------
+# test_ggml_types
+# Tests the POD default values and enum coverage of ofxGgmlTypes.h.
+# No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ggml_types
+    test_ggml_types.cpp
+)
+
+target_include_directories(test_ggml_types PRIVATE
+    "${GGML_SRC_DIR}/support"
+)
+
+add_test(NAME ggml_types COMMAND test_ggml_types)
+
+# ---------------------------------------------------------------------------
+# test_ggml_helpers
+# Tests the pure inline helper functions in ofxGgmlHelpers.h (typeName,
+# backendTypeName, elementSize, stateName, formatBytes).
+# No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ggml_helpers
+    test_ggml_helpers.cpp
+)
+
+target_include_directories(test_ggml_helpers PRIVATE
+    "${GGML_SRC_DIR}/support"
+)
+
+add_test(NAME ggml_helpers COMMAND test_ggml_helpers)
+
+# ---------------------------------------------------------------------------
+# test_ggml_session
+# Tests the session persistence escape/unescape logic and file format
+# round-trip.  Pure C++17 — no OF, GLFW, VLC, or ggml dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ggml_session
+    test_ggml_session.cpp
+)
+
+add_test(NAME ggml_session COMMAND test_ggml_session)
+
+# ---------------------------------------------------------------------------
+# test_ggml_model_presets
+# Tests model preset and script language data integrity (required fields,
+# URL format, filename consistency, uniqueness).  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ggml_model_presets
+    test_ggml_model_presets.cpp
+)
+
+add_test(NAME ggml_model_presets COMMAND test_ggml_model_presets)
+
+# ---------------------------------------------------------------------------
+# test_ggml_script_source
+# Tests GitHub path/branch validation, URL prefix checks, file extension
+# filtering, and local folder scan simulation.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ggml_script_source
+    test_ggml_script_source.cpp
+)
+
+add_test(NAME ggml_script_source COMMAND test_ggml_script_source)
