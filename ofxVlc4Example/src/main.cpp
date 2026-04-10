@@ -1,8 +1,10 @@
 #include "ofMain.h"
 #include "ofApp.h"
+#include "support/ofxVlc4CrashHandler.h"
 
 //========================================================================
 int main() {
+	ofxVlc4CrashHandler::install("ofxVlc4_crash.log");
 	ofGLFWWindowSettings settings;
 	settings.setGLVersion(3, 3);
 	settings.setSize(1, 1);
