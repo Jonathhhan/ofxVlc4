@@ -1861,3 +1861,23 @@ break;
 void ofApp::copyToClipboard(const std::string & text) {
 ImGui::SetClipboardText(text.c_str());
 }
+
+// ---------------------------------------------------------------------------
+// Export chat history to a Markdown file
+// ---------------------------------------------------------------------------
+
+void ofApp::exportChatHistory(const std::string & path) {
+std::ofstream out(path);
+if (!out.is_open()) return;
+
+out << "# Chat Export\n\n";
+for (const auto & msg : chatMessages) {
+	if (msg.role == "user") {
+		out << "**User:** " << msg.text << "\n\n";
+	} else if (msg.role == "assistant") {
+		out << "**Assistant:** " << msg.text << "\n\n";
+	} else {
+		out << "**" << msg.role << ":** " << msg.text << "\n\n";
+	}
+}
+}
