@@ -45,6 +45,17 @@ using ofxVlc4GlOps::setupFboWithTexture;
 using ofxVlc4GlOps::unbindFbo;
 
 namespace {
+void setWindowFocusOnShow(GLFWwindow * window, bool enabled) {
+#ifdef GLFW_FOCUS_ON_SHOW
+	if (window) {
+		glfwSetWindowAttrib(window, GLFW_FOCUS_ON_SHOW, enabled ? GLFW_TRUE : GLFW_FALSE);
+	}
+#else
+	(void)window;
+	(void)enabled;
+#endif
+}
+
 libvlc_video_projection_t toLibvlcProjectionMode(ofxVlc4::VideoProjectionMode mode) {
 	switch (mode) {
 	case ofxVlc4::VideoProjectionMode::Rectangular:
@@ -670,10 +681,13 @@ void ofxVlc4::VideoComponent::updateNativeVideoWindowVisibility() {
 			owner.m_impl->videoResourceRuntime.vlcWindow->setWindowPosition(560, 24);
 			owner.m_impl->videoResourceRuntime.nativeWindowGeometryInitialized = true;
 		}
+		setWindowFocusOnShow(glfwWindow, false);
 		glfwSetWindowAttrib(glfwWindow, GLFW_DECORATED, GLFW_TRUE);
 		glfwShowWindow(glfwWindow);
+		glfwPostEmptyEvent();
 	} else {
 		glfwHideWindow(glfwWindow);
+		setWindowFocusOnShow(glfwWindow, false);
 		glfwSetWindowAttrib(glfwWindow, GLFW_DECORATED, GLFW_FALSE);
 	}
 }
@@ -1925,8 +1939,16 @@ void ofxVlc4::VideoComponent::refreshDisplayAspectRatio() {
 }
 
 ofTexture & ofxVlc4::VideoComponent::getTexture() {
+	if (!usesTextureVideoOutput()) {
+		return owner.m_impl->videoResourceRuntime.videoTexture;
+	}
+
 	if (owner.m_impl->videoFrameRuntime.exposedTextureDirty.exchange(false)) {
 		refreshExposedTexture();
+	}
+
+	if (!owner.m_impl->videoResourceRuntime.exposedTextureFbo.isAllocated()) {
+		return owner.m_impl->videoResourceRuntime.videoTexture;
 	}
 
 	return owner.m_impl->videoResourceRuntime.exposedTextureFbo.getTexture();
