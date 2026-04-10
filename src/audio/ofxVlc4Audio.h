@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <vector>
 
+class ofxVlc4Recorder;
+
 class ofxVlc4::AudioComponent {
 public:
 	explicit AudioComponent(ofxVlc4 & owner);
