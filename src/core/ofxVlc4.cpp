@@ -31,6 +31,7 @@ using ofxVlc4Utils::readTextFileIfPresent;
 using ofxVlc4MuxHelpers::removeRecordingFile;
 using ofxVlc4MuxHelpers::tryRemoveRecordingFileOnce;
 using ofxVlc4MuxHelpers::buildDefaultMuxOutputPath;
+using RecordingMuxRuntimeState = ofxVlc4::Impl::RecordingMuxRuntimeState;
 
 namespace {
 
@@ -817,7 +818,7 @@ void ofxVlc4::captureCurrentWindowBackbuffer() {
 }
 
 void ofxVlc4::onWindowCaptureDraw(ofEventArgs &) {
-	if (!m_impl->windowCaptureRuntime.active || m_impl->lifecycleRuntime.shuttingDown.load()) {
+	if (!m_impl->windowCaptureRuntime.active || m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 	if (!m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
@@ -990,7 +991,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	releaseVlcResources();
 	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
 	m_impl->lifecycleRuntime.closeRequested.store(false);
-	m_impl->lifecycleRuntime.shuttingDown.store(false);
+	m_impl->lifecycleRuntime.shuttingDown.store(false, std::memory_order_release);
 	m_impl->subsystemRuntime.playbackController->resetTransportState();
 	m_impl->subsystemRuntime.audioComponent->clearPendingEqualizerApplyOnPlay();
 	m_impl->subsystemRuntime.videoComponent->clearPendingVideoAdjustApplyOnPlay();
@@ -1866,7 +1867,7 @@ void ofxVlc4::close() {
 	m_impl->subsystemRuntime.playbackController->prepareForClose();
 
 	// Only flip the hard shutdown guard once playback had a chance to unwind cleanly.
-	m_impl->lifecycleRuntime.shuttingDown.store(true);
+	m_impl->lifecycleRuntime.shuttingDown.store(true, std::memory_order_release);
 	releaseVlcResources();
 	m_impl->audioRuntime.ready.store(false);
 	m_impl->videoFrameRuntime.isVideoLoaded.store(false);

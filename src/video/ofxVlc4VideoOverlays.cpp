@@ -97,7 +97,7 @@ int clampPackedRgbColor(int color) {
 }
 
 void ofxVlc4::applyVlcFullscreen() {
-	videoComponent->applyVlcFullscreen();
+	m_impl->subsystemRuntime.videoComponent->applyVlcFullscreen();
 }
 
 void ofxVlc4::VideoComponent::applyVlcFullscreen() {
@@ -566,43 +566,43 @@ void ofxVlc4::VideoComponent::setVideoTitleDisplayTimeoutMs(unsigned timeoutMs) 
 }
 
 void ofxVlc4::applyVideoInputHandling() {
-	videoComponent->applyVideoInputHandling();
+	m_impl->subsystemRuntime.videoComponent->applyVideoInputHandling();
 }
 
 void ofxVlc4::applyVideoTitleDisplay() {
-	videoComponent->applyVideoTitleDisplay();
+	m_impl->subsystemRuntime.videoComponent->applyVideoTitleDisplay();
 }
 
 void ofxVlc4::applyTeletextSettings() {
-	videoComponent->applyTeletextSettings();
+	m_impl->subsystemRuntime.videoComponent->applyTeletextSettings();
 }
 
 void ofxVlc4::applyVideoMarquee() {
-	videoComponent->applyVideoMarquee();
+	m_impl->subsystemRuntime.videoComponent->applyVideoMarquee();
 }
 
 void ofxVlc4::applyVideoLogo() {
-	videoComponent->applyVideoLogo();
+	m_impl->subsystemRuntime.videoComponent->applyVideoLogo();
 }
 
 int ofxVlc4::getTeletextPage() const {
-	return videoComponent->getTeletextPage();
+	return m_impl->subsystemRuntime.videoComponent->getTeletextPage();
 }
 
 void ofxVlc4::setTeletextPage(int page) {
-	videoComponent->setTeletextPage(page);
+	m_impl->subsystemRuntime.videoComponent->setTeletextPage(page);
 }
 
 bool ofxVlc4::isTeletextTransparencyEnabled() const {
-	return videoComponent->isTeletextTransparencyEnabled();
+	return m_impl->subsystemRuntime.videoComponent->isTeletextTransparencyEnabled();
 }
 
 void ofxVlc4::setTeletextTransparencyEnabled(bool enabled) {
-	videoComponent->setTeletextTransparencyEnabled(enabled);
+	m_impl->subsystemRuntime.videoComponent->setTeletextTransparencyEnabled(enabled);
 }
 
 void ofxVlc4::sendTeletextKey(TeletextKey key) {
-	videoComponent->sendTeletextKey(key);
+	m_impl->subsystemRuntime.videoComponent->sendTeletextKey(key);
 }
 
 void ofxVlc4::sendTeletextKeyRed() {
@@ -630,198 +630,198 @@ void ofxVlc4::toggleTeletextTransparency() {
 }
 
 bool ofxVlc4::isKeyInputEnabled() const {
-	return videoComponent->isKeyInputEnabled();
+	return m_impl->subsystemRuntime.videoComponent->isKeyInputEnabled();
 }
 
 void ofxVlc4::setKeyInputEnabled(bool enabled) {
-	videoComponent->setKeyInputEnabled(enabled);
+	m_impl->subsystemRuntime.videoComponent->setKeyInputEnabled(enabled);
 }
 
 bool ofxVlc4::isMouseInputEnabled() const {
-	return videoComponent->isMouseInputEnabled();
+	return m_impl->subsystemRuntime.videoComponent->isMouseInputEnabled();
 }
 
 void ofxVlc4::setMouseInputEnabled(bool enabled) {
-	videoComponent->setMouseInputEnabled(enabled);
+	m_impl->subsystemRuntime.videoComponent->setMouseInputEnabled(enabled);
 }
 
 bool ofxVlc4::isVlcFullscreenEnabled() const {
-	return videoComponent->isVlcFullscreenEnabled();
+	return m_impl->subsystemRuntime.videoComponent->isVlcFullscreenEnabled();
 }
 
 void ofxVlc4::setVlcFullscreenEnabled(bool enabled) {
-	videoComponent->setVlcFullscreenEnabled(enabled);
+	m_impl->subsystemRuntime.videoComponent->setVlcFullscreenEnabled(enabled);
 }
 
 void ofxVlc4::toggleVlcFullscreen() {
-	videoComponent->toggleVlcFullscreen();
+	m_impl->subsystemRuntime.videoComponent->toggleVlcFullscreen();
 }
 
 bool ofxVlc4::isVideoTitleDisplayEnabled() const {
-	return videoComponent->isVideoTitleDisplayEnabled();
+	return m_impl->subsystemRuntime.videoComponent->isVideoTitleDisplayEnabled();
 }
 
 void ofxVlc4::setVideoTitleDisplayEnabled(bool enabled) {
-	videoComponent->setVideoTitleDisplayEnabled(enabled);
+	m_impl->subsystemRuntime.videoComponent->setVideoTitleDisplayEnabled(enabled);
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::getVideoTitleDisplayPosition() const {
-	return videoComponent->getVideoTitleDisplayPosition();
+	return m_impl->subsystemRuntime.videoComponent->getVideoTitleDisplayPosition();
 }
 
 void ofxVlc4::setVideoTitleDisplayPosition(OverlayPosition position) {
-	videoComponent->setVideoTitleDisplayPosition(position);
+	m_impl->subsystemRuntime.videoComponent->setVideoTitleDisplayPosition(position);
 }
 
 unsigned ofxVlc4::getVideoTitleDisplayTimeoutMs() const {
-	return videoComponent->getVideoTitleDisplayTimeoutMs();
+	return m_impl->subsystemRuntime.videoComponent->getVideoTitleDisplayTimeoutMs();
 }
 
 void ofxVlc4::setVideoTitleDisplayTimeoutMs(unsigned timeoutMs) {
-	videoComponent->setVideoTitleDisplayTimeoutMs(timeoutMs);
+	m_impl->subsystemRuntime.videoComponent->setVideoTitleDisplayTimeoutMs(timeoutMs);
 }
 
 bool ofxVlc4::isMarqueeEnabled() const {
-	return videoComponent->isMarqueeEnabled();
+	return m_impl->subsystemRuntime.videoComponent->isMarqueeEnabled();
 }
 
 void ofxVlc4::setMarqueeEnabled(bool enabled) {
-	videoComponent->setMarqueeEnabled(enabled);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeEnabled(enabled);
 }
 
 std::string ofxVlc4::getMarqueeText() const {
-	return videoComponent->getMarqueeText();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueeText();
 }
 
 void ofxVlc4::setMarqueeText(const std::string & text) {
-	videoComponent->setMarqueeText(text);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeText(text);
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::getMarqueePosition() const {
-	return videoComponent->getMarqueePosition();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueePosition();
 }
 
 void ofxVlc4::setMarqueePosition(OverlayPosition position) {
-	videoComponent->setMarqueePosition(position);
+	m_impl->subsystemRuntime.videoComponent->setMarqueePosition(position);
 }
 
 int ofxVlc4::getMarqueeOpacity() const {
-	return videoComponent->getMarqueeOpacity();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueeOpacity();
 }
 
 void ofxVlc4::setMarqueeOpacity(int opacity) {
-	videoComponent->setMarqueeOpacity(opacity);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeOpacity(opacity);
 }
 
 int ofxVlc4::getMarqueeSize() const {
-	return videoComponent->getMarqueeSize();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueeSize();
 }
 
 void ofxVlc4::setMarqueeSize(int size) {
-	videoComponent->setMarqueeSize(size);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeSize(size);
 }
 
 int ofxVlc4::getMarqueeColor() const {
-	return videoComponent->getMarqueeColor();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueeColor();
 }
 
 void ofxVlc4::setMarqueeColor(int color) {
-	videoComponent->setMarqueeColor(color);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeColor(color);
 }
 
 int ofxVlc4::getMarqueeRefresh() const {
-	return videoComponent->getMarqueeRefresh();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueeRefresh();
 }
 
 void ofxVlc4::setMarqueeRefresh(int refreshMs) {
-	videoComponent->setMarqueeRefresh(refreshMs);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeRefresh(refreshMs);
 }
 
 int ofxVlc4::getMarqueeTimeout() const {
-	return videoComponent->getMarqueeTimeout();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueeTimeout();
 }
 
 void ofxVlc4::setMarqueeTimeout(int timeoutMs) {
-	videoComponent->setMarqueeTimeout(timeoutMs);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeTimeout(timeoutMs);
 }
 
 int ofxVlc4::getMarqueeX() const {
-	return videoComponent->getMarqueeX();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueeX();
 }
 
 void ofxVlc4::setMarqueeX(int x) {
-	videoComponent->setMarqueeX(x);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeX(x);
 }
 
 int ofxVlc4::getMarqueeY() const {
-	return videoComponent->getMarqueeY();
+	return m_impl->subsystemRuntime.videoComponent->getMarqueeY();
 }
 
 void ofxVlc4::setMarqueeY(int y) {
-	videoComponent->setMarqueeY(y);
+	m_impl->subsystemRuntime.videoComponent->setMarqueeY(y);
 }
 
 bool ofxVlc4::isLogoEnabled() const {
-	return videoComponent->isLogoEnabled();
+	return m_impl->subsystemRuntime.videoComponent->isLogoEnabled();
 }
 
 void ofxVlc4::setLogoEnabled(bool enabled) {
-	videoComponent->setLogoEnabled(enabled);
+	m_impl->subsystemRuntime.videoComponent->setLogoEnabled(enabled);
 }
 
 std::string ofxVlc4::getLogoPath() const {
-	return videoComponent->getLogoPath();
+	return m_impl->subsystemRuntime.videoComponent->getLogoPath();
 }
 
 void ofxVlc4::setLogoPath(const std::string & path) {
-	videoComponent->setLogoPath(path);
+	m_impl->subsystemRuntime.videoComponent->setLogoPath(path);
 }
 
 ofxVlc4::OverlayPosition ofxVlc4::getLogoPosition() const {
-	return videoComponent->getLogoPosition();
+	return m_impl->subsystemRuntime.videoComponent->getLogoPosition();
 }
 
 void ofxVlc4::setLogoPosition(OverlayPosition position) {
-	videoComponent->setLogoPosition(position);
+	m_impl->subsystemRuntime.videoComponent->setLogoPosition(position);
 }
 
 int ofxVlc4::getLogoOpacity() const {
-	return videoComponent->getLogoOpacity();
+	return m_impl->subsystemRuntime.videoComponent->getLogoOpacity();
 }
 
 void ofxVlc4::setLogoOpacity(int opacity) {
-	videoComponent->setLogoOpacity(opacity);
+	m_impl->subsystemRuntime.videoComponent->setLogoOpacity(opacity);
 }
 
 int ofxVlc4::getLogoX() const {
-	return videoComponent->getLogoX();
+	return m_impl->subsystemRuntime.videoComponent->getLogoX();
 }
 
 void ofxVlc4::setLogoX(int x) {
-	videoComponent->setLogoX(x);
+	m_impl->subsystemRuntime.videoComponent->setLogoX(x);
 }
 
 int ofxVlc4::getLogoY() const {
-	return videoComponent->getLogoY();
+	return m_impl->subsystemRuntime.videoComponent->getLogoY();
 }
 
 void ofxVlc4::setLogoY(int y) {
-	videoComponent->setLogoY(y);
+	m_impl->subsystemRuntime.videoComponent->setLogoY(y);
 }
 
 int ofxVlc4::getLogoDelay() const {
-	return videoComponent->getLogoDelay();
+	return m_impl->subsystemRuntime.videoComponent->getLogoDelay();
 }
 
 void ofxVlc4::setLogoDelay(int delayMs) {
-	videoComponent->setLogoDelay(delayMs);
+	m_impl->subsystemRuntime.videoComponent->setLogoDelay(delayMs);
 }
 
 int ofxVlc4::getLogoRepeat() const {
-	return videoComponent->getLogoRepeat();
+	return m_impl->subsystemRuntime.videoComponent->getLogoRepeat();
 }
 
 void ofxVlc4::setLogoRepeat(int repeat) {
-	videoComponent->setLogoRepeat(repeat);
+	m_impl->subsystemRuntime.videoComponent->setLogoRepeat(repeat);
 }
 

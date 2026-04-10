@@ -1,4 +1,5 @@
 #include "ofxVlc4.h"
+#include "ofxVlc4Impl.h"
 #include "ofxVlc4Recorder.h"
 #include "support/ofxVlc4GlOps.h"
 #include "support/ofxVlc4MuxHelpers.h"
@@ -220,17 +221,17 @@ bool ofxVlc4::muxRecordingFilesInternal(
 }
 
 bool ofxVlc4::startNamedAudioCaptureSession(const std::string & audioPath) {
-	if (std::string recorderError; !recorder.startAudioCapture(
+	if (std::string recorderError; !m_impl->recordingObjectRuntime.recorder.startAudioCapture(
 		audioPath,
-		sampleRate.load(),
-		channels.load(),
+		m_impl->audioRuntime.sampleRate.load(),
+		m_impl->audioRuntime.channels.load(),
 		recorderError)) {
 		setRecordingSessionState(ofxVlc4RecordingSessionState::Failed);
 		setError(recorderError);
 		return false;
 	}
 	setRecordingSessionState(ofxVlc4RecordingSessionState::Capturing);
-	return recorder.isAudioCaptureActive();
+	return m_impl->recordingObjectRuntime.recorder.isAudioCaptureActive();
 }
 
 bool ofxVlc4::startRecordingSession(const ofxVlc4RecordingSessionConfig & config) {
@@ -291,8 +292,8 @@ bool ofxVlc4::startRecordingSession(const ofxVlc4RecordingSessionConfig & config
 		}
 		break;
 	case ofxVlc4RecordingSource::Window:
-		if (!mainWindow) {
-			mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
+		if (!m_impl->videoResourceRuntime.mainWindow) {
+			m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
 		}
 
 		const unsigned sourceWidth = static_cast<unsigned>(std::max(0, ofGetWidth()));
@@ -311,18 +312,18 @@ bool ofxVlc4::startRecordingSession(const ofxVlc4RecordingSessionConfig & config
 			return false;
 		}
 
-		windowCaptureRuntime.includeAudioCapture = options.includeAudioCapture;
-		windowCaptureRuntime.active = true;
+		m_impl->windowCaptureRuntime.includeAudioCapture = options.includeAudioCapture;
+		m_impl->windowCaptureRuntime.active = true;
 		registerWindowCaptureListener();
 		captureCurrentWindowBackbuffer();
-		if (!startNamedTextureCaptureSession(config.outputBasePath, windowCaptureRuntime.captureFbo.getTexture(), options)) {
-			windowCaptureRuntime.active = false;
+		if (!startNamedTextureCaptureSession(config.outputBasePath, m_impl->windowCaptureRuntime.captureFbo.getTexture(), options)) {
+			m_impl->windowCaptureRuntime.active = false;
 			unregisterWindowCaptureListener();
 			clearRecordingSessionConfig();
 			return false;
 		}
-		if (!recorder.isVideoCaptureActive()) {
-			windowCaptureRuntime.active = false;
+		if (!m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
+			m_impl->windowCaptureRuntime.active = false;
 			unregisterWindowCaptureListener();
 			clearRecordingSessionConfig();
 			return false;
@@ -364,20 +365,20 @@ bool ofxVlc4::startNamedTextureCaptureSession(
 		setError("Texture is not allocated.");
 		return false;
 	}
-	if (recorder.getVideoCaptureFrameRate() <= 0) {
+	if (m_impl->recordingObjectRuntime.recorder.getVideoCaptureFrameRate() <= 0) {
 		setError("Video recording frame rate must be positive.");
 		return false;
 	}
-	if (recorder.getVideoCaptureCodec().empty()) {
+	if (m_impl->recordingObjectRuntime.recorder.getVideoCaptureCodec().empty()) {
 		setError("Video recording codec is empty.");
 		return false;
 	}
 
 	const bool usesPlayerOutputTexture =
-		(exposedTextureFbo.isAllocated() &&
-			texture.getTextureData().textureID == exposedTextureFbo.getTexture().getTextureData().textureID) ||
-		(videoTexture.isAllocated() &&
- 		 texture.getTextureData().textureID == videoTexture.getTextureData().textureID);
+		(m_impl->videoResourceRuntime.exposedTextureFbo.isAllocated() &&
+			texture.getTextureData().textureID == m_impl->videoResourceRuntime.exposedTextureFbo.getTexture().getTextureData().textureID) ||
+		(m_impl->videoResourceRuntime.videoTexture.isAllocated() &&
+ 		 texture.getTextureData().textureID == m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID);
 	if (usesPlayerOutputTexture) {
 		setError("Recording from the player's own output texture is not supported.");
 		return false;
@@ -394,12 +395,12 @@ bool ofxVlc4::startNamedTextureCaptureSession(
 	const auto failTextureRecordingStart = [&](const std::string & message) {
 		setRecordingSessionState(ofxVlc4RecordingSessionState::Failed);
 		setError(message);
-		if (options.includeAudioCapture) recorder.clearAudioRecording();
+		if (options.includeAudioCapture) m_impl->recordingObjectRuntime.recorder.clearAudioRecording();
 		return false;
 	};
 	const auto startTextureRecordingPlayback = [&](const std::string & videoPath, const std::string & startedStatus) {
 		std::string recorderError;
-		libvlc_media_t * recordingMedia = recorder.beginVideoCapture(
+		libvlc_media_t * recordingMedia = m_impl->recordingObjectRuntime.recorder.beginVideoCapture(
 			texture,
 			videoPath,
 			options.outputWidth,
@@ -410,15 +411,16 @@ bool ofxVlc4::startNamedTextureCaptureSession(
 		}
 
 		clearCurrentMedia();
-		media = recordingMedia;
-		if (coreSession) coreSession->setMedia(media);
-		libvlc_media_player_set_media(mediaPlayer, media);
+		if (m_impl->subsystemRuntime.coreSession) {
+			m_impl->subsystemRuntime.coreSession->setMedia(recordingMedia);
+		}
+		libvlc_media_player_set_media(mediaPlayer, recordingMedia);
 		applyCurrentMediaPlayerSettings();
 		applySelectedRenderer();
 		const int playResult = libvlc_media_player_play(mediaPlayer);
 		if (playResult != 0) {
 			clearCurrentMedia(false);
-			recorder.clearVideoRecording();
+			m_impl->recordingObjectRuntime.recorder.clearVideoRecording();
 			return failTextureRecordingStart("Failed to start recording playback.");
 		}
 
@@ -448,11 +450,11 @@ bool ofxVlc4::startNamedTextureCaptureSession(
 }
 
 bool ofxVlc4::ensureRecorderSessionCanStart(bool requireAudioCapture) {
-	if (recorder.hasActiveCaptureSession()) {
+	if (m_impl->recordingObjectRuntime.recorder.hasActiveCaptureSession()) {
 		setError("Stop the current recording session first.");
 		return false;
 	}
-	if (requireAudioCapture && !audioCaptureEnabled) {
+	if (requireAudioCapture && !m_impl->playerConfigRuntime.audioCaptureEnabled) {
 		setError("Enable audio capture before recording audio.");
 		return false;
 	}
@@ -460,17 +462,17 @@ bool ofxVlc4::ensureRecorderSessionCanStart(bool requireAudioCapture) {
 }
 
 void ofxVlc4::stopActiveRecorderSessions() {
-	const bool hadActiveSession = recorder.hasActiveCaptureSession();
-	recorder.clearCaptureState();
+	const bool hadActiveSession = m_impl->recordingObjectRuntime.recorder.hasActiveCaptureSession();
+	m_impl->recordingObjectRuntime.recorder.clearCaptureState();
 	clearRecordingSessionConfig();
-	if (hadActiveSession && !recordingMuxRuntime.pending.load() && !recordingMuxRuntime.inProgress.load()) {
+	if (hadActiveSession && !m_impl->recordingMuxRuntime.pending.load() && !m_impl->recordingMuxRuntime.inProgress.load()) {
 		setRecordingSessionState(ofxVlc4RecordingSessionState::Done);
 	}
 }
 
 void ofxVlc4::recordAudio(std::string name) {
-	if (recorder.isAudioCaptureActive() && !recorder.isVideoCaptureActive()) {
-		setStatus("Audio recording saved to " + recorder.finishAudioCapture() + ".");
+	if (m_impl->recordingObjectRuntime.recorder.isAudioCaptureActive() && !m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
+		setStatus("Audio recording saved to " + m_impl->recordingObjectRuntime.recorder.finishAudioCapture() + ".");
 		clearRecordingSessionConfig();
 		return;
 	}
@@ -530,46 +532,46 @@ bool ofxVlc4::beginWindowRecording(std::string name, bool includeAudioCapture) {
 }
 
 void ofxVlc4::endWindowRecording() {
-	windowCaptureRuntime.active = false;
+	m_impl->windowCaptureRuntime.active = false;
 	unregisterWindowCaptureListener();
-	if (recorder.isVideoCaptureActive()) {
+	if (m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
 		stopRecordingSessionInternal(true);
 	}
 }
 
 bool ofxVlc4::isWindowRecording() const {
-	return windowCaptureRuntime.active && recorder.isVideoCaptureActive();
+	return m_impl->windowCaptureRuntime.active && m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive();
 }
 
 bool ofxVlc4::armPendingRecordingMux(const std::string & outputPath, const ofxVlc4MuxOptions & options) {
 	finalizeRecordingMuxThread();
-	if (recordingMuxRuntime.pending.load() || recordingMuxRuntime.inProgress.load()) {
+	if (m_impl->recordingMuxRuntime.pending.load() || m_impl->recordingMuxRuntime.inProgress.load()) {
 		setStatus("Recording finalize/mux already in progress.");
 		return false;
 	}
 
-	if (!recorder.isVideoCaptureActive()) {
+	if (!m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
 		setError("Muxing requires an active video recording session.");
 		setRecordingSessionState(ofxVlc4RecordingSessionState::Failed);
 		return false;
 	}
 
-	const std::string previousVideoPath = recorder.getLastFinishedVideoPath();
-	const std::string previousAudioPath = recorder.getLastFinishedAudioPath();
+	const std::string previousVideoPath = m_impl->recordingObjectRuntime.recorder.getLastFinishedVideoPath();
+	const std::string previousAudioPath = m_impl->recordingObjectRuntime.recorder.getLastFinishedAudioPath();
 	std::string expectedVideoPath;
 	std::string expectedAudioPath;
 	{
-		std::lock_guard<std::mutex> recordingLock(recorder.recordingMutex);
-		expectedVideoPath = recorder.videoOutputPath;
+		std::lock_guard<std::mutex> recordingLock(m_impl->recordingObjectRuntime.recorder.recordingMutex);
+		expectedVideoPath = m_impl->recordingObjectRuntime.recorder.videoOutputPath;
 	}
 	{
-		std::lock_guard<std::mutex> audioLock(recorder.audioRecordingMutex);
-		expectedAudioPath = recorder.outputPath;
+		std::lock_guard<std::mutex> audioLock(m_impl->recordingObjectRuntime.recorder.audioRecordingMutex);
+		expectedAudioPath = m_impl->recordingObjectRuntime.recorder.outputPath;
 	}
 	const std::string resolvedExpectedVideoPath =
-		!expectedVideoPath.empty() ? expectedVideoPath : recorder.getLastFinishedVideoPath();
+		!expectedVideoPath.empty() ? expectedVideoPath : m_impl->recordingObjectRuntime.recorder.getLastFinishedVideoPath();
 	const std::string resolvedExpectedAudioPath =
-		!expectedAudioPath.empty() ? expectedAudioPath : recorder.getLastFinishedAudioPath();
+		!expectedAudioPath.empty() ? expectedAudioPath : m_impl->recordingObjectRuntime.recorder.getLastFinishedAudioPath();
 	if (resolvedExpectedVideoPath.empty()) {
 		setError("Muxing requires a finalized video recording output.");
 		setRecordingSessionState(ofxVlc4RecordingSessionState::Failed);
@@ -582,39 +584,39 @@ bool ofxVlc4::armPendingRecordingMux(const std::string & outputPath, const ofxVl
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
-		recordingMuxRuntime.options = options;
-		recordingMuxRuntime.previousVideoPath = previousVideoPath;
-		recordingMuxRuntime.previousAudioPath = previousAudioPath;
-		recordingMuxRuntime.expectedVideoPath = resolvedExpectedVideoPath;
-		recordingMuxRuntime.expectedAudioPath = resolvedExpectedAudioPath;
-		recordingMuxRuntime.requestedOutputPath = outputPath;
-		recordingMuxRuntime.completedOutputPath.clear();
-		recordingMuxRuntime.completedError.clear();
+		std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
+		m_impl->recordingMuxRuntime.options = options;
+		m_impl->recordingMuxRuntime.previousVideoPath = previousVideoPath;
+		m_impl->recordingMuxRuntime.previousAudioPath = previousAudioPath;
+		m_impl->recordingMuxRuntime.expectedVideoPath = resolvedExpectedVideoPath;
+		m_impl->recordingMuxRuntime.expectedAudioPath = resolvedExpectedAudioPath;
+		m_impl->recordingMuxRuntime.requestedOutputPath = outputPath;
+		m_impl->recordingMuxRuntime.completedOutputPath.clear();
+		m_impl->recordingMuxRuntime.completedError.clear();
 	}
-	recordingMuxRuntime.pending.store(true);
+	m_impl->recordingMuxRuntime.pending.store(true);
 	setRecordingSessionState(ofxVlc4RecordingSessionState::Finalizing);
 	setStatus("Finalizing recording...");
 	return true;
 }
 
 bool ofxVlc4::stopRecordingSessionInternal(bool allowConfiguredMux) {
-	const bool hadVideoCapture = recorder.isVideoCaptureActive();
-	const bool hadAudioCapture = recorder.isAudioCaptureActive();
-	if (windowCaptureRuntime.active) {
-		windowCaptureRuntime.active = false;
+	const bool hadVideoCapture = m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive();
+	const bool hadAudioCapture = m_impl->recordingObjectRuntime.recorder.isAudioCaptureActive();
+	if (m_impl->windowCaptureRuntime.active) {
+		m_impl->windowCaptureRuntime.active = false;
 		unregisterWindowCaptureListener();
 	}
 
-	if (recorder.isVideoCaptureActive()) {
+	if (m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
 		if (allowConfiguredMux) {
 			ofxVlc4RecordingSessionConfig configCopy;
 			bool shouldMuxOnStop = false;
 			{
-				std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-				shouldMuxOnStop = recordingSessionRuntime.hasConfig && recordingSessionRuntime.config.muxOnStop;
+				std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+				shouldMuxOnStop = m_impl->recordingSessionRuntime.hasConfig && m_impl->recordingSessionRuntime.config.muxOnStop;
 				if (shouldMuxOnStop) {
-					configCopy = recordingSessionRuntime.config;
+					configCopy = m_impl->recordingSessionRuntime.config;
 				}
 			}
 			if (shouldMuxOnStop && !armPendingRecordingMux(configCopy.muxOutputPath, configCopy.muxOptions)) {
@@ -626,8 +628,8 @@ bool ofxVlc4::stopRecordingSessionInternal(bool allowConfiguredMux) {
 		return true;
 	}
 
-	if (recorder.isAudioCaptureActive()) {
-		const std::string finishedAudioPath = recorder.finishAudioCapture();
+	if (m_impl->recordingObjectRuntime.recorder.isAudioCaptureActive()) {
+		const std::string finishedAudioPath = m_impl->recordingObjectRuntime.recorder.finishAudioCapture();
 		clearRecordingSessionConfig();
 		setRecordingSessionState(ofxVlc4RecordingSessionState::Done);
 		setStatus("Audio recording saved to " + finishedAudioPath + ".");
@@ -658,32 +660,32 @@ bool ofxVlc4::stopRecordingSessionAndMux(const std::string & outputPath, const o
 }
 
 bool ofxVlc4::isRecordingMuxPending() const {
-	return recordingMuxRuntime.pending.load();
+	return m_impl->recordingMuxRuntime.pending.load();
 }
 
 bool ofxVlc4::isRecordingMuxInProgress() const {
-	return recordingMuxRuntime.inProgress.load();
+	return m_impl->recordingMuxRuntime.inProgress.load();
 }
 
 std::string ofxVlc4::getLastMuxedRecordingPath() const {
-	std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
-	return recordingMuxRuntime.completedOutputPath;
+	std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
+	return m_impl->recordingMuxRuntime.completedOutputPath;
 }
 
 std::string ofxVlc4::getLastMuxError() const {
-	std::lock_guard<std::mutex> lock(recordingMuxRuntime.mutex);
-	return recordingMuxRuntime.completedError;
+	std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.mutex);
+	return m_impl->recordingMuxRuntime.completedError;
 }
 
 bool ofxVlc4::startAudioRecordingForActiveVideo(std::string name) {
-	if (!recorder.isVideoCaptureActive()) {
+	if (!m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive()) {
 		setError("Start video recording before attaching audio.");
 		return false;
 	}
-	if (recorder.isAudioCaptureActive()) {
+	if (m_impl->recordingObjectRuntime.recorder.isAudioCaptureActive()) {
 		return true;
 	}
-	if (!audioCaptureEnabled) {
+	if (!m_impl->playerConfigRuntime.audioCaptureEnabled) {
 		setError("Enable audio capture before recording audio.");
 		return false;
 	}
@@ -698,18 +700,18 @@ bool ofxVlc4::startAudioRecordingForActiveVideo(std::string name) {
 }
 
 void ofxVlc4::setVideoRecordingFrameRate(int fps) {
-	if (std::string recorderError; !recorder.setVideoCaptureFrameRate(fps, recorderError)) {
+	if (std::string recorderError; !m_impl->recordingObjectRuntime.recorder.setVideoCaptureFrameRate(fps, recorderError)) {
 		setError(recorderError);
 		return;
 	}
 	{
-		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-		recordingSessionRuntime.preset.videoFrameRate = std::max(1, fps);
+		std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+		m_impl->recordingSessionRuntime.preset.videoFrameRate = std::max(1, fps);
 	}
 }
 
 void ofxVlc4::setVideoRecordingCodec(const std::string & codec) {
-	if (std::string recorderError; !recorder.setVideoCaptureCodec(codec, recorderError)) {
+	if (std::string recorderError; !m_impl->recordingObjectRuntime.recorder.setVideoCaptureCodec(codec, recorderError)) {
 		setError(recorderError);
 		return;
 	}
@@ -717,10 +719,10 @@ void ofxVlc4::setVideoRecordingCodec(const std::string & codec) {
 	ofxVlc4RecordingVideoCodecPreset codecPreset = ofxVlc4RecordingVideoCodecPreset::H264;
 	ofxVlc4RecordingMuxProfile muxProfile = ofxVlc4RecordingMuxProfile::Mp4Aac;
 	{
-		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-		recordingSessionRuntime.preset.videoCodecPreset = recordingVideoCodecPresetForCodec(codec);
-		codecPreset = recordingSessionRuntime.preset.videoCodecPreset;
-		muxProfile = recordingSessionRuntime.preset.muxProfile;
+		std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+		m_impl->recordingSessionRuntime.preset.videoCodecPreset = recordingVideoCodecPresetForCodec(codec);
+		codecPreset = m_impl->recordingSessionRuntime.preset.videoCodecPreset;
+		muxProfile = m_impl->recordingSessionRuntime.preset.muxProfile;
 	}
 	if (const std::string compatibilityMessage = recordingMuxProfileCompatibilityMessage(muxProfile, codecPreset);
 		!compatibilityMessage.empty()) {
@@ -733,56 +735,56 @@ void ofxVlc4::setVideoRecordingCodecPreset(ofxVlc4RecordingVideoCodecPreset pres
 }
 
 void ofxVlc4::setVideoReadbackPolicy(ofxVlc4VideoReadbackPolicy policy) {
-	recorder.setVideoReadbackPolicy(policy);
+	m_impl->recordingObjectRuntime.recorder.setVideoReadbackPolicy(policy);
 }
 
 ofxVlc4VideoReadbackPolicy ofxVlc4::getVideoReadbackPolicy() const {
-	return recorder.getVideoReadbackPolicy();
+	return m_impl->recordingObjectRuntime.recorder.getVideoReadbackPolicy();
 }
 
 void ofxVlc4::setVideoReadbackBufferCount(size_t bufferCount) {
-	recorder.setVideoReadbackBufferCount(bufferCount);
+	m_impl->recordingObjectRuntime.recorder.setVideoReadbackBufferCount(bufferCount);
 }
 
 size_t ofxVlc4::getVideoReadbackBufferCount() const {
-	return recorder.getVideoReadbackBufferCount();
+	return m_impl->recordingObjectRuntime.recorder.getVideoReadbackBufferCount();
 }
 
 void ofxVlc4::updateRecorder() {
-	if (const std::string recorderError = recorder.updateCaptureState(); !recorderError.empty()) {
+	if (const std::string recorderError = m_impl->recordingObjectRuntime.recorder.updateCaptureState(); !recorderError.empty()) {
 		setError(recorderError);
 	}
 }
 
 bool ofxVlc4::isAudioRecording() const {
-	return recorder.isAudioCaptureActive();
+	return m_impl->recordingObjectRuntime.recorder.isAudioCaptureActive();
 }
 
 bool ofxVlc4::isVideoRecording() const {
-	return recorder.isVideoCaptureActive();
+	return m_impl->recordingObjectRuntime.recorder.isVideoCaptureActive();
 }
 
 int ofxVlc4::getVideoRecordingFrameRate() const {
-	return recorder.getVideoCaptureFrameRate();
+	return m_impl->recordingObjectRuntime.recorder.getVideoCaptureFrameRate();
 }
 
 void ofxVlc4::setVideoRecordingBitrateKbps(int bitrateKbps) {
-	if (std::string recorderError; !recorder.setVideoCaptureBitrateKbps(bitrateKbps, recorderError)) {
+	if (std::string recorderError; !m_impl->recordingObjectRuntime.recorder.setVideoCaptureBitrateKbps(bitrateKbps, recorderError)) {
 		setError(recorderError);
 		return;
 	}
 	{
-		std::lock_guard<std::mutex> lock(recordingSessionRuntime.mutex);
-		recordingSessionRuntime.preset.videoBitrateKbps = std::max(0, bitrateKbps);
+		std::lock_guard<std::mutex> lock(m_impl->recordingSessionRuntime.mutex);
+		m_impl->recordingSessionRuntime.preset.videoBitrateKbps = std::max(0, bitrateKbps);
 	}
 }
 
 int ofxVlc4::getVideoRecordingBitrateKbps() const {
-	return recorder.getVideoCaptureBitrateKbps();
+	return m_impl->recordingObjectRuntime.recorder.getVideoCaptureBitrateKbps();
 }
 
 const std::string & ofxVlc4::getVideoRecordingCodec() const {
-	return recorder.getVideoCaptureCodec();
+	return m_impl->recordingObjectRuntime.recorder.getVideoCaptureCodec();
 }
 
 ofxVlc4RecordingVideoCodecPreset ofxVlc4::getVideoRecordingCodecPreset() const {
@@ -790,15 +792,15 @@ ofxVlc4RecordingVideoCodecPreset ofxVlc4::getVideoRecordingCodecPreset() const {
 }
 
 ofxVlc4RecorderPerformanceInfo ofxVlc4::getRecorderPerformanceInfo() const {
-	return recorder.getPerformanceInfo();
+	return m_impl->recordingObjectRuntime.recorder.getPerformanceInfo();
 }
 
 void ofxVlc4::setRecordingAudioRingBufferSeconds(double seconds) {
-	recorder.setAudioRingBufferSeconds(seconds);
+	m_impl->recordingObjectRuntime.recorder.setAudioRingBufferSeconds(seconds);
 }
 
 double ofxVlc4::getRecordingAudioRingBufferSeconds() const {
-	return recorder.getAudioRingBufferSeconds();
+	return m_impl->recordingObjectRuntime.recorder.getAudioRingBufferSeconds();
 }
 
 void ofxVlc4Recorder::resetAudioCaptureState() {
@@ -1761,11 +1763,11 @@ void ofxVlc4Recorder::textureClose(void * data) {
 }
 
 std::string ofxVlc4::getLastAudioRecordingPath() const {
-	return recorder.getLastFinishedAudioPath();
+	return m_impl->recordingObjectRuntime.recorder.getLastFinishedAudioPath();
 }
 
 std::string ofxVlc4::getLastVideoRecordingPath() const {
-	return recorder.getLastFinishedVideoPath();
+	return m_impl->recordingObjectRuntime.recorder.getLastFinishedVideoPath();
 }
 
 bool ofxVlc4::muxRecordingFiles(

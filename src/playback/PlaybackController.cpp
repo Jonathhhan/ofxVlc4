@@ -497,7 +497,7 @@ void PlaybackController::pause() {
 }
 
 void PlaybackController::stop() {
-	const bool shuttingDown = owner.m_impl->lifecycleRuntime.shuttingDown.load();
+	const bool shuttingDown = owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire);
 	clearPendingActivationRequest();
 	playbackTransport.playNextRequested.store(false);
 	playbackTransport.playbackWanted.store(false);
@@ -761,7 +761,7 @@ void PlaybackController::processDeferredPlaybackActions() {
 		playbackTransport.manualStopRequestTimeMs.store(0);
 		playbackTransport.manualStopRetryIssued.store(false);
 		clearCurrentMedia();
-		if (!owner.m_impl->lifecycleRuntime.shuttingDown.load()) {
+		if (!owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 			owner.stopActiveRecorderSessions();
 		}
 	}
