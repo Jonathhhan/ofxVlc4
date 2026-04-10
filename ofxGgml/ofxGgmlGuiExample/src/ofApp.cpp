@@ -1172,7 +1172,8 @@ static const char * kTranslateLanguages[] = {
 "Portuguese", "Chinese", "Japanese", "Korean", "Russian",
 "Arabic", "Hindi", "Dutch", "Swedish", "Polish"
 };
-static constexpr int kTranslateLangCount = 15;
+static constexpr int kTranslateLangCount = static_cast<int>(
+sizeof(kTranslateLanguages) / sizeof(kTranslateLanguages[0]));
 
 void ofApp::drawTranslatePanel() {
 ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "Translate");
@@ -1189,12 +1190,17 @@ ImGui::Text("  Target language:");
 ImGui::SameLine();
 ImGui::SetNextItemWidth(160);
 ImGui::Combo("##TgtLang", &translateTargetLang, kTranslateLanguages, kTranslateLangCount);
+ImGui::SameLine();
+if (ImGui::Button("Swap", ImVec2(60, 0))) {
+std::swap(translateSourceLang, translateTargetLang);
+}
 
 ImGui::Text("Enter text to translate:");
 ImGui::InputTextMultiline("##TransIn", translateInput, sizeof(translateInput),
 ImVec2(-1, 120));
 
-ImGui::BeginDisabled(generating.load() || std::strlen(translateInput) == 0);
+bool hasInput = std::strlen(translateInput) > 0;
+ImGui::BeginDisabled(generating.load() || !hasInput);
 if (ImGui::Button("Translate", ImVec2(110, 0))) {
 std::string prompt = std::string("Translate the following from ")
 + kTranslateLanguages[translateSourceLang] + " to "
@@ -1205,10 +1211,6 @@ ImGui::SameLine();
 if (ImGui::Button("Detect Language", ImVec2(140, 0))) {
 std::string prompt = std::string("Detect the language of the following text and explain:\n") + translateInput;
 runInference(AiMode::Translate, prompt);
-}
-ImGui::SameLine();
-if (ImGui::Button("Swap Languages", ImVec2(140, 0))) {
-std::swap(translateSourceLang, translateTargetLang);
 }
 ImGui::EndDisabled();
 
@@ -1840,8 +1842,9 @@ oss << "]\n\nTo rewrite/expand text, a full language model is needed. "
 break;
 
 case AiMode::Translate:
-oss << "Translation request: " << inputLen << " characters.\n";
-oss << "Feature vector: [";
+oss << "Translation request: " << inputLen << " characters, ~"
+<< (spaceCount + 1) << " words.\n";
+oss << "Softmax output: [";
 for (int i = 0; i < outputDim; i++) {
 if (i > 0) oss << ", ";
 oss << ofToString(probs[static_cast<size_t>(i)], 4);

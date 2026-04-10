@@ -128,8 +128,8 @@ private:
 	char summarizeInput[8192] = {};
 	char writeInput[4096] = {};
 	char translateInput[4096] = {};
-	int translateSourceLang = 0;        // index into translateLanguages
-	int translateTargetLang = 1;        // index into translateLanguages
+	int translateSourceLang = 0;        // index into kTranslateLanguages
+	int translateTargetLang = 1;        // index into kTranslateLanguages
 	char customInput[4096] = {};
 	char customSystemPrompt[2048] = {};
 
