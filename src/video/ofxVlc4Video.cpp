@@ -2351,7 +2351,7 @@ void ofxVlc4::setVideoFilterChain(const std::string & filterChain) {
 }
 
 bool ofxVlc4::canApplyNativeVideoFilters() const {
-	return getVideoOutputBackend() == VideoOutputBackend::NativeWindow;
+	return m_impl->videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::NativeWindow;
 }
 
 std::vector<std::string> ofxVlc4::getVideoFilterChainEntries() const {
