@@ -405,3 +405,36 @@ add_executable(test_ggml_script_source
 )
 
 add_test(NAME ggml_script_source COMMAND test_ggml_script_source)
+
+# ---------------------------------------------------------------------------
+# test_ggml_backend_selection
+# Tests backend type→enum mapping, GPU settings configuration, thread/graph
+# size validation, and device info population.  No runtime dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ggml_backend_selection
+    test_ggml_backend_selection.cpp
+)
+
+target_include_directories(test_ggml_backend_selection PRIVATE
+    "${GGML_SRC_DIR}/support"
+)
+
+add_test(NAME ggml_backend_selection COMMAND test_ggml_backend_selection)
+
+# ---------------------------------------------------------------------------
+# test_ggml_lifecycle
+# Tests the ofxGgml lifecycle state machine: setup/close transitions,
+# double-close safety, compute error paths, resource cleanup, and full
+# GPU workflow patterns.  Uses a mock lifecycle class.  No runtime deps.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ggml_lifecycle
+    test_ggml_lifecycle.cpp
+)
+
+target_include_directories(test_ggml_lifecycle PRIVATE
+    "${GGML_SRC_DIR}/support"
+)
+
+add_test(NAME ggml_lifecycle COMMAND test_ggml_lifecycle)

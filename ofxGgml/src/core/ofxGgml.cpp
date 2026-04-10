@@ -32,11 +32,10 @@ struct ofxGgml::Impl {
 //  Static log callback for ggml
 // --------------------------------------------------------------------------
 
-static ofxGgml::Impl * s_activeImpl = nullptr;
-
-static void ggmlLogCallback(ggml_log_level level, const char * text, void * /*user_data*/) {
-	if (s_activeImpl && s_activeImpl->logCb) {
-		s_activeImpl->logCb(static_cast<int>(level), text ? text : "");
+static void ggmlLogCallback(ggml_log_level level, const char * text, void * user_data) {
+	auto * impl = static_cast<ofxGgml::Impl *>(user_data);
+	if (impl && impl->logCb) {
+		impl->logCb(static_cast<int>(level), text ? text : "");
 	}
 }
 
@@ -57,8 +56,7 @@ bool ofxGgml::setup(const ofxGgmlSettings & settings) {
 	}
 
 	m_impl->settings = settings;
-	s_activeImpl = m_impl.get();
-	ggml_log_set(ggmlLogCallback, nullptr);
+	ggml_log_set(ggmlLogCallback, m_impl.get());
 
 	// Load all available backend libraries (CUDA, Metal, Vulkan, …).
 	ggml_backend_load_all();
@@ -121,17 +119,19 @@ void ofxGgml::close() {
 		ggml_backend_sched_free(m_impl->sched);
 		m_impl->sched = nullptr;
 	}
+	// Guard: if backend and cpuBackend point to the same allocation,
+	// only free once to avoid double-free.
+	const bool sameBackend = (m_impl->backend && m_impl->backend == m_impl->cpuBackend);
 	if (m_impl->backend) {
 		ggml_backend_free(m_impl->backend);
 		m_impl->backend = nullptr;
 	}
-	if (m_impl->cpuBackend) {
+	if (m_impl->cpuBackend && !sameBackend) {
 		ggml_backend_free(m_impl->cpuBackend);
-		m_impl->cpuBackend = nullptr;
 	}
-	if (s_activeImpl == m_impl.get()) {
-		s_activeImpl = nullptr;
-	}
+	m_impl->cpuBackend = nullptr;
+	// Clear the global log callback to prevent use-after-free.
+	ggml_log_set(nullptr, nullptr);
 	m_impl->state = ofxGgmlState::Uninitialized;
 }
 
