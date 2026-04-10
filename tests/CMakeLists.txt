@@ -443,3 +443,20 @@ target_include_directories(test_nle_undo PRIVATE
 )
 
 add_test(NAME nle_undo COMMAND test_nle_undo)
+
+# ---------------------------------------------------------------------------
+# test_crash_handler
+# Tests the crash handler utility: install idempotency, signal name/
+# description helpers, unsigned-to-string conversion, and (on POSIX)
+# verifies that a crashing child process writes a crash-log file.
+# ---------------------------------------------------------------------------
+
+add_executable(test_crash_handler
+    test_crash_handler.cpp
+)
+
+target_include_directories(test_crash_handler PRIVATE
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME crash_handler COMMAND test_crash_handler)
