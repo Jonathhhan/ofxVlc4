@@ -1862,7 +1862,17 @@ void ofxVlc4::releaseVlcResources() {
 		clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
 	}
 	if (cleanupWindow && needsGlCleanup) {
-		glfwMakeContextCurrent(nullptr);
+		// Restore the main window GL context so that callers invoked from
+		// within draw() (e.g. an ImGui "Apply" button) can continue issuing
+		// GL calls in the same frame.  Without this, glfwMakeContextCurrent(nullptr)
+		// would leave the thread with no current context and any subsequent GL
+		// operation would fail or crash.
+		if (m_impl->videoResourceRuntime.mainWindow &&
+			m_impl->videoResourceRuntime.mainWindow->getGLFWWindow()) {
+			m_impl->videoResourceRuntime.mainWindow->makeCurrent();
+		} else {
+			glfwMakeContextCurrent(nullptr);
+		}
 	}
 	releaseD3D11Resources();
 	clearVideoHdrMetadata();
