@@ -1239,6 +1239,7 @@ bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
 	}
 
 	if (!owner.m_impl->videoResourceRuntime.vlcWindow || !owner.m_impl->videoResourceRuntime.vlcWindow->getGLFWWindow()) {
+		owner.logWarning("Video callback makeCurrent(" + std::string(current ? "true" : "false") + ") failed: VLC GLFW window unavailable.");
 		return false;
 	}
 
@@ -2263,10 +2264,18 @@ void ofxVlc4::videoSwap(void * data) {
 
 bool ofxVlc4::make_current(void * data, bool current) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	if (!that || !that->m_impl) {
 		return false;
 	}
-	return that->m_impl->subsystemRuntime.videoComponent->makeCurrent(current);
+	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		that->logVerbose("Video callback make_current(" + std::string(current ? "true" : "false") + ") ignored: shuttingDown flag is set.");
+		return false;
+	}
+	const bool ok = that->m_impl->subsystemRuntime.videoComponent->makeCurrent(current);
+	if (!ok) {
+		that->logWarning("Video callback make_current(" + std::string(current ? "true" : "false") + ") failed.");
+	}
+	return ok;
 }
 
 void * ofxVlc4::get_proc_address(void * data, const char * name) {
@@ -2298,9 +2307,14 @@ bool ofxVlc4::videoOutputSetup(
 
 void ofxVlc4::videoOutputCleanup(void * data) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	if (!that || !that->m_impl) {
 		return;
 	}
+	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		that->logVerbose("Video callback videoOutputCleanup ignored: shuttingDown flag is set.");
+		return;
+	}
+	that->logVerbose("Video callback videoOutputCleanup invoked.");
 	that->m_impl->subsystemRuntime.videoComponent->videoOutputCleanup();
 }
 
