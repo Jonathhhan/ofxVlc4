@@ -501,6 +501,7 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 	// inside VLC's vout_helper.c.
 	if (libvlc_media_player_is_playing(player) ||
 		libvlc_media_player_get_state(player) == libvlc_Paused) {
+		owner.logNotice(label + ": stopping player before reinit.");
 		libvlc_media_player_stop_async(player);
 
 		constexpr int kReinitStopPollMs = 4;
@@ -515,11 +516,14 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 			std::this_thread::sleep_for(std::chrono::milliseconds(kReinitStopPollMs));
 		}
 		if (!stoppedOrIdle) {
-			owner.logWarning("Timed out waiting for player stop before reinit; continuing with teardown.");
+			owner.logWarning(label + ": timed out waiting for player stop before reinit; continuing with teardown.");
+		} else {
+			owner.logNotice(label + ": player stopped, proceeding with reinit.");
 		}
 	}
 
 	// Reinitialize the VLC instance and player with the updated settings.
+	owner.logNotice(label + ": reinitializing VLC session.");
 	owner.init(0, nullptr);
 	if (!owner.sessionPlayer()) {
 		owner.logWarning(label + " reinit failed; player is not available.");
