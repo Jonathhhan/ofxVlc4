@@ -994,11 +994,13 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			m_impl->subsystemRuntime.coreSession->player() != nullptr ||
 			m_impl->subsystemRuntime.coreSession->media() != nullptr);
 	if (hasExistingVlcSession) {
-		// Signal callback guards so that any in-flight VLC rendering callbacks
-		// (makeCurrent, videoSwap, videoResize, …) bail out before touching
-		// resources that releaseVlcResources() is about to destroy.  The flag
-		// is reset to false immediately after the teardown completes.
-		m_impl->lifecycleRuntime.shuttingDown.store(true, std::memory_order_release);
+		// Do NOT set shuttingDown before releaseVlcResources().  VLC's OpenGL
+		// display module calls our make_current(true) callback from inside
+		// libvlc_media_player_release() to obtain a GL context for its own
+		// resource cleanup (shader/VAO deletion).  If shuttingDown is true at
+		// that point the callback returns false and VLC proceeds to delete GL
+		// objects without a context, which crashes.  releaseVlcResources()
+		// sets the flag internally after the player is fully released.
 		logNotice("Reinit: tearing down previous VLC session.");
 		releaseVlcResources();
 	}
@@ -1828,6 +1830,13 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 	}
 
+	// The player is now fully released — VLC has joined all internal threads
+	// (vout, audio, mainloop) and called our make_current / cleanup callbacks
+	// as needed.  From this point no VLC thread will invoke our callbacks, so
+	// flip the guard to prevent any stale or late invocations from touching
+	// resources we are about to destroy.
+	m_impl->lifecycleRuntime.shuttingDown.store(true, std::memory_order_release);
+
 	clearCurrentMedia(false);
 
 	if (cleanupWindow && needsGlCleanup) {
@@ -1890,8 +1899,11 @@ void ofxVlc4::close() {
 
 	m_impl->subsystemRuntime.playbackController->prepareForClose();
 
-	// Only flip the hard shutdown guard once playback had a chance to unwind cleanly.
-	m_impl->lifecycleRuntime.shuttingDown.store(true, std::memory_order_release);
+	// Do NOT set shuttingDown before releaseVlcResources() — VLC's OpenGL
+	// display module needs our make_current callback to work during the
+	// player release so it can delete its own GL resources with a valid
+	// context.  releaseVlcResources() sets the flag after the player is
+	// fully released.
 	releaseVlcResources();
 	m_impl->audioRuntime.ready.store(false);
 	m_impl->videoFrameRuntime.isVideoLoaded.store(false);
