@@ -1802,6 +1802,7 @@ void ofxVlc4::clearWindowCaptureState(const std::shared_ptr<ofAppGLFWWindow> & c
 }
 
 void ofxVlc4::releaseVlcResources() {
+	logVerbose("Release: begin VLC resource teardown.");
 	finalizeRecordingMuxThread();
 	cancelPendingRecordingMux();
 	detachEvents();
@@ -1820,12 +1821,14 @@ void ofxVlc4::releaseVlcResources() {
 		recorderNeedsCleanup;
 
 	if (m_impl->subsystemRuntime.coreSession->player()) {
+		logVerbose("Release: releasing media player.");
 		if (m_impl->watchTimeRuntime.registered) {
 			libvlc_media_player_unwatch_time(m_impl->subsystemRuntime.coreSession->player());
 			m_impl->watchTimeRuntime.registered = false;
 		}
 		libvlc_video_set_adjust_int(m_impl->subsystemRuntime.coreSession->player(), libvlc_adjust_Enable, 0);
 		libvlc_media_player_release(m_impl->subsystemRuntime.coreSession->player());
+		logVerbose("Release: media player released.");
 		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
 		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 	}
@@ -1880,11 +1883,13 @@ void ofxVlc4::releaseVlcResources() {
 	m_impl->videoGeometryRuntime.allocatedVideoHeight = 1;
 
 	if (m_impl->subsystemRuntime.coreSession->instance()) {
+		logVerbose("Release: releasing VLC instance.");
 		libvlc_log_unset(m_impl->subsystemRuntime.coreSession->instance());
 		m_impl->subsystemRuntime.mediaComponent->closeLibVlcLogFile();
 		libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
 		libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
 		libvlc_release(m_impl->subsystemRuntime.coreSession->instance());
+		logVerbose("Release: VLC instance released.");
 		m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
 	}
 	processDeferredRecordingMuxCleanup(true);
@@ -1899,6 +1904,7 @@ void ofxVlc4::releaseVlcResources() {
 
 	m_impl->videoPresentationRuntime.activeVideoOutputBackend = m_impl->videoPresentationRuntime.videoOutputBackend;
 	m_impl->effectsRuntime.activeVideoAdjustmentEngine = m_impl->effectsRuntime.videoAdjustmentEngine;
+	logVerbose("Release: teardown complete.");
 }
 
 void ofxVlc4::close() {
