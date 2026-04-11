@@ -995,8 +995,8 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			m_impl->subsystemRuntime.coreSession->player() != nullptr ||
 			m_impl->subsystemRuntime.coreSession->media() != nullptr);
 	if (hasExistingVlcSession) {
-		const libvlc_media_player_t * existingPlayer = m_impl->subsystemRuntime.coreSession->player();
-		const libvlc_state_t existingState = existingPlayer ? libvlc_media_player_get_state(const_cast<libvlc_media_player_t *>(existingPlayer)) : libvlc_Stopped;
+		libvlc_media_player_t * existingPlayer = m_impl->subsystemRuntime.coreSession->player();
+		const libvlc_state_t existingState = existingPlayer ? libvlc_media_player_get_state(existingPlayer) : libvlc_Stopped;
 		logNotice("Reinit: existing session detected (instance="
 			+ ofToString(static_cast<const void *>(m_impl->subsystemRuntime.coreSession->instance()))
 			+ ", player="

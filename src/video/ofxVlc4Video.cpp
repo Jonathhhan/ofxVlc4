@@ -1239,7 +1239,9 @@ bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
 	}
 
 	if (!owner.m_impl->videoResourceRuntime.vlcWindow || !owner.m_impl->videoResourceRuntime.vlcWindow->getGLFWWindow()) {
-		owner.logWarning("Video callback makeCurrent(" + std::string(current ? "true" : "false") + ") failed: VLC GLFW window unavailable.");
+		owner.logWarning(current
+			? "Video callback makeCurrent(true) failed: VLC GLFW window unavailable."
+			: "Video callback makeCurrent(false) failed: VLC GLFW window unavailable.");
 		return false;
 	}
 
@@ -2268,12 +2270,16 @@ bool ofxVlc4::make_current(void * data, bool current) {
 		return false;
 	}
 	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
-		that->logVerbose("Video callback make_current(" + std::string(current ? "true" : "false") + ") ignored: shuttingDown flag is set.");
+		that->logVerbose(current
+			? "Video callback make_current(true) ignored: shuttingDown flag is set."
+			: "Video callback make_current(false) ignored: shuttingDown flag is set.");
 		return false;
 	}
 	const bool ok = that->m_impl->subsystemRuntime.videoComponent->makeCurrent(current);
 	if (!ok) {
-		that->logWarning("Video callback make_current(" + std::string(current ? "true" : "false") + ") failed.");
+		that->logWarning(current
+			? "Video callback make_current(true) failed."
+			: "Video callback make_current(false) failed.");
 	}
 	return ok;
 }
