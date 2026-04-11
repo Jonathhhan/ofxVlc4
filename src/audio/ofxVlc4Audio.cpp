@@ -1942,7 +1942,7 @@ bool ofxVlc4::removeAudioFilter(const std::string & filterName) {
 		return false;
 	}
 	std::vector<std::string> filters = getAudioFilterChainEntries();
-	const auto it = std::remove(filters.begin(), filters.end(), target);
+	auto it = std::remove(filters.begin(), filters.end(), target);
 	if (it == filters.end()) {
 		return false;
 	}

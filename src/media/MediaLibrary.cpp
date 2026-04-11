@@ -1606,12 +1606,12 @@ bool MediaLibrary::removeBookmark(const std::string & bookmarkId) {
 	}
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->bookmarkState.mutex);
-	const auto it = owner.m_impl->bookmarkState.entries.find(currentPath);
+	auto it = owner.m_impl->bookmarkState.entries.find(currentPath);
 	if (it == owner.m_impl->bookmarkState.entries.end()) {
 		return false;
 	}
 
-	const auto newEnd = std::remove_if(
+	auto newEnd = std::remove_if(
 		it->second.begin(),
 		it->second.end(),
 		[&bookmarkId](const ofxVlc4::BookmarkInfo & bookmark) { return bookmark.id == bookmarkId; });

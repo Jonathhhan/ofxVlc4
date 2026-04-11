@@ -2417,7 +2417,7 @@ bool ofxVlc4::removeVideoFilter(const std::string & filterName) {
 		return false;
 	}
 	std::vector<std::string> filters = getVideoFilterChainEntries();
-	const auto it = std::remove(filters.begin(), filters.end(), target);
+	auto it = std::remove(filters.begin(), filters.end(), target);
 	if (it == filters.end()) {
 		return false;
 	}
