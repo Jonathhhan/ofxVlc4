@@ -688,6 +688,9 @@ void PlaybackController::handlePlaybackEnded() {
 }
 
 void PlaybackController::processDeferredPlaybackActions() {
+	if (owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
 	constexpr uint64_t kManualStopRetryMs = 150;
 	constexpr uint64_t kManualStopFallbackMs = 1500;
 	libvlc_media_player_t * player = owner.sessionPlayer();
@@ -715,7 +718,7 @@ void PlaybackController::processDeferredPlaybackActions() {
 			playbackTransport.manualStopRequestTimeMs.store(0);
 			playbackTransport.manualStopRetryIssued.store(false);
 		}
-		if (manualStopDecision.shouldRetryStopAsync) {
+		if (manualStopDecision.shouldRetryStopAsync && player) {
 			libvlc_media_player_stop_async(player);
 			playbackTransport.manualStopRetryIssued.store(true);
 		}
