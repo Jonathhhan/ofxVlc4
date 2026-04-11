@@ -351,6 +351,25 @@ target_include_directories(test_video_pipeline PRIVATE
 add_test(NAME video_pipeline COMMAND test_video_pipeline)
 
 # ---------------------------------------------------------------------------
+# test_video_output_reinit
+# Mock-based test that validates the video output reinit path:
+# setup → frame delivery → teardown → re-setup → frame delivery.
+# Ensures the shuttingDown flag guards callbacks during teardown and that
+# resources can be safely torn down and re-created across reinit cycles.
+# ---------------------------------------------------------------------------
+
+add_executable(test_video_output_reinit
+    test_video_output_reinit.cpp
+)
+
+target_include_directories(test_video_output_reinit PRIVATE
+    "${STUBS_GL_DIR}"        # ofMain.h stub + GLFW/ sub-stub (controllable)
+    "${SRC_DIR}/support"     # ofxVlc4GlOps.h, ofxVlc4VideoHelpers.h
+)
+
+add_test(NAME video_output_reinit COMMAND test_video_output_reinit)
+
+# ---------------------------------------------------------------------------
 # test_nle_timecode
 # Tests the SMPTE timecode engine: construction, conversions, drop-frame
 # math, arithmetic, comparison, clamping, and FrameRate helpers.

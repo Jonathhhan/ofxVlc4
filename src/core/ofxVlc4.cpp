@@ -994,6 +994,12 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			m_impl->subsystemRuntime.coreSession->player() != nullptr ||
 			m_impl->subsystemRuntime.coreSession->media() != nullptr);
 	if (hasExistingVlcSession) {
+		// Signal callback guards so that any in-flight VLC rendering callbacks
+		// (makeCurrent, videoSwap, videoResize, …) bail out before touching
+		// resources that releaseVlcResources() is about to destroy.  The flag
+		// is reset to false immediately after the teardown completes.
+		m_impl->lifecycleRuntime.shuttingDown.store(true, std::memory_order_release);
+		logNotice("Reinit: tearing down previous VLC session.");
 		releaseVlcResources();
 	}
 	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
