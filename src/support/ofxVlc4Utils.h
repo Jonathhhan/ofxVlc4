@@ -140,6 +140,8 @@ inline bool isStoppedOrIdleState(libvlc_state_t state) {
 		state == libvlc_NothingSpecial;
 }
 
+// "Terminal stop" means a state where teardown can proceed without waiting.
+// VLC 3 exposed libvlc_Ended as a terminal state, while VLC 4 removed it.
 inline bool isTerminalStopState(libvlc_state_t state) {
 #if !defined(LIBVLC_VERSION_MAJOR) || LIBVLC_VERSION_MAJOR < 4
 	return isStoppedOrIdleState(state) || state == libvlc_Ended || state == libvlc_Error;
