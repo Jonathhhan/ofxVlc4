@@ -499,24 +499,29 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 	// subsequent releaseVlcResources() inside init() can tear down GL resources
 	// while the vout is still using them, triggering a GL_INVALID_OPERATION assert
 	// inside VLC's vout_helper.c.
-	if (libvlc_media_player_is_playing(player) ||
-		libvlc_media_player_get_state(player) == libvlc_Paused) {
+	const libvlc_state_t playerStateBeforeReinit = libvlc_media_player_get_state(player);
+	const bool shouldStopBeforeReinit =
+		!isStoppedOrIdleState(playerStateBeforeReinit) &&
+		playerStateBeforeReinit != libvlc_Stopping;
+	if (shouldStopBeforeReinit) {
 		owner.logNotice(label + ": stopping player before reinit.");
 		libvlc_media_player_stop_async(player);
 
 		constexpr int kReinitStopPollMs = 4;
-		constexpr int kReinitStopMaxWaitMs = 500;
+		constexpr int kReinitStopMaxWaitMs = 2000;
 		bool stoppedOrIdle = false;
 		for (int waitedMs = 0; waitedMs < kReinitStopMaxWaitMs; waitedMs += kReinitStopPollMs) {
 			const libvlc_state_t state = libvlc_media_player_get_state(player);
-			if (ofxVlc4Utils::isStoppedOrIdleState(state)) {
+			if (isStoppedOrIdleState(state) || state == libvlc_Stopping) {
 				stoppedOrIdle = true;
 				break;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(kReinitStopPollMs));
 		}
 		if (!stoppedOrIdle) {
-			owner.logWarning(label + ": timed out waiting for player stop before reinit; continuing with teardown.");
+			owner.logWarning(label + ": timed out waiting for player stop before reinit (state="
+				+ ofToString(static_cast<int>(libvlc_media_player_get_state(player)))
+				+ "); continuing with teardown.");
 		} else {
 			owner.logNotice(label + ": player stopped, proceeding with reinit.");
 		}
