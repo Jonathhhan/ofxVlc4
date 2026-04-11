@@ -28,6 +28,8 @@ using ofxVlc4Utils::formatProgramName;
 using ofxVlc4Utils::isUri;
 using ofxVlc4Utils::isStoppedOrIdleState;
 using ofxVlc4Utils::isTransientPlaybackState;
+using ofxVlc4Utils::kPlayerStopMaxWaitMs;
+using ofxVlc4Utils::kPlayerStopPollMs;
 using ofxVlc4Utils::mediaLabelForPath;
 using ofxVlc4Utils::normalizeOptionalPath;
 using ofxVlc4Utils::sanitizeFileStem;
@@ -508,16 +510,14 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 		owner.logNotice(label + ": stopping player before reinit.");
 		libvlc_media_player_stop_async(player);
 
-		constexpr int kReinitStopPollMs = 4;
-		constexpr int kReinitStopMaxWaitMs = 4000;
 		bool reachedTerminalStopState = false;
-		for (int waitedMs = 0; waitedMs < kReinitStopMaxWaitMs; waitedMs += kReinitStopPollMs) {
+		for (int waitedMs = 0; waitedMs < kPlayerStopMaxWaitMs; waitedMs += kPlayerStopPollMs) {
 			const libvlc_state_t state = libvlc_media_player_get_state(player);
 			if (isTerminalStopState(state)) {
 				reachedTerminalStopState = true;
 				break;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(kReinitStopPollMs));
+			std::this_thread::sleep_for(std::chrono::milliseconds(kPlayerStopPollMs));
 		}
 		if (!reachedTerminalStopState) {
 			owner.logWarning(label + ": timed out waiting for a safe terminal stop state before reinit (state="

@@ -28,6 +28,8 @@
 #endif
 
 using ofxVlc4Utils::clearAllocatedFbo;
+using ofxVlc4Utils::kPlayerStopMaxWaitMs;
+using ofxVlc4Utils::kPlayerStopPollMs;
 using ofxVlc4Utils::readTextFileIfPresent;
 using ofxVlc4MuxHelpers::removeRecordingFile;
 using ofxVlc4MuxHelpers::tryRemoveRecordingFileOnce;
@@ -1862,19 +1864,41 @@ void ofxVlc4::releaseVlcResources() {
 		+ ".");
 
 	if (m_impl->subsystemRuntime.coreSession->player()) {
-		const libvlc_state_t stateBeforeRelease = libvlc_media_player_get_state(m_impl->subsystemRuntime.coreSession->player());
+		libvlc_media_player_t * player = m_impl->subsystemRuntime.coreSession->player();
+		const auto isTerminalStopState = [](libvlc_state_t state) {
+			return isStoppedOrIdleState(state) || state == libvlc_Ended || state == libvlc_Error;
+		};
+		libvlc_state_t stateBeforeRelease = libvlc_media_player_get_state(player);
 		logNotice("Release: player teardown starting (player="
-			+ ofToString(static_cast<void *>(m_impl->subsystemRuntime.coreSession->player()))
+			+ ofToString(static_cast<void *>(player))
 			+ ", state="
 			+ ofToString(static_cast<int>(stateBeforeRelease))
 			+ ").");
+		if (!isTerminalStopState(stateBeforeRelease)) {
+			logNotice("Release: requesting async stop before player release.");
+			libvlc_media_player_stop_async(player);
+			for (int waitedMs = 0; waitedMs < kPlayerStopMaxWaitMs; waitedMs += kPlayerStopPollMs) {
+				stateBeforeRelease = libvlc_media_player_get_state(player);
+				if (isTerminalStopState(stateBeforeRelease)) {
+					break;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(kPlayerStopPollMs));
+			}
+			if (!isTerminalStopState(stateBeforeRelease)) {
+				logWarning("Release: player did not reach terminal stop state before release (state="
+					+ ofToString(static_cast<int>(stateBeforeRelease))
+					+ "). Proceeding with release.");
+			} else {
+				logNotice("Release: player reached terminal stop state before release.");
+			}
+		}
 		logVerbose("Release: releasing media player.");
 		if (m_impl->watchTimeRuntime.registered) {
-			libvlc_media_player_unwatch_time(m_impl->subsystemRuntime.coreSession->player());
+			libvlc_media_player_unwatch_time(player);
 			m_impl->watchTimeRuntime.registered = false;
 		}
-		libvlc_video_set_adjust_int(m_impl->subsystemRuntime.coreSession->player(), libvlc_adjust_Enable, 0);
-		libvlc_media_player_release(m_impl->subsystemRuntime.coreSession->player());
+		libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 0);
+		libvlc_media_player_release(player);
 		logVerbose("Release: media player released.");
 		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
 		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
