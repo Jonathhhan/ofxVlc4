@@ -1941,8 +1941,10 @@ void ofxVlc4::releaseVlcResources() {
 	// loadMediaSource) and runs on the instance, not the player.  If the
 	// parse is still active when the media is released, VLC's internal
 	// parse thread may race with the instance teardown that follows.
-	if (m_impl->subsystemRuntime.coreSession->instance() && m_impl->subsystemRuntime.coreSession->media()) {
-		libvlc_media_parse_stop(m_impl->subsystemRuntime.coreSession->instance(), m_impl->subsystemRuntime.coreSession->media());
+	libvlc_instance_t * instanceBeforeMediaClear = m_impl->subsystemRuntime.coreSession->instance();
+	libvlc_media_t * mediaBeforeClear = m_impl->subsystemRuntime.coreSession->media();
+	if (instanceBeforeMediaClear && mediaBeforeClear) {
+		libvlc_media_parse_stop(instanceBeforeMediaClear, mediaBeforeClear);
 	}
 	clearCurrentMedia(false);
 	logVerbose("Release: current media cleared.");
