@@ -499,10 +499,11 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 	// subsequent releaseVlcResources() inside init() can tear down GL resources
 	// while the vout is still using them, triggering a GL_INVALID_OPERATION assert
 	// inside VLC's vout_helper.c.
+	const auto isStoppedOrStoppingState = [](libvlc_state_t state) {
+		return isStoppedOrIdleState(state) || state == libvlc_Stopping;
+	};
 	const libvlc_state_t playerStateBeforeReinit = libvlc_media_player_get_state(player);
-	const bool shouldStopBeforeReinit =
-		!isStoppedOrIdleState(playerStateBeforeReinit) &&
-		playerStateBeforeReinit != libvlc_Stopping;
+	const bool shouldStopBeforeReinit = !isStoppedOrStoppingState(playerStateBeforeReinit);
 	if (shouldStopBeforeReinit) {
 		owner.logNotice(label + ": stopping player before reinit.");
 		libvlc_media_player_stop_async(player);
@@ -512,7 +513,7 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 		bool stoppedOrIdle = false;
 		for (int waitedMs = 0; waitedMs < kReinitStopMaxWaitMs; waitedMs += kReinitStopPollMs) {
 			const libvlc_state_t state = libvlc_media_player_get_state(player);
-			if (isStoppedOrIdleState(state) || state == libvlc_Stopping) {
+			if (isStoppedOrStoppingState(state)) {
 				stoppedOrIdle = true;
 				break;
 			}
