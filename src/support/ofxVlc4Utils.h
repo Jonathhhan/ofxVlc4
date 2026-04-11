@@ -140,6 +140,13 @@ inline bool isStoppedOrIdleState(libvlc_state_t state) {
 		state == libvlc_NothingSpecial;
 }
 
+// Bounded wait used when stopping a media player before teardown/reinit.
+// We keep the poll interval short for responsiveness, and allow up to 4s
+// because hardware/video-output pipelines can require longer than 2s to
+// settle to a terminal state during asynchronous shutdown.
+inline constexpr int kPlayerStopPollMs = 4;
+inline constexpr int kPlayerStopMaxWaitMs = 4000;
+
 inline bool isTransientPlaybackState(libvlc_state_t state) {
 	return state == libvlc_Opening || state == libvlc_Buffering || state == libvlc_Stopping;
 }

@@ -28,6 +28,8 @@ using ofxVlc4Utils::formatProgramName;
 using ofxVlc4Utils::isUri;
 using ofxVlc4Utils::isStoppedOrIdleState;
 using ofxVlc4Utils::isTransientPlaybackState;
+using ofxVlc4Utils::kPlayerStopMaxWaitMs;
+using ofxVlc4Utils::kPlayerStopPollMs;
 using ofxVlc4Utils::mediaLabelForPath;
 using ofxVlc4Utils::normalizeOptionalPath;
 using ofxVlc4Utils::sanitizeFileStem;
@@ -499,32 +501,32 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 	// subsequent releaseVlcResources() inside init() can tear down GL resources
 	// while the vout is still using them, triggering a GL_INVALID_OPERATION assert
 	// inside VLC's vout_helper.c.
-	const auto isStoppedOrStoppingState = [](libvlc_state_t state) {
-		return isStoppedOrIdleState(state) || state == libvlc_Stopping;
+	const auto isTerminalStopState = [](libvlc_state_t state) {
+		return isStoppedOrIdleState(state) || state == libvlc_Ended || state == libvlc_Error;
 	};
 	const libvlc_state_t playerStateBeforeReinit = libvlc_media_player_get_state(player);
-	const bool shouldStopBeforeReinit = !isStoppedOrStoppingState(playerStateBeforeReinit);
+	const bool shouldStopBeforeReinit = !isTerminalStopState(playerStateBeforeReinit);
 	if (shouldStopBeforeReinit) {
 		owner.logNotice(label + ": stopping player before reinit.");
 		libvlc_media_player_stop_async(player);
 
-		constexpr int kReinitStopPollMs = 4;
-		constexpr int kReinitStopMaxWaitMs = 2000;
-		bool stoppedOrIdle = false;
-		for (int waitedMs = 0; waitedMs < kReinitStopMaxWaitMs; waitedMs += kReinitStopPollMs) {
+		bool reachedTerminalStopState = false;
+		for (int waitedMs = 0; waitedMs < kPlayerStopMaxWaitMs; waitedMs += kPlayerStopPollMs) {
 			const libvlc_state_t state = libvlc_media_player_get_state(player);
-			if (isStoppedOrStoppingState(state)) {
-				stoppedOrIdle = true;
+			if (isTerminalStopState(state)) {
+				reachedTerminalStopState = true;
 				break;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(kReinitStopPollMs));
+			std::this_thread::sleep_for(std::chrono::milliseconds(kPlayerStopPollMs));
 		}
-		if (!stoppedOrIdle) {
-			owner.logWarning(label + ": timed out waiting for player stop before reinit (state="
+		if (!reachedTerminalStopState) {
+			owner.logWarning(label + ": timed out waiting for a safe terminal stop state before reinit (state="
 				+ ofToString(static_cast<int>(libvlc_media_player_get_state(player)))
-				+ "); continuing with teardown.");
+				+ "); aborting reinit to avoid unsafe teardown.");
+			owner.setStatus(label + " update queued. Player did not fully stop for safe reinit.");
+			return false;
 		} else {
-			owner.logNotice(label + ": player stopped, proceeding with reinit.");
+			owner.logNotice(label + ": player reached terminal stop state, proceeding with reinit.");
 		}
 	}
 

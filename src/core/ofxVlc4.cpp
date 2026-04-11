@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
@@ -27,6 +28,8 @@
 #endif
 
 using ofxVlc4Utils::clearAllocatedFbo;
+using ofxVlc4Utils::kPlayerStopMaxWaitMs;
+using ofxVlc4Utils::kPlayerStopPollMs;
 using ofxVlc4Utils::readTextFileIfPresent;
 using ofxVlc4MuxHelpers::removeRecordingFile;
 using ofxVlc4MuxHelpers::tryRemoveRecordingFileOnce;
@@ -994,6 +997,17 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			m_impl->subsystemRuntime.coreSession->player() != nullptr ||
 			m_impl->subsystemRuntime.coreSession->media() != nullptr);
 	if (hasExistingVlcSession) {
+		libvlc_media_player_t * existingPlayer = m_impl->subsystemRuntime.coreSession->player();
+		const libvlc_state_t existingState = existingPlayer ? libvlc_media_player_get_state(existingPlayer) : libvlc_Stopped;
+		logNotice("Reinit: existing session detected (instance="
+			+ ofToString(static_cast<const void *>(m_impl->subsystemRuntime.coreSession->instance()))
+			+ ", player="
+			+ ofToString(static_cast<const void *>(existingPlayer))
+			+ ", media="
+			+ ofToString(static_cast<const void *>(m_impl->subsystemRuntime.coreSession->media()))
+			+ ", state="
+			+ ofToString(static_cast<int>(existingState))
+			+ ").");
 		// Do NOT set shuttingDown before releaseVlcResources().  VLC's OpenGL
 		// display module calls our make_current(true) callback from inside
 		// libvlc_media_player_release() to obtain a GL context for its own
@@ -1005,6 +1019,11 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		releaseVlcResources();
 	}
 	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
+	logVerbose("Init: main window pointer="
+		+ ofToString(static_cast<void *>(m_impl->videoResourceRuntime.mainWindow.get()))
+		+ ", vlc window pointer="
+		+ ofToString(static_cast<void *>(m_impl->videoResourceRuntime.vlcWindow.get()))
+		+ ".");
 	m_impl->lifecycleRuntime.closeRequested.store(false);
 	m_impl->lifecycleRuntime.shuttingDown.store(false, std::memory_order_release);
 	m_impl->subsystemRuntime.playbackController->resetTransportState();
@@ -1121,6 +1140,11 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		releaseVlcResources();
 		return;
 	}
+	logVerbose("Init: video output backend active="
+		+ ofToString(static_cast<int>(m_impl->videoPresentationRuntime.activeVideoOutputBackend))
+		+ ", requested="
+		+ ofToString(static_cast<int>(m_impl->videoPresentationRuntime.videoOutputBackend))
+		+ ".");
 
 	if (m_impl->playerConfigRuntime.audioCaptureEnabled) {
 		libvlc_audio_set_callbacks(m_impl->subsystemRuntime.coreSession->player(), audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
@@ -1803,6 +1827,7 @@ void ofxVlc4::clearWindowCaptureState(const std::shared_ptr<ofAppGLFWWindow> & c
 
 void ofxVlc4::releaseVlcResources() {
 	logVerbose("Release: begin VLC resource teardown.");
+	const auto releaseStart = std::chrono::steady_clock::now();
 	finalizeRecordingMuxThread();
 	cancelPendingRecordingMux();
 	detachEvents();
@@ -1810,6 +1835,13 @@ void ofxVlc4::releaseVlcResources() {
 	stopMediaDiscoveryInternal();
 	stopRendererDiscoveryInternal();
 	std::shared_ptr<ofAppGLFWWindow> cleanupWindow = m_impl->videoResourceRuntime.vlcWindow ? m_impl->videoResourceRuntime.vlcWindow : m_impl->videoResourceRuntime.mainWindow;
+	logVerbose("Release: cleanup window pointer="
+		+ ofToString(static_cast<void *>(cleanupWindow.get()))
+		+ " (vlcWindow="
+		+ ofToString(static_cast<void *>(m_impl->videoResourceRuntime.vlcWindow.get()))
+		+ ", mainWindow="
+		+ ofToString(static_cast<void *>(m_impl->videoResourceRuntime.mainWindow.get()))
+		+ ").");
 	const bool recorderNeedsCleanup = m_impl->recordingObjectRuntime.recorder.hasCleanupState();
 	const bool needsGlCleanup =
 		m_impl->videoResourceRuntime.vlcFramebufferId != 0 ||
@@ -1819,18 +1851,58 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->videoResourceRuntime.videoAdjustShader.isLoaded() ||
 		m_impl->windowCaptureRuntime.captureFbo.isAllocated() ||
 		recorderNeedsCleanup;
+	logVerbose("Release: needsGlCleanup="
+		+ ofToString(needsGlCleanup ? 1 : 0)
+		+ ", recorderNeedsCleanup="
+		+ ofToString(recorderNeedsCleanup ? 1 : 0)
+		+ ", vlcFramebufferId="
+		+ ofToString(m_impl->videoResourceRuntime.vlcFramebufferId)
+		+ ", videoTextureAllocated="
+		+ ofToString(m_impl->videoResourceRuntime.videoTexture.isAllocated() ? 1 : 0)
+		+ ", exposedFboAllocated="
+		+ ofToString(m_impl->videoResourceRuntime.exposedTextureFbo.isAllocated() ? 1 : 0)
+		+ ".");
 
 	if (m_impl->subsystemRuntime.coreSession->player()) {
+		libvlc_media_player_t * player = m_impl->subsystemRuntime.coreSession->player();
+		const auto isTerminalStopState = [](libvlc_state_t state) {
+			return isStoppedOrIdleState(state) || state == libvlc_Ended || state == libvlc_Error;
+		};
+		libvlc_state_t stateBeforeRelease = libvlc_media_player_get_state(player);
+		logNotice("Release: player teardown starting (player="
+			+ ofToString(static_cast<void *>(player))
+			+ ", state="
+			+ ofToString(static_cast<int>(stateBeforeRelease))
+			+ ").");
+		if (!isTerminalStopState(stateBeforeRelease)) {
+			logNotice("Release: requesting async stop before player release.");
+			libvlc_media_player_stop_async(player);
+			for (int waitedMs = 0; waitedMs < kPlayerStopMaxWaitMs; waitedMs += kPlayerStopPollMs) {
+				stateBeforeRelease = libvlc_media_player_get_state(player);
+				if (isTerminalStopState(stateBeforeRelease)) {
+					break;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(kPlayerStopPollMs));
+			}
+			if (!isTerminalStopState(stateBeforeRelease)) {
+				logWarning("Release: player did not reach terminal stop state before release (state="
+					+ ofToString(static_cast<int>(stateBeforeRelease))
+					+ "). Proceeding with release.");
+			} else {
+				logNotice("Release: player reached terminal stop state before release.");
+			}
+		}
 		logVerbose("Release: releasing media player.");
 		if (m_impl->watchTimeRuntime.registered) {
-			libvlc_media_player_unwatch_time(m_impl->subsystemRuntime.coreSession->player());
+			libvlc_media_player_unwatch_time(player);
 			m_impl->watchTimeRuntime.registered = false;
 		}
-		libvlc_video_set_adjust_int(m_impl->subsystemRuntime.coreSession->player(), libvlc_adjust_Enable, 0);
-		libvlc_media_player_release(m_impl->subsystemRuntime.coreSession->player());
+		libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 0);
+		libvlc_media_player_release(player);
 		logVerbose("Release: media player released.");
 		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
 		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
+		logNotice("Release: player teardown complete.");
 	}
 
 	// The player is now fully released — VLC has joined all internal threads
@@ -1839,8 +1911,10 @@ void ofxVlc4::releaseVlcResources() {
 	// flip the guard to prevent any stale or late invocations from touching
 	// resources we are about to destroy.
 	m_impl->lifecycleRuntime.shuttingDown.store(true, std::memory_order_release);
+	logVerbose("Release: lifecycle shuttingDown flag set.");
 
 	clearCurrentMedia(false);
+	logVerbose("Release: current media cleared.");
 
 	if (cleanupWindow && needsGlCleanup) {
 		updateNativeVideoWindowVisibility();
@@ -1863,6 +1937,7 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->videoResourceRuntime.videoAdjustShaderReady = false;
 		m_impl->videoResourceRuntime.videoTexture.clear();
 		clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
+		logVerbose("Release: GL resources cleared.");
 	}
 	if (cleanupWindow && needsGlCleanup) {
 		// Restore the main window GL context so that callers invoked from
@@ -1904,6 +1979,8 @@ void ofxVlc4::releaseVlcResources() {
 
 	m_impl->videoPresentationRuntime.activeVideoOutputBackend = m_impl->videoPresentationRuntime.videoOutputBackend;
 	m_impl->effectsRuntime.activeVideoAdjustmentEngine = m_impl->effectsRuntime.videoAdjustmentEngine;
+	const auto releaseElapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - releaseStart).count();
+	logNotice("Release: teardown complete in " + ofToString(static_cast<long long>(releaseElapsedMs)) + " ms.");
 	logVerbose("Release: teardown complete.");
 }
 
