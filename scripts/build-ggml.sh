@@ -210,16 +210,30 @@ fi
 
 write_step "Verifying installation..."
 if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists ggml 2>/dev/null; then
-write_step "pkg-config: ggml version $(pkg-config --modversion ggml)"
-elif [[ -f "$INSTALL_PREFIX/lib/libggml.so" ]] ||
-[[ -f "$INSTALL_PREFIX/lib/libggml.dylib" ]] ||
-[[ -f "$INSTALL_PREFIX/lib/libggml.dll.a" ]] ||
-[[ -f "$INSTALL_PREFIX/lib/ggml.lib" ]] ||
-[[ -f "$INSTALL_PREFIX/bin/libggml.dll" ]] ||
-[[ -f "$INSTALL_PREFIX/bin/ggml.dll" ]]; then
-write_step "ggml libraries found under $INSTALL_PREFIX/."
+	write_step "pkg-config: ggml version $(pkg-config --modversion ggml)"
 else
-write_step "Warning: could not verify ggml installation. You may need to set your library path."
+	possible_libs=(
+		"$INSTALL_PREFIX/lib/libggml.so"
+		"$INSTALL_PREFIX/lib64/libggml.so"
+		"$INSTALL_PREFIX/lib/libggml.dylib"
+		"$INSTALL_PREFIX/lib/libggml.dll.a"
+		"$INSTALL_PREFIX/lib/ggml.lib"
+		"$INSTALL_PREFIX/bin/libggml.dll"
+		"$INSTALL_PREFIX/bin/ggml.dll"
+	)
+	lib_found=0
+	for lib_path in "${possible_libs[@]}"; do
+		if [[ -f "$lib_path" ]]; then
+			lib_found=1
+			break
+		fi
+	done
+
+	if [[ "$lib_found" -eq 1 ]]; then
+		write_step "ggml libraries found under $INSTALL_PREFIX/."
+	else
+		write_step "Warning: could not verify ggml installation. You may need to set your library path."
+	fi
 fi
 
 write_step "Done! ggml has been built and installed to $INSTALL_PREFIX."
