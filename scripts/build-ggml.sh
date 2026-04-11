@@ -21,7 +21,8 @@ GGML_BRANCH="master"
 TMP_ROOT="${TMPDIR:-/tmp}"
 BUILD_DIR="$TMP_ROOT/ggml-build"
 SOURCE_DIR="$TMP_ROOT/ggml-source"
-INSTALL_PREFIX="/usr/local"
+DEFAULT_INSTALL_PREFIX="/usr/local"
+INSTALL_PREFIX="$DEFAULT_INSTALL_PREFIX"
 JOBS=""
 ENABLE_CUDA=0
 ENABLE_VULKAN=0
@@ -181,13 +182,18 @@ cmake --build . --config Release -j "$JOBS"
 # ---------------------------------------------------------------------------
 
 write_step "Installing ggml to $INSTALL_PREFIX..."
+EFFECTIVE_INSTALL_PREFIX="$INSTALL_PREFIX"
 if [[ -w "$INSTALL_PREFIX" ]]; then
-cmake --install .
+	cmake --install .
 elif command -v sudo >/dev/null 2>&1 && ! is_windows_like; then
-write_step "Requires elevated permissions for $INSTALL_PREFIX — using sudo."
-sudo cmake --install .
+	write_step "Requires elevated permissions for $INSTALL_PREFIX — using sudo."
+	sudo cmake --install .
+elif [[ "$INSTALL_PREFIX" == "$DEFAULT_INSTALL_PREFIX" ]] && [[ -n "${HOME:-}" ]]; then
+	EFFECTIVE_INSTALL_PREFIX="${HOME}/.local"
+	write_step "Install prefix '$INSTALL_PREFIX' is not writable; falling back to '$EFFECTIVE_INSTALL_PREFIX'."
+	cmake --install . --prefix "$EFFECTIVE_INSTALL_PREFIX"
 else
-die "Install prefix '$INSTALL_PREFIX' is not writable. Use --prefix to a writable location."
+	die "Install prefix '$INSTALL_PREFIX' is not writable. Use --prefix to a writable location."
 fi
 
 # ---------------------------------------------------------------------------
@@ -213,13 +219,13 @@ if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists ggml 2>/dev/null
 	write_step "pkg-config: ggml version $(pkg-config --modversion ggml)"
 else
 	possible_libs=(
-		"$INSTALL_PREFIX/lib/libggml.so"
-		"$INSTALL_PREFIX/lib64/libggml.so"
-		"$INSTALL_PREFIX/lib/libggml.dylib"
-		"$INSTALL_PREFIX/lib/libggml.dll.a"
-		"$INSTALL_PREFIX/lib/ggml.lib"
-		"$INSTALL_PREFIX/bin/libggml.dll"
-		"$INSTALL_PREFIX/bin/ggml.dll"
+		"$EFFECTIVE_INSTALL_PREFIX/lib/libggml.so"
+		"$EFFECTIVE_INSTALL_PREFIX/lib64/libggml.so"
+		"$EFFECTIVE_INSTALL_PREFIX/lib/libggml.dylib"
+		"$EFFECTIVE_INSTALL_PREFIX/lib/libggml.dll.a"
+		"$EFFECTIVE_INSTALL_PREFIX/lib/ggml.lib"
+		"$EFFECTIVE_INSTALL_PREFIX/bin/libggml.dll"
+		"$EFFECTIVE_INSTALL_PREFIX/bin/ggml.dll"
 	)
 	lib_found=0
 	for lib_path in "${possible_libs[@]}"; do
@@ -230,13 +236,13 @@ else
 	done
 
 	if [[ "$lib_found" -eq 1 ]]; then
-		write_step "ggml libraries found under $INSTALL_PREFIX/."
+		write_step "ggml libraries found under $EFFECTIVE_INSTALL_PREFIX/."
 	else
 		write_step "Warning: could not verify ggml installation. You may need to set your library path."
 	fi
 fi
 
-write_step "Done! ggml has been built and installed to $INSTALL_PREFIX."
+write_step "Done! ggml has been built and installed to $EFFECTIVE_INSTALL_PREFIX."
 write_step ""
 write_step "Next steps:"
 write_step "  1. Run scripts/download-model.sh to fetch a GGUF model."
