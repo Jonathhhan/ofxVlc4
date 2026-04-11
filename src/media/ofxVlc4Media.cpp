@@ -27,6 +27,7 @@ using ofxVlc4Utils::fallbackIndexedLabel;
 using ofxVlc4Utils::formatProgramName;
 using ofxVlc4Utils::isUri;
 using ofxVlc4Utils::isStoppedOrIdleState;
+using ofxVlc4Utils::isTerminalStopState;
 using ofxVlc4Utils::isTransientPlaybackState;
 using ofxVlc4Utils::kPlayerStopMaxWaitMs;
 using ofxVlc4Utils::kPlayerStopPollMs;
@@ -501,9 +502,6 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 	// subsequent releaseVlcResources() inside init() can tear down GL resources
 	// while the vout is still using them, triggering a GL_INVALID_OPERATION assert
 	// inside VLC's vout_helper.c.
-	const auto isTerminalStopState = [](libvlc_state_t state) {
-		return isStoppedOrIdleState(state) || state == libvlc_Ended || state == libvlc_Error;
-	};
 	const libvlc_state_t playerStateBeforeReinit = libvlc_media_player_get_state(player);
 	const bool shouldStopBeforeReinit = !isTerminalStopState(playerStateBeforeReinit);
 	if (shouldStopBeforeReinit) {

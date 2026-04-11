@@ -140,6 +140,14 @@ inline bool isStoppedOrIdleState(libvlc_state_t state) {
 		state == libvlc_NothingSpecial;
 }
 
+inline bool isTerminalStopState(libvlc_state_t state) {
+#if !defined(LIBVLC_VERSION_MAJOR) || LIBVLC_VERSION_MAJOR < 4
+	return isStoppedOrIdleState(state) || state == libvlc_Ended || state == libvlc_Error;
+#else
+	return isStoppedOrIdleState(state) || state == libvlc_Error;
+#endif
+}
+
 // Bounded wait used when stopping a media player before teardown/reinit.
 // We keep the poll interval short for responsiveness, and allow up to 4s
 // because hardware/video-output pipelines can require longer than 2s to

@@ -28,6 +28,7 @@
 #endif
 
 using ofxVlc4Utils::clearAllocatedFbo;
+using ofxVlc4Utils::isTerminalStopState;
 using ofxVlc4Utils::kPlayerStopMaxWaitMs;
 using ofxVlc4Utils::kPlayerStopPollMs;
 using ofxVlc4Utils::readTextFileIfPresent;
@@ -1865,9 +1866,6 @@ void ofxVlc4::releaseVlcResources() {
 
 	if (m_impl->subsystemRuntime.coreSession->player()) {
 		libvlc_media_player_t * player = m_impl->subsystemRuntime.coreSession->player();
-		const auto isTerminalStopState = [](libvlc_state_t state) {
-			return isStoppedOrIdleState(state) || state == libvlc_Ended || state == libvlc_Error;
-		};
 		libvlc_state_t stateBeforeRelease = libvlc_media_player_get_state(player);
 		logNotice("Release: player teardown starting (player="
 			+ ofToString(static_cast<void *>(player))
