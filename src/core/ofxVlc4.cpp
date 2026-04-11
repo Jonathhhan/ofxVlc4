@@ -1909,6 +1909,16 @@ void ofxVlc4::releaseVlcResources() {
 			m_impl->watchTimeRuntime.registered = false;
 		}
 		libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 0);
+
+		// Detach the media from the player BEFORE releasing the player so
+		// VLC's internal player→media link is cleanly severed.  Without this,
+		// libvlc_media_player_release() has to unlink the media during its
+		// own destruction, which in certain states (e.g. a media parse is
+		// still running on the instance) can race with the subsequent
+		// libvlc_media_release() in clearCurrentMedia().
+		if (m_impl->subsystemRuntime.coreSession->media()) {
+			libvlc_media_player_set_media(player, nullptr);
+		}
 		libvlc_media_player_release(player);
 		logVerbose("Release: media player released.");
 		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
@@ -1926,6 +1936,16 @@ void ofxVlc4::releaseVlcResources() {
 	// the release window.
 	logVerbose("Release: player released, shuttingDown already set.");
 
+	// Stop any pending media parse BEFORE releasing the media.  The parse
+	// is asynchronous (started by libvlc_media_parse_request in
+	// loadMediaSource) and runs on the instance, not the player.  If the
+	// parse is still active when the media is released, VLC's internal
+	// parse thread may race with the instance teardown that follows.
+	libvlc_instance_t * instanceBeforeMediaClear = m_impl->subsystemRuntime.coreSession->instance();
+	libvlc_media_t * mediaBeforeClear = m_impl->subsystemRuntime.coreSession->media();
+	if (instanceBeforeMediaClear && mediaBeforeClear) {
+		libvlc_media_parse_stop(instanceBeforeMediaClear, mediaBeforeClear);
+	}
 	clearCurrentMedia(false);
 	logVerbose("Release: current media cleared.");
 
