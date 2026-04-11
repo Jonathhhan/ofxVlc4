@@ -3,8 +3,9 @@
 //
 // This validates that:
 //  1. Resources can be torn down and re-created without leaking state.
-//  2. The shuttingDown flag prevents producer callbacks from touching
-//     resources that are being destroyed during reinit.
+//  2. The shuttingDown flag is set AFTER the player release (not before),
+//     so VLC's OpenGL display Close() can call our make_current callback
+//     to obtain a GL context for its own resource cleanup.
 //  3. After reinit the pipeline resumes normal frame delivery.
 
 #include "ofxVlc4GlOps.h"
@@ -235,7 +236,7 @@ static void testReinitCycle() {
 }
 
 static void testShutdownGuardDuringTeardown() {
-	beginSuite("shuttingDown flag prevents callbacks during teardown");
+	beginSuite("shuttingDown flag prevents callbacks after player release");
 
 	resetAll();
 	MockVideoState state;
@@ -247,7 +248,15 @@ static void testShutdownGuardDuringTeardown() {
 	runProducerFrame(state);
 	simulateConsumerRefresh(state);
 
-	// Simulate the reinit path: set shuttingDown before teardown.
+	// Simulate the corrected reinit path: teardown first (player release),
+	// THEN set shuttingDown.  This mirrors the real code where
+	// libvlc_media_player_release() must be able to call our make_current
+	// callback (VLC's OpenGL display Close() requires a GL context for its
+	// own resource cleanup).
+	simulateTeardown(state);
+	CHECK_EQ(state.vlcFramebufferId, 0u);
+
+	// NOW set shuttingDown — player is gone, guard against stale callbacks.
 	state.shuttingDown.store(true, std::memory_order_release);
 
 	// Reset hasReceivedVideoFrame so we can verify the guarded frame does
@@ -266,10 +275,6 @@ static void testShutdownGuardDuringTeardown() {
 	// makeCurrent(false) bailed — no flush.
 	CHECK(!logContains("glFlush"));
 	CHECK_EQ(logSize(), 0u);
-
-	// Now teardown is safe since no callbacks are accessing resources.
-	simulateTeardown(state);
-	CHECK_EQ(state.vlcFramebufferId, 0u);
 
 	// Clear shutdown flag (simulates init() resetting the flag).
 	state.shuttingDown.store(false, std::memory_order_release);
@@ -373,9 +378,9 @@ static void testMultipleReinitCycles() {
 		}
 		CHECK(state.hasReceivedVideoFrame);
 
-		// Simulate reinit: shutdown guard → teardown → clear flag.
-		state.shuttingDown.store(true, std::memory_order_release);
+		// Simulate reinit: teardown first, THEN set shutdown guard, clear flag.
 		simulateTeardown(state);
+		state.shuttingDown.store(true, std::memory_order_release);
 		state.shuttingDown.store(false, std::memory_order_release);
 		state.hasReceivedVideoFrame = false;
 
@@ -399,15 +404,78 @@ static void testTeardownWithPendingFence() {
 	CHECK(state.exposedTextureDirty);
 
 	// Teardown with an outstanding fence — must not leak.
-	state.shuttingDown.store(true, std::memory_order_release);
 	resetAll();
 	simulateTeardown(state);
+	// Set shuttingDown after teardown (mirrors real code).
+	state.shuttingDown.store(true, std::memory_order_release);
 
 	CHECK_EQ(state.publishedVideoFrameFence, nullptr);
 	CHECK(logContains("glDeleteSync"));
 	CHECK(logContains("glDeleteFramebuffers"));
 
 	state.shuttingDown.store(false, std::memory_order_release);
+}
+
+static void testCallbacksWorkDuringPlayerRelease() {
+	beginSuite("callbacks function while shuttingDown is false (VLC player release window)");
+
+	// This test reproduces the crash scenario where VLC's OpenGL display
+	// module calls make_current(true) during libvlc_media_player_release().
+	// VLC's Close() function does:
+	//   vlc_gl_MakeCurrent(gl);          → our make_current(true) callback
+	//   vout_display_opengl_Delete();    → GL cleanup (shaders, VAOs, etc.)
+	//   vlc_gl_ReleaseCurrent(gl);       → our make_current(false) callback
+	//
+	// If shuttingDown is true, make_current(true) returns false and VLC tries
+	// GL operations without a context → crash.  The fix: shuttingDown must
+	// NOT be set until after the player release completes.
+
+	resetAll();
+	MockVideoState state;
+	g_glClientWaitSyncResult = GL_ALREADY_SIGNALED;
+
+	// Normal setup and frame delivery.
+	simulateSetup(state, 1920, 1080);
+	simulateConsumerRefresh(state);
+	for (int i = 0; i < 3; ++i) {
+		runProducerFrame(state);
+		simulateConsumerRefresh(state);
+	}
+	CHECK(state.hasReceivedVideoFrame);
+
+	// Simulate VLC's player release window: shuttingDown is STILL false.
+	// VLC's vout Close() calls make_current(true) to get a context.
+	CHECK(!state.shuttingDown.load(std::memory_order_acquire));
+	resetAll();
+	simulateMakeCurrentTrue(state);
+	// make_current(true) succeeded — FBO is bound, GL context is active.
+	CHECK(state.vlcFboBound);
+	CHECK(logContains("glBindFramebuffer"));
+
+	// VLC does its internal GL cleanup (simulated as a no-op here).
+	// Then calls make_current(false) to release the context.
+	simulateMakeCurrentFalse(state);
+	CHECK(!state.vlcFboBound);
+	CHECK(logContains("glFlush"));
+
+	// Player release is done. NOW set shuttingDown.
+	state.shuttingDown.store(true, std::memory_order_release);
+
+	// Our GL cleanup runs — teardown resources.
+	simulateTeardown(state);
+	CHECK_EQ(state.vlcFramebufferId, 0u);
+	CHECK_EQ(state.textureId, 0u);
+
+	// Reset and verify pipeline works again.
+	state.shuttingDown.store(false, std::memory_order_release);
+	resetAll();
+	bool ok = simulateSetup(state, 640, 480);
+	CHECK(ok);
+	CHECK(state.vlcFramebufferId != 0u);
+
+	runProducerFrame(state);
+	CHECK(state.hasReceivedVideoFrame);
+	simulateTeardown(state);
 }
 
 // ---------------------------------------------------------------------------
@@ -420,6 +488,7 @@ int main() {
 	testConcurrentShutdownGuard();
 	testMultipleReinitCycles();
 	testTeardownWithPendingFence();
+	testCallbacksWorkDuringPlayerRelease();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;
