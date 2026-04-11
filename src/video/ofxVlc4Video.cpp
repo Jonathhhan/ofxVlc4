@@ -2269,12 +2269,13 @@ bool ofxVlc4::make_current(void * data, bool current) {
 	if (!that || !that->m_impl) {
 		return false;
 	}
-	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
-		that->logVerbose(current
-			? "Video callback make_current(true) ignored: shuttingDown flag is set."
-			: "Video callback make_current(false) ignored: shuttingDown flag is set.");
-		return false;
-	}
+	// NOTE: This callback intentionally does NOT check shuttingDown.
+	// VLC's OpenGL display module calls make_current(true) from inside
+	// libvlc_media_player_release() to obtain a GL context for its own
+	// resource cleanup (shader/VAO deletion).  If we blocked that call,
+	// VLC would delete GL objects without a context, which crashes.
+	// The member function has its own safety checks (vlcWindow validity,
+	// videoMutex, FBO state) that prevent unsafe resource access.
 	const bool ok = that->m_impl->subsystemRuntime.videoComponent->makeCurrent(current);
 	if (!ok) {
 		that->logWarning(current
@@ -2286,10 +2287,13 @@ bool ofxVlc4::make_current(void * data, bool current) {
 
 void * ofxVlc4::get_proc_address(void * data, const char * name) {
 	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	if (!that || !that->m_impl) {
 		return nullptr;
 	}
-
+	// NOTE: This callback intentionally does NOT check shuttingDown.
+	// VLC may call get_proc_address during player release for its own
+	// GL cleanup.  Returning nullptr would cause VLC to fail resolving
+	// GL function pointers needed for safe resource deletion.
 	return that->m_impl->subsystemRuntime.videoComponent->getProcAddress(name);
 }
 
