@@ -384,12 +384,6 @@ ofxVlc4::ofxVlc4()
 	m_impl->subsystemRuntime.eventRouter = std::make_unique<VlcEventRouter>(*this);
 	m_impl->effectsRuntime.equalizerBandAmps.assign(libvlc_audio_equalizer_get_band_count(), 0.0f);
 
-	// Module proxies (Phase 5.11).
-	m_impl->audioModule = std::make_unique<AudioModule>(*this);
-	m_impl->videoModule = std::make_unique<VideoModule>(*this);
-	m_impl->mediaModule = std::make_unique<MediaModule>(*this);
-	m_impl->recordingModule = std::make_unique<RecordingModule>(*this);
-	m_impl->midiModule = std::make_unique<MidiModule>(*this);
 }
 
 ofxVlc4::~ofxVlc4() {
@@ -2460,92 +2454,4 @@ int ofxVlc4::getSampleRate() const {
 	return m_impl->audioRuntime.sampleRate.load(std::memory_order_relaxed);
 }
 
-// ---------------------------------------------------------------------------
-// Module accessors (Phase 5.11)
-// ---------------------------------------------------------------------------
 
-ofxVlc4::AudioModule & ofxVlc4::audio() { return *m_impl->audioModule; }
-const ofxVlc4::AudioModule & ofxVlc4::audio() const { return *m_impl->audioModule; }
-
-ofxVlc4::VideoModule & ofxVlc4::video() { return *m_impl->videoModule; }
-const ofxVlc4::VideoModule & ofxVlc4::video() const { return *m_impl->videoModule; }
-
-ofxVlc4::MediaModule & ofxVlc4::media() { return *m_impl->mediaModule; }
-const ofxVlc4::MediaModule & ofxVlc4::media() const { return *m_impl->mediaModule; }
-
-ofxVlc4::RecordingModule & ofxVlc4::recording() { return *m_impl->recordingModule; }
-const ofxVlc4::RecordingModule & ofxVlc4::recording() const { return *m_impl->recordingModule; }
-
-ofxVlc4::MidiModule & ofxVlc4::midi() { return *m_impl->midiModule; }
-const ofxVlc4::MidiModule & ofxVlc4::midi() const { return *m_impl->midiModule; }
-
-// ---------------------------------------------------------------------------
-// Typed playback state (Phase 5.12)
-// ---------------------------------------------------------------------------
-
-PlaybackState ofxVlc4::getPlaybackState() const {
-	if (!sessionPlayer()) return PlaybackState::Stopped;
-	switch (libvlc_media_player_get_state(sessionPlayer())) {
-	case libvlc_NothingSpecial:
-	case libvlc_Stopped:
-	case libvlc_Ended:
-		return PlaybackState::Stopped;
-	case libvlc_Opening:
-		return PlaybackState::Opening;
-	case libvlc_Buffering:
-		return PlaybackState::Buffering;
-	case libvlc_Playing:
-		return PlaybackState::Playing;
-	case libvlc_Paused:
-		return PlaybackState::Paused;
-	case libvlc_Error:
-		return PlaybackState::Error;
-	default:
-		return PlaybackState::Unknown;
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Builder (Phase 5.13)
-// ---------------------------------------------------------------------------
-
-ofxVlc4::Builder & ofxVlc4::Builder::logLevel(ofLogLevel level) { m_logLevel = level; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::subtitleFont(const std::string & fontFamily) { m_subtitleFont = fontFamily; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::subtitleTextScale(float scale) { m_subtitleTextScale = scale; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::subtitleRenderer(ofxVlc4SubtitleTextRenderer renderer) { m_subtitleRenderer = renderer; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::audioCaptureEnabled(bool enabled) { m_audioCaptureEnabled = enabled; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::audioCaptureSampleRate(int rate) { m_audioCaptureSampleRate = rate; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::audioCaptureChannelCount(int channels) { m_audioCaptureChannelCount = channels; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::audioCaptureBufferSeconds(double seconds) { m_audioCaptureBufferSeconds = seconds; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::audioMixMode(AudioMixMode mode) { m_audioMixMode = mode; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::videoOutputBackend(VideoOutputBackend backend) { m_videoOutputBackend = backend; return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::extraArg(const std::string & arg) { m_extraArgs.push_back(arg); return *this; }
-ofxVlc4::Builder & ofxVlc4::Builder::extraArgs(const std::vector<std::string> & args) {
-	m_extraArgs.insert(m_extraArgs.end(), args.begin(), args.end());
-	return *this;
-}
-
-std::unique_ptr<ofxVlc4> ofxVlc4::Builder::build() const {
-	auto player = std::make_unique<ofxVlc4>();
-
-	ofxVlc4::setLogLevel(m_logLevel);
-
-	if (!m_subtitleFont.empty()) {
-		player->setSubtitleFontFamily(m_subtitleFont);
-	}
-	player->setSubtitleTextScale(m_subtitleTextScale);
-	player->setSubtitleTextRenderer(m_subtitleRenderer);
-	player->setAudioCaptureEnabled(m_audioCaptureEnabled);
-	player->setAudioCaptureSampleRate(m_audioCaptureSampleRate);
-	player->setAudioCaptureChannelCount(m_audioCaptureChannelCount);
-	player->setAudioCaptureBufferSeconds(m_audioCaptureBufferSeconds);
-	player->setAudioMixMode(m_audioMixMode);
-	player->setVideoOutputBackend(m_videoOutputBackend);
-
-	if (!m_extraArgs.empty()) {
-		player->setExtraInitArgs(m_extraArgs);
-	}
-
-	player->init(0, nullptr);
-	return player;
-}
