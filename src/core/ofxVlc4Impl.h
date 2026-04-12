@@ -2,6 +2,7 @@
 
 // Heavy includes only needed by internal implementation:
 #include "ofxVlc4.h"
+#include "ofxVlc4Modules.h"
 #include "GLFW/glfw3.h"
 #include "midi/ofxVlc4MidiPlayback.h"
 #include "recording/ofxVlc4Recorder.h"
@@ -427,4 +428,11 @@ struct ofxVlc4::Impl {
 	RecordingObjectRuntimeState recordingObjectRuntime;
 	VideoFrameRuntimeState videoFrameRuntime;
 	AudioBufferRuntimeState audioBufferRuntime;
+
+	// Module proxies (Phase 5.11).
+	std::unique_ptr<AudioModule> audioModule;
+	std::unique_ptr<VideoModule> videoModule;
+	std::unique_ptr<MediaModule> mediaModule;
+	std::unique_ptr<RecordingModule> recordingModule;
+	std::unique_ptr<MidiModule> midiModule;
 };

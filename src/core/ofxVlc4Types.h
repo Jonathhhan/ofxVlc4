@@ -136,6 +136,21 @@ struct ofxVlc4RecorderSettingsInfo {
 };
 
 // ---------------------------------------------------------------------------
+// Typed playback state enum for exhaustive switch inspection.
+// ---------------------------------------------------------------------------
+
+/// Combined playback state for exhaustive switch inspection.
+enum class PlaybackState : int {
+	Stopped = 0,
+	Opening = 1,
+	Buffering = 2,
+	Playing = 3,
+	Paused = 4,
+	Error = 5,
+	Unknown = -1
+};
+
+// ---------------------------------------------------------------------------
 // MIDI types.
 // ---------------------------------------------------------------------------
 
