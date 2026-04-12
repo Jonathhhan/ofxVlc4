@@ -912,7 +912,7 @@ void ofxVlc4::VideoComponent::ensureExposedTextureFboCapacity(unsigned requiredW
 }
 
 bool ofxVlc4::VideoComponent::applyPendingVideoResize() {
-	using ResizeState = VideoGeometryRuntimeState::ResizeState;
+	using ResizeState = Impl::VideoGeometryRuntimeState::ResizeState;
 	int expected = static_cast<int>(ResizeState::Requested);
 	if (!owner.m_impl->videoGeometryRuntime.resizeState.compare_exchange_strong(
 			expected, static_cast<int>(ResizeState::InProgress))) {
@@ -1050,7 +1050,7 @@ bool ofxVlc4::VideoComponent::videoResize(const libvlc_video_render_cfg_t * cfg,
 		owner.m_impl->videoGeometryRuntime.pendingRenderWidth.store(cfg->width);
 		owner.m_impl->videoGeometryRuntime.pendingRenderHeight.store(cfg->height);
 		owner.m_impl->videoGeometryRuntime.resizeState.store(
-			static_cast<int>(VideoGeometryRuntimeState::ResizeState::Requested));
+			static_cast<int>(Impl::VideoGeometryRuntimeState::ResizeState::Requested));
 	}
 
 	return true;
