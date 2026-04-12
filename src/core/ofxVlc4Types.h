@@ -192,6 +192,10 @@ struct ofxVlc4AudioVisualizerSettings {
 	int projectMTextureSize = 0; // --projectm-texture-size (power-of-two pixels, e.g. 512, 1024)
 	int projectMMeshX = 0;       // --projectm-meshx (horizontal mesh density)
 	int projectMMeshY = 0;       // --projectm-meshy (vertical mesh density)
+	// When true and a visualizer module is active, silence is written into
+	// the audio ring buffer whenever VLC is not delivering audio, keeping
+	// the visualizer display active even when no media is playing.
+	bool continuousMode = false;
 
 	bool operator==(const ofxVlc4AudioVisualizerSettings & other) const {
 		return module == other.module
@@ -202,7 +206,8 @@ struct ofxVlc4AudioVisualizerSettings {
 			&& projectMPresetPath == other.projectMPresetPath
 			&& projectMTextureSize == other.projectMTextureSize
 			&& projectMMeshX == other.projectMMeshX
-			&& projectMMeshY == other.projectMMeshY;
+			&& projectMMeshY == other.projectMMeshY
+			&& continuousMode == other.continuousMode;
 	}
 	bool operator!=(const ofxVlc4AudioVisualizerSettings & other) const {
 		return !(*this == other);

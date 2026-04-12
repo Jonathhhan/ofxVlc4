@@ -106,6 +106,7 @@ public:
 	void audioResume(int64_t pts);
 	void audioFlush(int64_t pts);
 	void audioDrain();
+	void writeSilenceForContinuousMode();
 
 private:
 	ofxVlc4::MediaComponent & media() const;
