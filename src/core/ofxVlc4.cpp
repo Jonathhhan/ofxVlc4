@@ -1120,13 +1120,18 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			+ ", state="
 			+ ofToString(static_cast<int>(existingState))
 			+ ").");
-		// shuttingDown is set inside releaseVlcResources() BEFORE the
-		// player release to block audio, video, and event callbacks during
-		// the teardown.  The make_current and get_proc_address callbacks
-		// are exempt from the flag so VLC's OpenGL display module can still
-		// obtain a GL context for its own resource cleanup during the
-		// release.  After releaseVlcResources() returns the flag is reset
-		// below to allow the new session to operate normally.
+		// Mark the ControlBlock as expired BEFORE teardown so that all VLC
+		// callbacks (audio, video, events) that check the expired flag will
+		// early-return.  This mirrors the gating that close() performs.
+		// Without this, callbacks arriving between the start of teardown
+		// and the shuttingDown flag (set inside releaseVlcResources() just
+		// before player release) could access partially-torn-down state.
+		// The make_current and get_proc_address callbacks are exempt from
+		// the expired check so VLC's OpenGL display module can still obtain
+		// a GL context for its own resource cleanup during the release.
+		// After releaseVlcResources() returns, expired is reset below to
+		// allow the new session to operate normally.
+		m_controlBlock->expired.store(true, std::memory_order_release);
 		logNotice("Reinit: tearing down previous VLC session.");
 		releaseVlcResources();
 	}
