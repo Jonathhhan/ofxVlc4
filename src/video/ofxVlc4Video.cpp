@@ -384,6 +384,13 @@ ofxVlc4::VideoComponent::VideoComponent(ofxVlc4 & owner)
 	: owner(owner) {}
 
 void ofxVlc4::VideoComponent::clearPublishedFrameFenceLocked() {
+	if (!ofxVlc4Utils::hasCurrentGlContext()) {
+		if (owner.m_impl->videoFrameRuntime.publishedVideoFrameFence) {
+			owner.logWarning("clearPublishedFrameFenceLocked: no current GL context; deferring fence cleanup.");
+			owner.m_impl->videoFrameRuntime.deferredGlCleanupNeeded.store(true);
+		}
+		return;
+	}
 	deleteFenceSync(owner.m_impl->videoFrameRuntime.publishedVideoFrameFence);
 }
 
@@ -394,17 +401,26 @@ void ofxVlc4::VideoComponent::waitForPublishedFrameFenceLocked() {
 	}
 
 	owner.m_impl->videoFrameRuntime.publishedVideoFrameFence = nullptr;
-	const GLenum waitResult = clientWaitFenceSync(
-		publishedFence,
-		GL_SYNC_FLUSH_COMMANDS_BIT,
-		1000000000ULL);
+
+	static constexpr GLuint64 kFenceTimeouts[] = {
+		100000000ULL,   // 100 ms
+		500000000ULL,   // 500 ms
+		1000000000ULL   // 1 s
+	};
+	static constexpr int kMaxRetries = 3;
+
+	GLenum waitResult = GL_TIMEOUT_EXPIRED;
+	for (int attempt = 0; attempt < kMaxRetries && waitResult == GL_TIMEOUT_EXPIRED; ++attempt) {
+		waitResult = clientWaitFenceSync(
+			publishedFence,
+			GL_SYNC_FLUSH_COMMANDS_BIT,
+			kFenceTimeouts[attempt]);
+	}
+
 	if (waitResult == GL_WAIT_FAILED) {
 		owner.logWarning("GL sync wait failed; frame texture may be incomplete.");
 	} else if (waitResult == GL_TIMEOUT_EXPIRED) {
-		// CPU wait timed out; hand the wait off to the GPU pipeline so that
-		// subsequent draw commands on this context are still ordered after the
-		// fence, then continue.
-		owner.logWarning("GL sync wait timed out; handing fence to GPU pipeline.");
+		owner.logError("GL sync wait timed out after 3 retries; resetting fence pipeline.");
 		gpuWaitFenceSync(publishedFence);
 	}
 	deleteFenceSync(publishedFence);
@@ -896,13 +912,18 @@ void ofxVlc4::VideoComponent::ensureExposedTextureFboCapacity(unsigned requiredW
 }
 
 bool ofxVlc4::VideoComponent::applyPendingVideoResize() {
-	if (!owner.m_impl->videoGeometryRuntime.pendingResize.exchange(false)) {
+	using ResizeState = VideoGeometryRuntimeState::ResizeState;
+	int expected = static_cast<int>(ResizeState::Requested);
+	if (!owner.m_impl->videoGeometryRuntime.resizeState.compare_exchange_strong(
+			expected, static_cast<int>(ResizeState::InProgress))) {
 		return false;
 	}
 
 	const unsigned newRenderWidth = owner.m_impl->videoGeometryRuntime.pendingRenderWidth.load();
 	const unsigned newRenderHeight = owner.m_impl->videoGeometryRuntime.pendingRenderHeight.load();
 	if (newRenderWidth == 0 || newRenderHeight == 0) {
+		owner.m_impl->videoGeometryRuntime.resizeState.store(
+			static_cast<int>(ResizeState::Idle));
 		return false;
 	}
 
@@ -931,6 +952,8 @@ bool ofxVlc4::VideoComponent::applyPendingVideoResize() {
 	ensureVideoRenderTargetCapacity(newRenderWidth, newRenderHeight, newGlPixelFormat);
 	owner.m_impl->videoFrameRuntime.isVideoLoaded.store(true);
 	owner.m_impl->videoFrameRuntime.exposedTextureDirty.store(true);
+	owner.m_impl->videoGeometryRuntime.resizeState.store(
+		static_cast<int>(ResizeState::Idle));
 	return true;
 }
 
@@ -1026,7 +1049,8 @@ bool ofxVlc4::VideoComponent::videoResize(const libvlc_video_render_cfg_t * cfg,
 		owner.m_impl->videoGeometryRuntime.pendingGlPixelFormat.store(glPixelFormat);
 		owner.m_impl->videoGeometryRuntime.pendingRenderWidth.store(cfg->width);
 		owner.m_impl->videoGeometryRuntime.pendingRenderHeight.store(cfg->height);
-		owner.m_impl->videoGeometryRuntime.pendingResize.store(true);
+		owner.m_impl->videoGeometryRuntime.resizeState.store(
+			static_cast<int>(VideoGeometryRuntimeState::ResizeState::Requested));
 	}
 
 	return true;

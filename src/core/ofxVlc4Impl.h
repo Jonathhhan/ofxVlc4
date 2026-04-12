@@ -208,6 +208,12 @@ struct ofxVlc4::Impl {
 	};
 
 	struct VideoGeometryRuntimeState {
+		enum class ResizeState : int {
+			Idle = 0,
+			Requested = 1,
+			InProgress = 2
+		};
+
 		std::atomic<unsigned> renderWidth { 0 };
 		std::atomic<unsigned> renderHeight { 0 };
 		std::atomic<unsigned> videoWidth { 0 };
@@ -222,7 +228,7 @@ struct ofxVlc4::Impl {
 		unsigned lastBoundViewportHeight = 0;
 		std::atomic<unsigned> pendingRenderWidth { 0 };
 		std::atomic<unsigned> pendingRenderHeight { 0 };
-		std::atomic<bool> pendingResize { false };
+		std::atomic<int> resizeState { static_cast<int>(ResizeState::Idle) };
 		std::atomic<int> pendingGlPixelFormat { static_cast<int>(GL_RGBA) };
 	};
 
@@ -373,6 +379,7 @@ struct ofxVlc4::Impl {
 		std::atomic<bool> hasReceivedVideoFrame { false };
 		std::atomic<bool> exposedTextureDirty { true };
 		std::atomic<bool> vlcFramebufferAttachmentDirty { true };
+		std::atomic<bool> deferredGlCleanupNeeded { false };
 		GLsync publishedVideoFrameFence = nullptr;
 		bool vlcFboBound = false;
 	};

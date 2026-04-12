@@ -753,7 +753,8 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 		owner.m_impl->videoGeometryRuntime.pixelAspectDenominator.store(1);
 		owner.m_impl->videoGeometryRuntime.pendingRenderWidth.store(0);
 		owner.m_impl->videoGeometryRuntime.pendingRenderHeight.store(0);
-		owner.m_impl->videoGeometryRuntime.pendingResize.store(false);
+		owner.m_impl->videoGeometryRuntime.resizeState.store(
+			static_cast<int>(VideoGeometryRuntimeState::ResizeState::Idle));
 		owner.m_impl->videoGeometryRuntime.displayAspectRatio.store(1.0f);
 		owner.m_impl->videoFrameRuntime.isVideoLoaded.store(false);
 		owner.m_impl->videoFrameRuntime.hasReceivedVideoFrame.store(false);

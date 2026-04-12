@@ -802,6 +802,14 @@ void ofxVlc4::update() {
 	if (m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
+	if (m_impl->videoFrameRuntime.deferredGlCleanupNeeded.exchange(false)) {
+		if (ofxVlc4Utils::hasCurrentGlContext()) {
+			m_impl->subsystemRuntime.videoComponent->clearPublishedFrameFence();
+			logNotice("Deferred GL fence cleanup completed.");
+		} else {
+			m_impl->videoFrameRuntime.deferredGlCleanupNeeded.store(true);
+		}
+	}
 	finalizeRecordingMuxThread();
 	processDeferredRecordingMuxCleanup();
 	updateMidiTransport(ofGetElapsedTimef());
@@ -2054,6 +2062,9 @@ void ofxVlc4::releaseVlcResources() {
 		logNotice("Release: activating GL context for resource cleanup.");
 		updateNativeVideoWindowVisibility();
 		cleanupWindow->makeCurrent();
+	} else if (!cleanupWindow && needsGlCleanup) {
+		logWarning("Release: GL resources need cleanup but no GL context window is available; resources may leak.");
+		m_impl->videoFrameRuntime.deferredGlCleanupNeeded.store(true);
 	}
 
 	if (recorderNeedsCleanup) {
