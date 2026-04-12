@@ -1352,8 +1352,18 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 	if (normalized == m_impl->playerConfigRuntime.audioVisualizerSettings) {
 		return;
 	}
+	const bool libvlcArgsChanged = !normalized.libvlcInitArgsEqual(
+		m_impl->playerConfigRuntime.audioVisualizerSettings);
 	m_impl->playerConfigRuntime.audioVisualizerSettings = normalized;
-	setStatus("Audio visualizer settings updated for the next init.");
+	if (libvlcArgsChanged && sessionPlayer()) {
+		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
+			return;
+		}
+		logNotice("Audio visualizer settings updated. Reinit to apply.");
+		setStatus("Audio visualizer settings updated. Reinit to apply.");
+		return;
+	}
+	setStatus("Audio visualizer settings updated.");
 }
 
 ofxVlc4SubtitleTextRenderer ofxVlc4::getSubtitleTextRenderer() const {

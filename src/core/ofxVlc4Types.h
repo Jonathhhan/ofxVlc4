@@ -197,6 +197,7 @@ struct ofxVlc4AudioVisualizerSettings {
 	// the visualizer display active even when no media is playing.
 	bool continuousMode = false;
 
+	/// @brief Compare all fields including runtime-only fields.
 	bool operator==(const ofxVlc4AudioVisualizerSettings & other) const {
 		return module == other.module
 			&& visualEffect == other.visualEffect
@@ -211,6 +212,21 @@ struct ofxVlc4AudioVisualizerSettings {
 	}
 	bool operator!=(const ofxVlc4AudioVisualizerSettings & other) const {
 		return !(*this == other);
+	}
+
+	/// @brief Compare only the fields that map to libvlc init arguments.
+	/// Runtime-only fields (e.g. continuousMode) are excluded so that
+	/// changing them does not trigger an unnecessary VLC reinit.
+	bool libvlcInitArgsEqual(const ofxVlc4AudioVisualizerSettings & other) const {
+		return module == other.module
+			&& visualEffect == other.visualEffect
+			&& width == other.width
+			&& height == other.height
+			&& goomSpeed == other.goomSpeed
+			&& projectMPresetPath == other.projectMPresetPath
+			&& projectMTextureSize == other.projectMTextureSize
+			&& projectMMeshX == other.projectMMeshX
+			&& projectMMeshY == other.projectMMeshY;
 	}
 };
 
