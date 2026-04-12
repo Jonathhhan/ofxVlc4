@@ -390,9 +390,6 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 	const bool settingsChanged = (pendingVlcVisualizerSettings != settingsBefore);
 	if (settingsChanged && (comboChanged || inputDeactivated)) {
 		player.setAudioVisualizerSettings(pendingVlcVisualizerSettings);
-		if (applyAudioVisualizerSettings) {
-			applyAudioVisualizerSettings();
-		}
 	}
 
 	ImGui::TextDisabled("Reinitializes the player. 'None' disables VLC visualizer modules.");
