@@ -31,7 +31,6 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 	ofxVlc4 & player,
 	const ImVec2 & labelInnerSpacing,
 	float compactControlWidth,
-	const std::function<void()> & applyAudioVisualizerSettings,
 	bool detachedOnly) {
 	const ofxVlc4::VideoStateInfo videoState = player.getVideoStateInfo();
 	static const char * deinterlaceModes[] = {
@@ -90,9 +89,6 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 				preferredDecoderDevices,
 				IM_ARRAYSIZE(preferredDecoderDevices))) {
 			player.setPreferredDecoderDevice(static_cast<ofxVlc4::PreferredDecoderDevice>(preferredDecoderDeviceIndex));
-			if (player.isInitialized() && applyAudioVisualizerSettings) {
-				applyAudioVisualizerSettings();
-			}
 		}
 		if (player.isInitialized() && videoState.outputBackend != videoState.activeOutputBackend) {
 			ImGui::TextDisabled("Backend changes apply on the next init.");

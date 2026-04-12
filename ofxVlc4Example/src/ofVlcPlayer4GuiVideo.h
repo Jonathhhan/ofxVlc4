@@ -2,8 +2,6 @@
 
 #include "ofxImGui.h"
 
-#include <functional>
-
 class ofxVlc4;
 
 enum class AnaglyphColorMode {
@@ -25,7 +23,6 @@ public:
 		ofxVlc4 & player,
 		const ImVec2 & labelInnerSpacing,
 		float compactControlWidth,
-		const std::function<void()> & applyAudioVisualizerSettings,
 		bool detachedOnly = false);
 	void drawAdjustmentsContent(
 		ofxVlc4 & player,
