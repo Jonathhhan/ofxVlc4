@@ -833,6 +833,7 @@ void ofxVlc4::update() {
 	}
 	updatePendingRecordingMux();
 	processDeferredPlaybackActions();
+	m_impl->subsystemRuntime.audioComponent->writeSilenceForContinuousMode();
 }
 
 bool ofxVlc4::ensureWindowCaptureTarget(unsigned requiredWidth, unsigned requiredHeight) {
@@ -1347,6 +1348,7 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 	normalized.projectMTextureSize = std::max(0, settings.projectMTextureSize);
 	normalized.projectMMeshX = std::max(0, settings.projectMMeshX);
 	normalized.projectMMeshY = std::max(0, settings.projectMMeshY);
+	normalized.continuousMode = settings.continuousMode;
 	if (normalized == m_impl->playerConfigRuntime.audioVisualizerSettings) {
 		return;
 	}

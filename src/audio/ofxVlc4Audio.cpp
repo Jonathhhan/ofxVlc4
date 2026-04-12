@@ -1769,6 +1769,47 @@ void ofxVlc4::AudioComponent::audioDrain() {
 	clearAudioPtsState();
 }
 
+void ofxVlc4::AudioComponent::writeSilenceForContinuousMode() {
+	const auto & vizSettings = owner.m_impl->playerConfigRuntime.audioVisualizerSettings;
+	if (!vizSettings.continuousMode || vizSettings.module == ofxVlc4AudioVisualizerModule::None) {
+		return;
+	}
+	if (!owner.m_impl->playerConfigRuntime.audioCaptureEnabled) {
+		return;
+	}
+
+	// Only inject silence when VLC's audio callback has been quiet for a while.
+	// This avoids writing over real audio samples during normal playback.
+	constexpr uint64_t kSilenceThresholdMicros = 100000; // 100 ms
+	const uint64_t lastCbMicros = owner.m_impl->audioRuntime.lastCallbackSteadyMicros.load(std::memory_order_relaxed);
+	const uint64_t nowMicros = steadyMicrosNow();
+	if (lastCbMicros != 0 && (nowMicros - lastCbMicros) < kSilenceThresholdMicros) {
+		return;
+	}
+
+	const int channels = std::max(1, owner.m_impl->audioRuntime.channels.load(std::memory_order_relaxed));
+	const int sampleRate = std::max(1, owner.m_impl->audioRuntime.sampleRate.load(std::memory_order_relaxed));
+
+	// Ensure the ring buffer is allocated even if no audio callback has
+	// fired yet.  This mirrors what prepareRingBuffer() does.
+	if (owner.m_impl->audioBufferRuntime.ringBuffer.size() == 0) {
+		const double bufferSeconds = std::max(kMinBufferedAudioSeconds, owner.m_impl->playerConfigRuntime.audioCaptureBufferSeconds);
+		const size_t requestedSamples = static_cast<size_t>(sampleRate * channels * bufferSeconds);
+		owner.m_impl->audioBufferRuntime.ringBuffer.allocate(requestedSamples);
+	}
+
+	// Write one frame-worth of silence (~1/60s) so that peekLatest() always
+	// has fresh data for the visualizer to consume.
+	constexpr int kSilenceChunksPerSecond = 60;
+	const size_t frameSamples = static_cast<size_t>(sampleRate / kSilenceChunksPerSecond) * static_cast<size_t>(channels);
+	thread_local std::vector<float> silence;
+	if (silence.size() < frameSamples) {
+		silence.resize(frameSamples, 0.0f);
+	}
+	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.audioMutex);
+	owner.m_impl->audioBufferRuntime.ringBuffer.write(silence.data(), frameSamples);
+}
+
 void ofxVlc4::prepareAudioRingBuffer() {
 	m_impl->subsystemRuntime.audioComponent->prepareRingBuffer();
 }

@@ -160,6 +160,7 @@ static void testAudioVisualizerSettingsDefaults() {
 	CHECK_EQ(settings.projectMTextureSize, 0);
 	CHECK_EQ(settings.projectMMeshX, 0);
 	CHECK_EQ(settings.projectMMeshY, 0);
+	CHECK_EQ(settings.continuousMode, false);
 }
 
 // ---------------------------------------------------------------------------
@@ -446,6 +447,7 @@ static void testAudioVisualizerSettingsCopy() {
 	original.goomSpeed = 10;
 	original.projectMPresetPath = "/presets";
 	original.projectMTextureSize = 1024;
+	original.continuousMode = true;
 
 	ofxVlc4AudioVisualizerSettings copy = original;
 	CHECK_EQ(copy.module, ofxVlc4AudioVisualizerModule::ProjectM);
@@ -455,6 +457,7 @@ static void testAudioVisualizerSettingsCopy() {
 	CHECK_EQ(copy.goomSpeed, 10);
 	CHECK_EQ(copy.projectMPresetPath, "/presets");
 	CHECK_EQ(copy.projectMTextureSize, 1024);
+	CHECK_EQ(copy.continuousMode, true);
 
 	copy.module = ofxVlc4AudioVisualizerModule::Goom;
 	CHECK_EQ(original.module, ofxVlc4AudioVisualizerModule::ProjectM);
