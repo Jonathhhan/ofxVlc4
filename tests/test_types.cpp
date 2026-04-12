@@ -464,6 +464,39 @@ static void testAudioVisualizerSettingsCopy() {
 }
 
 // ---------------------------------------------------------------------------
+// AudioVisualizerSettings libvlcInitArgsEqual
+// ---------------------------------------------------------------------------
+
+static void testAudioVisualizerSettingsLibvlcInitArgsEqual() {
+	beginSuite("ofxVlc4AudioVisualizerSettings: libvlcInitArgsEqual");
+
+	ofxVlc4AudioVisualizerSettings a;
+	a.module = ofxVlc4AudioVisualizerModule::Visual;
+	a.continuousMode = false;
+
+	// Changing only continuousMode: libvlcInitArgsEqual should return true.
+	ofxVlc4AudioVisualizerSettings b = a;
+	b.continuousMode = true;
+	CHECK(a.libvlcInitArgsEqual(b));
+	CHECK(a != b); // full equality should still differ
+
+	// Changing module: libvlcInitArgsEqual should return false.
+	ofxVlc4AudioVisualizerSettings c = a;
+	c.module = ofxVlc4AudioVisualizerModule::Goom;
+	CHECK(!a.libvlcInitArgsEqual(c));
+
+	// Changing width: libvlcInitArgsEqual should return false.
+	ofxVlc4AudioVisualizerSettings d = a;
+	d.width = 640;
+	CHECK(!a.libvlcInitArgsEqual(d));
+
+	// Identical settings: both should be true.
+	ofxVlc4AudioVisualizerSettings e = a;
+	CHECK(a.libvlcInitArgsEqual(e));
+	CHECK(a == e);
+}
+
+// ---------------------------------------------------------------------------
 // Copy / assign semantics of POD types
 // ---------------------------------------------------------------------------
 
@@ -533,6 +566,7 @@ int main() {
 	testRecordingSessionConfigCopy();
 	testRecorderSettingsInfoCopy();
 	testAudioVisualizerSettingsCopy();
+	testAudioVisualizerSettingsLibvlcInitArgsEqual();
 	testMuxOptionsCopy();
 	testRecordingPresetCopy();
 
