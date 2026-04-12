@@ -1401,6 +1401,8 @@ void ofxVlc4::AudioComponent::resetAudioStateInfo() {
 	owner.m_impl->audioRuntime.recorderMaxMicros.store(0, std::memory_order_relaxed);
 	owner.m_impl->audioRuntime.firstCallbackSteadyMicros.store(0, std::memory_order_relaxed);
 	owner.m_impl->audioRuntime.lastCallbackSteadyMicros.store(0, std::memory_order_relaxed);
+	owner.m_impl->audioRuntime.pendingAudioCallbackWarning.store(false, std::memory_order_relaxed);
+	owner.m_impl->audioRuntime.pendingAudioCallbackWarningCode.store(0, std::memory_order_relaxed);
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.audioStateMutex);
 	owner.m_impl->stateCacheRuntime.audio = {};
@@ -1650,13 +1652,15 @@ void ofxVlc4::AudioComponent::audioPlay(const void * samples, unsigned int count
 	uint64_t recorderMicros = 0;
 	const auto writeCapturedSamples = [&](const float * inputSamples, size_t inputSampleCount) {
 		const auto ringWriteStart = std::chrono::steady_clock::now();
-		{
-			std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.audioMutex);
-			owner.m_impl->audioBufferRuntime.ringBuffer.write(inputSamples, inputSampleCount);
-		}
+		owner.m_impl->audioBufferRuntime.ringBuffer.write(inputSamples, inputSampleCount);
 		ringWriteMicros = static_cast<uint64_t>(
 			std::chrono::duration_cast<std::chrono::microseconds>(
 				std::chrono::steady_clock::now() - ringWriteStart).count());
+
+		if (owner.m_impl->audioBufferRuntime.ringBuffer.wasOverflowWarningIssued()) {
+			owner.m_impl->audioRuntime.pendingAudioCallbackWarning.store(true, std::memory_order_relaxed);
+			owner.m_impl->audioRuntime.pendingAudioCallbackWarningCode.store(1, std::memory_order_relaxed);
+		}
 
 		const auto recorderStart = std::chrono::steady_clock::now();
 		captureRecorderAudioSamples(inputSamples, inputSampleCount);

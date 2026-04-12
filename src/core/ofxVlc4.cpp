@@ -811,6 +811,14 @@ void ofxVlc4::update() {
 			m_impl->videoFrameRuntime.deferredGlCleanupNeeded.store(true);
 		}
 	}
+	if (m_impl->audioRuntime.pendingAudioCallbackWarning.exchange(false, std::memory_order_acquire)) {
+		const int code = m_impl->audioRuntime.pendingAudioCallbackWarningCode.load(std::memory_order_relaxed);
+		if (code == 1) {
+			logWarning("Audio ring buffer overflow detected — samples were dropped.");
+		} else {
+			logWarning("Audio callback warning (code " + std::to_string(code) + ").");
+		}
+	}
 	finalizeRecordingMuxThread();
 	processDeferredRecordingMuxCleanup();
 	updateMidiTransport(ofGetElapsedTimef());

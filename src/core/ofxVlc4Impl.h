@@ -206,6 +206,8 @@ struct ofxVlc4::Impl {
 		std::atomic<uint64_t> recorderMaxMicros { 0 };
 		std::atomic<uint64_t> firstCallbackSteadyMicros { 0 };
 		std::atomic<uint64_t> lastCallbackSteadyMicros { 0 };
+		std::atomic<bool> pendingAudioCallbackWarning { false };
+		std::atomic<int> pendingAudioCallbackWarningCode { 0 };
 	};
 
 	struct VideoGeometryRuntimeState {

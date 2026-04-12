@@ -5,6 +5,13 @@
 #include <cstddef>
 #include <vector>
 
+/// Policy for handling buffer overflows (write when full).
+enum class OverflowPolicy : int {
+	Drop = 0,      ///< Drop samples and increment overrun counter (default, RT-safe).
+	ExpandOnce = 1 ///< Double buffer capacity on first overflow, then drop.
+	               ///< WARNING: Not safe during concurrent reads. Set before playback.
+};
+
 class ofxVlc4RingBuffer {
 public:
 	explicit ofxVlc4RingBuffer(size_t size = 0);
@@ -12,6 +19,15 @@ public:
 	void clear();
 	void reset();
 	size_t size() const { return _capacity; }
+
+	/// Set the overflow policy.  ExpandOnce must be set before playback
+	/// starts — it is NOT thread-safe with concurrent reads.
+	void setOverflowPolicy(OverflowPolicy policy);
+	OverflowPolicy getOverflowPolicy() const;
+
+	/// Returns true (once) if an overflow was detected since the last call.
+	/// Resets the flag on read so the caller can log from the main thread.
+	bool wasOverflowWarningIssued();
 
 	void allocate(size_t size);
 
@@ -54,4 +70,8 @@ private:
 	std::atomic<uint64_t> _version { 0 };
 	std::atomic<uint64_t> _overruns { 0 };
 	std::atomic<uint64_t> _underruns { 0 };
+
+	OverflowPolicy _overflowPolicy = OverflowPolicy::Drop;
+	bool _expandedOnce = false;
+	std::atomic<bool> _overflowWarningIssued { false };
 };
