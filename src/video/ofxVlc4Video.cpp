@@ -1761,9 +1761,13 @@ void ofxVlc4::VideoComponent::setVideoOutputBackend(VideoOutputBackend backend) 
 		if (media().reinitAndReapplyCurrentMedia("Video output backend")) {
 			return;
 		}
-		owner.logNotice(std::string("Video output backend set to ") +
-			videoOutputBackendLabel(backend) + ". Reinit to apply.");
-		owner.setStatus("Video output backend updated. Reinit to apply.");
+		// No active media — reinitialize the player so the backend is
+		// applied immediately instead of waiting for the next play/start.
+		// This is especially important for NativeWindow + visualizer so
+		// the native window becomes visible right away on selection.
+		owner.init(0, nullptr);
+		updateNativeVideoWindowVisibility();
+		owner.setStatus("Video output backend applied.");
 		return;
 	}
 
