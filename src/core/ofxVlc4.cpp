@@ -1924,6 +1924,8 @@ void ofxVlc4::releaseVlcResources() {
 		// The player release path owns final cleanup of watch-time observers,
 		// and explicit unwatch here can race/double-release internal VLC
 		// watch-time state on some builds.
+		// This bool is only our local registration mirror; we clear it so the
+		// next session can safely register a fresh observer on its new player.
 		m_impl->watchTimeRuntime.registered = false;
 		libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 0);
 
