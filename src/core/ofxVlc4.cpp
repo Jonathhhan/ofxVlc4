@@ -1351,14 +1351,6 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 		return;
 	}
 	m_impl->playerConfigRuntime.audioVisualizerSettings = normalized;
-	if (sessionPlayer()) {
-		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
-			return;
-		}
-		logNotice("Audio visualizer settings updated. Reinit to apply.");
-		setStatus("Audio visualizer settings updated. Reinit to apply.");
-		return;
-	}
 	setStatus("Audio visualizer settings updated for the next init.");
 }
 
