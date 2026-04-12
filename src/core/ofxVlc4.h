@@ -1380,11 +1380,8 @@ public:
 	std::string getVlcModuleHelpText(const std::string & moduleName) const;
 	void printVlcModuleHelp(const std::string & moduleName) const;
 
-	// The enum overload is the canonical API; the string overload remains for compatibility.
 	void setPlaybackMode(PlaybackMode mode);
-	void setPlaybackMode(const std::string & mode);
 	PlaybackMode getPlaybackMode() const;
-	std::string getPlaybackModeString() const;
 
 	void setShuffleEnabled(bool enabled);
 	bool isShuffleEnabled() const;

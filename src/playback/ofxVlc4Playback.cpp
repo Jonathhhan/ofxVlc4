@@ -115,13 +115,6 @@ void ofxVlc4::setPlaybackMode(PlaybackMode mode) {
 	m_impl->subsystemRuntime.playbackController->setPlaybackMode(mode);
 }
 
-void ofxVlc4::setPlaybackMode(const std::string & mode) {
-	m_impl->subsystemRuntime.playbackController->setPlaybackMode(mode);
-}
-
-std::string ofxVlc4::getPlaybackModeString() const {
-	return m_impl->subsystemRuntime.playbackController->getPlaybackModeString();
-}
 
 ofxVlc4::PlaybackMode ofxVlc4::getPlaybackMode() const {
 	return m_impl->subsystemRuntime.playbackController->getPlaybackMode();

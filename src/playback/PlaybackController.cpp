@@ -1186,16 +1186,8 @@ void PlaybackController::setPlaybackMode(ofxVlc4::PlaybackMode mode) {
 	owner.logNotice("Playback mode: " + ofxVlc4::playbackModeToString(mode));
 }
 
-void PlaybackController::setPlaybackMode(const std::string & mode) {
-	setPlaybackMode(ofxVlc4::playbackModeFromString(mode));
-}
-
 ofxVlc4::PlaybackMode PlaybackController::getPlaybackMode() const {
 	return getPlaybackModeValue();
-}
-
-std::string PlaybackController::getPlaybackModeString() const {
-	return ofxVlc4::playbackModeToString(getPlaybackMode());
 }
 
 void PlaybackController::setShuffleEnabled(bool enabled) {
