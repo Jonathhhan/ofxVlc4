@@ -1214,17 +1214,11 @@ void ofxVlc4::VideoComponent::videoSwap() {
 		return;
 	}
 
-	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.videoMutex);
-	const bool needsPublish = !owner.m_impl->videoFrameRuntime.exposedTextureDirty.exchange(true);
-	if (!needsPublish) {
-		return;
-	}
-
-	clearPublishedFrameFenceLocked();
-	owner.m_impl->videoFrameRuntime.publishedVideoFrameFence = insertFenceSync();
-	// The producer context is flushed in makeCurrent(false) after this call
-	// returns, which ensures the fence is visible to other contexts before
-	// the consumer attempts to wait on it.
+	// Mark the exposed texture as needing a refresh.  The GL fence sync is
+	// created in makeCurrent(false) instead of here because VLC 4 calls
+	// swap_cb "outside of makeCurrent current/not-current calls", meaning
+	// no GL context is current at this point and glFenceSync() would fail.
+	owner.m_impl->videoFrameRuntime.exposedTextureDirty.store(true, std::memory_order_release);
 }
 
 bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
@@ -1275,8 +1269,16 @@ bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
 		bindVlcRenderTarget();
 	} else {
 		unbindVlcRenderTarget();
+		// Insert the GL fence sync BEFORE releasing the context.  VLC 4
+		// calls swap_cb outside of makeCurrent calls, so glFenceSync()
+		// cannot be issued there.  Creating the fence here — while the
+		// producer context is still current — guarantees that the sync
+		// object captures all preceding render commands and is visible
+		// to the consumer context after the subsequent glFlush().
+		clearPublishedFrameFenceLocked();
+		owner.m_impl->videoFrameRuntime.publishedVideoFrameFence = insertFenceSync();
 		// Flush pending GL commands before releasing the context so that the
-		// fence inserted in videoSwap() and any preceding render commands are
+		// fence inserted above and any preceding render commands are
 		// submitted to the GPU.  Without this, glClientWaitSync on the main
 		// context may stall because the producer-side commands haven't been
 		// sent yet (GL_SYNC_FLUSH_COMMANDS_BIT only flushes the waiting
@@ -1308,6 +1310,10 @@ bool ofxVlc4::VideoComponent::drawCurrentFrame(const VideoStateInfo & state, flo
 		return true;
 	}
 
+	// Wait for VLC's GPU rendering to complete before reading the texture.
+	// Without this, the main context may read a partially rendered or blank
+	// texture on drivers that require explicit cross-context synchronization.
+	waitForPublishedFrameFenceLocked();
 	owner.m_impl->videoResourceRuntime.videoTexture.drawSubsection(x, y, width, height, 0, 0, sourceWidth, sourceHeight);
 	return true;
 }

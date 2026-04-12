@@ -111,6 +111,9 @@ typedef void * GLsync;
 #ifndef GL_CONDITION_SATISFIED
 #define GL_CONDITION_SATISFIED          0x911C
 #endif
+#ifndef GL_FRAMEBUFFER_COMPLETE
+#define GL_FRAMEBUFFER_COMPLETE         0x8CD5
+#endif
 
 // ---------------------------------------------------------------------------
 // GL call log – records every GL stub invocation for test assertions.
@@ -138,6 +141,7 @@ inline GLenum g_glClientWaitSyncResult = GL_ALREADY_SIGNALED;
 inline void * g_glMapBufferResult = nullptr;
 inline bool g_glGenBuffersFail = false;
 inline bool g_glGenFramebuffersFail = false;
+inline GLenum g_glCheckFramebufferStatusResult = GL_FRAMEBUFFER_COMPLETE;
 inline GLuint g_glNextObjectId = 1;
 
 // ---------------------------------------------------------------------------
@@ -176,6 +180,11 @@ inline void glBindFramebuffer(GLenum target, GLuint framebuffer) {
 
 inline void glFramebufferTexture2D(GLenum target, GLenum attachment, GLenum texTarget, GLuint texture, GLint level) {
 	glCallLog().push_back({"glFramebufferTexture2D", {target, attachment, texTarget, texture, static_cast<uint64_t>(level)}});
+}
+
+inline GLenum glCheckFramebufferStatus(GLenum target) {
+	glCallLog().push_back({"glCheckFramebufferStatus", {target}});
+	return g_glCheckFramebufferStatusResult;
 }
 
 inline void glDrawBuffer(GLenum buf) {
@@ -250,6 +259,7 @@ inline void resetGlStubs() {
 	g_glMapBufferResult = nullptr;
 	g_glGenBuffersFail = false;
 	g_glGenFramebuffersFail = false;
+	g_glCheckFramebufferStatusResult = GL_FRAMEBUFFER_COMPLETE;
 	g_glNextObjectId = 1;
 }
 
@@ -317,4 +327,19 @@ inline int g_ofClearCallCount = 0;
 
 inline void ofClear(float, float, float, float) {
 	++g_ofClearCallCount;
+}
+
+// ---------------------------------------------------------------------------
+// ofLogError stub – returns a no-op stream so `ofLogError(...) << "..."` compiles.
+// ---------------------------------------------------------------------------
+
+struct ofLogErrorStream {
+	template<typename T>
+	ofLogErrorStream & operator<<(const T &) { return *this; }
+	// Support for std::hex / std::dec / std::endl manipulators.
+	ofLogErrorStream & operator<<(std::ostream & (*)(std::ostream &)) { return *this; }
+};
+
+inline ofLogErrorStream ofLogError(const std::string & = "") {
+	return {};
 }
