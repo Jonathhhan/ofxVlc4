@@ -680,7 +680,7 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 
 	owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(libvlc_media_event_manager(owner.m_impl->subsystemRuntime.coreSession->media()));
 	if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.coreSession->mediaEvents()) {
-		owner.m_impl->subsystemRuntime.coreSession->attachMediaEvents(&owner, ofxVlc4::vlcMediaEventStatic);
+		owner.m_impl->subsystemRuntime.coreSession->attachMediaEvents(owner.m_controlBlock.get(), ofxVlc4::vlcMediaEventStatic);
 	}
 
 	if (instance) {
@@ -730,14 +730,13 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 	if (coreSession && coreSession->mediaEvents()) {
 		if (currentMedia) {
 			coreSession->detachMediaEvents(
-				&owner,
+				owner.m_controlBlock.get(),
 				ofxVlc4::vlcMediaEventStatic);
 		}
 		coreSession->setMediaEvents(nullptr);
 	}
 
 	if (currentMedia) {
-		libvlc_media_release(currentMedia);
 		if (coreSession) {
 			coreSession->setMedia(nullptr);
 		}
@@ -753,7 +752,8 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 		owner.m_impl->videoGeometryRuntime.pixelAspectDenominator.store(1);
 		owner.m_impl->videoGeometryRuntime.pendingRenderWidth.store(0);
 		owner.m_impl->videoGeometryRuntime.pendingRenderHeight.store(0);
-		owner.m_impl->videoGeometryRuntime.pendingResize.store(false);
+		owner.m_impl->videoGeometryRuntime.resizeState.store(
+			static_cast<int>(VideoGeometryRuntimeState::ResizeState::Idle));
 		owner.m_impl->videoGeometryRuntime.displayAspectRatio.store(1.0f);
 		owner.m_impl->videoFrameRuntime.isVideoLoaded.store(false);
 		owner.m_impl->videoFrameRuntime.hasReceivedVideoFrame.store(false);
@@ -1167,7 +1167,7 @@ void ofxVlc4::detachEvents() {
 	auto & coreSession = m_impl->subsystemRuntime.coreSession;
 
 	if (coreSession && coreSession->playerEvents()) {
-		coreSession->detachPlayerEvents(this, ofxVlc4::vlcMediaPlayerEventStatic);
+		coreSession->detachPlayerEvents(m_controlBlock.get(), ofxVlc4::vlcMediaPlayerEventStatic);
 		// Null the pointer unconditionally: if the router existed, callbacks
 		// are already unregistered above; if it didn't, nothing was registered
 		// so there is nothing to detach.  Either way the stale pointer must
@@ -1176,7 +1176,7 @@ void ofxVlc4::detachEvents() {
 	}
 
 	if (coreSession && coreSession->mediaEvents()) {
-		coreSession->detachMediaEvents(this, ofxVlc4::vlcMediaEventStatic);
+		coreSession->detachMediaEvents(m_controlBlock.get(), ofxVlc4::vlcMediaEventStatic);
 		// Null the pointer so that clearCurrentMedia() does not attempt a
 		// redundant detach on the same event manager.
 		coreSession->setMediaEvents(nullptr);
@@ -1562,6 +1562,7 @@ void ofxVlc4::refreshSubtitleStateInfo() {
 }
 
 ofxVlc4::SubtitleStateInfo ofxVlc4::getSubtitleStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getSubtitleStateInfo();
 }
 
@@ -1570,6 +1571,7 @@ void ofxVlc4::refreshNavigationStateInfo() {
 }
 
 ofxVlc4::NavigationStateInfo ofxVlc4::getNavigationStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getNavigationStateInfo();
 }
 
@@ -1597,10 +1599,11 @@ void ofxVlc4::MediaComponent::handleMediaEvent(const libvlc_event_t * event) {
 
 
 void ofxVlc4::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire)) {
 		return;
 	}
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope || !event) {
 		return;
@@ -1946,10 +1949,12 @@ void ofxVlc4::stopCurrentMediaParse() {
 }
 
 ofxVlc4::PlaybackStateInfo ofxVlc4::getPlaybackStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getPlaybackStateInfo();
 }
 
 ofxVlc4::MediaReadinessInfo ofxVlc4::getMediaReadinessInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getMediaReadinessInfo();
 }
 

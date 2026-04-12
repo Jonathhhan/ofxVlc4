@@ -2,8 +2,10 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <filesystem>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -14,6 +16,15 @@
 // ---------------------------------------------------------------------------
 
 namespace ofxVlc4MuxHelpers {
+
+// Optional file-readiness context that allows waitForRecordingFile to block on
+// a condition variable instead of polling.
+struct FileReadinessContext {
+	const std::atomic<bool> * videoFinalized = nullptr;
+	const std::atomic<bool> * audioFinalized = nullptr;
+	std::mutex * mutex = nullptr;
+	std::condition_variable * cv = nullptr;
+};
 
 // Number of consecutive polls where the file size must be unchanged before
 // the file is considered fully written and ready to read.
@@ -122,6 +133,42 @@ inline bool waitForRecordingFile(
 		std::this_thread::sleep_for(std::chrono::milliseconds(kFilePollIntervalMs));
 	}
 	return false;
+}
+
+// Overload that waits on a condition variable for an atomic "file finalized"
+// signal before falling through to the size-stability check.  If the signal
+// arrives before the timeout, the remaining time is used for the stability
+// poll; otherwise the call returns false.
+inline bool waitForRecordingFile(
+	const std::string & path,
+	uint64_t timeoutMs,
+	const std::atomic<bool> * cancelRequested,
+	const std::atomic<bool> & fileFinalized,
+	std::mutex & fileReadyMutex,
+	std::condition_variable & fileReadyCv) {
+	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+
+	// Wait for the finalized signal (or cancellation / timeout).
+	{
+		std::unique_lock<std::mutex> lock(fileReadyMutex);
+		fileReadyCv.wait_until(lock, deadline, [&]() {
+			return fileFinalized.load(std::memory_order_acquire)
+				|| (cancelRequested && cancelRequested->load(std::memory_order_acquire));
+		});
+	}
+
+	if (cancelRequested && cancelRequested->load(std::memory_order_acquire)) {
+		return false;
+	}
+
+	// Use remaining time for the size-stability check.
+	const auto now = std::chrono::steady_clock::now();
+	if (now >= deadline) {
+		return false;
+	}
+	const uint64_t remainingMs = static_cast<uint64_t>(
+		std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now).count());
+	return waitForRecordingFile(path, remainingMs, cancelRequested);
 }
 
 // Retries std::filesystem::remove until it succeeds or the deadline is

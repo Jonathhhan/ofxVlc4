@@ -49,12 +49,20 @@ void VlcEventRouter::mediaDiscovererMediaListEventStatic(const libvlc_event_t * 
 		return;
 	}
 
+	if (router->owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
+
 	router->owner.mediaDiscovererMediaListEvent(event);
 }
 
 void VlcEventRouter::rendererDiscovererEventStatic(const libvlc_event_t * event, void * data) {
 	auto * router = static_cast<VlcEventRouter *>(data);
 	if (!router || !event) {
+		return;
+	}
+
+	if (router->owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
@@ -74,7 +82,7 @@ void VlcEventRouter::dialogDisplayLoginStatic(
 	}
 
 	ofxVlc4::dialogDisplayLoginStatic(
-		&router->owner,
+		router->owner.m_controlBlock.get(),
 		id,
 		title,
 		text,
@@ -97,7 +105,7 @@ void VlcEventRouter::dialogDisplayQuestionStatic(
 	}
 
 	ofxVlc4::dialogDisplayQuestionStatic(
-		&router->owner,
+		router->owner.m_controlBlock.get(),
 		id,
 		title,
 		text,
@@ -121,7 +129,7 @@ void VlcEventRouter::dialogDisplayProgressStatic(
 	}
 
 	ofxVlc4::dialogDisplayProgressStatic(
-		&router->owner,
+		router->owner.m_controlBlock.get(),
 		id,
 		title,
 		text,
@@ -136,7 +144,7 @@ void VlcEventRouter::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
 		return;
 	}
 
-	ofxVlc4::dialogCancelStatic(&router->owner, id);
+	ofxVlc4::dialogCancelStatic(router->owner.m_controlBlock.get(), id);
 }
 
 void VlcEventRouter::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, float position, const char * text) {
@@ -145,7 +153,7 @@ void VlcEventRouter::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * 
 		return;
 	}
 
-	ofxVlc4::dialogUpdateProgressStatic(&router->owner, id, position, text);
+	ofxVlc4::dialogUpdateProgressStatic(router->owner.m_controlBlock.get(), id, position, text);
 }
 
 void VlcEventRouter::dialogErrorStatic(void * data, const char * title, const char * text) {
@@ -154,5 +162,5 @@ void VlcEventRouter::dialogErrorStatic(void * data, const char * title, const ch
 		return;
 	}
 
-	ofxVlc4::dialogErrorStatic(&router->owner, title, text);
+	ofxVlc4::dialogErrorStatic(router->owner.m_controlBlock.get(), title, text);
 }

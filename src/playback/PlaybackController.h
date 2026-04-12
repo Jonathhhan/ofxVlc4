@@ -63,9 +63,7 @@ public:
 	void jumpTime(int ms);
 	float getLength() const;
 	void setPlaybackMode(ofxVlc4::PlaybackMode mode);
-	void setPlaybackMode(const std::string & mode);
 	ofxVlc4::PlaybackMode getPlaybackMode() const;
-	std::string getPlaybackModeString() const;
 	void setShuffleEnabled(bool enabled);
 	bool isShuffleEnabled() const;
 	void invalidateShuffleQueue();

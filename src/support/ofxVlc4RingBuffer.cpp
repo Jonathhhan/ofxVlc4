@@ -27,6 +27,8 @@ void ofxVlc4RingBuffer::allocate(size_t size) {
 	_version.fetch_add(1, std::memory_order_release);
 	_overruns.store(0, std::memory_order_relaxed);
 	_underruns.store(0, std::memory_order_relaxed);
+	_expandedOnce = false;
+	_overflowWarningIssued.store(false, std::memory_order_relaxed);
 }
 
 void ofxVlc4RingBuffer::clear() {
@@ -35,6 +37,8 @@ void ofxVlc4RingBuffer::clear() {
 	_version.fetch_add(1, std::memory_order_release);
 	_overruns.store(0, std::memory_order_relaxed);
 	_underruns.store(0, std::memory_order_relaxed);
+	_expandedOnce = false;
+	_overflowWarningIssued.store(false, std::memory_order_relaxed);
 	std::fill(_buffer.begin(), _buffer.end(), 0.0f);
 }
 
@@ -44,6 +48,8 @@ void ofxVlc4RingBuffer::reset() {
 	_version.fetch_add(1, std::memory_order_release);
 	_overruns.store(0, std::memory_order_relaxed);
 	_underruns.store(0, std::memory_order_relaxed);
+	_expandedOnce = false;
+	_overflowWarningIssued.store(false, std::memory_order_relaxed);
 }
 
 size_t ofxVlc4RingBuffer::getNumReadableSamples() const {
@@ -119,6 +125,18 @@ void ofxVlc4RingBuffer::readEnd(size_t numSamples) {
 	_readStart.store(readStart + numSamples, std::memory_order_release);
 }
 
+void ofxVlc4RingBuffer::setOverflowPolicy(OverflowPolicy policy) {
+	_overflowPolicy = policy;
+}
+
+OverflowPolicy ofxVlc4RingBuffer::getOverflowPolicy() const {
+	return _overflowPolicy;
+}
+
+bool ofxVlc4RingBuffer::wasOverflowWarningIssued() {
+	return _overflowWarningIssued.exchange(false, std::memory_order_acquire);
+}
+
 size_t ofxVlc4RingBuffer::getReadPosition() {
 	return _capacity ? (_readStart.load(std::memory_order_acquire) & _mask) : 0;
 }
@@ -128,11 +146,24 @@ size_t ofxVlc4RingBuffer::write(const float * src, size_t wanted) {
 
 	float * dst[2];
 	size_t count[2] = { 0, 0 };
-	const size_t writable = writeBegin(dst[0], count[0], dst[1], count[1]);
-	const size_t consumed = std::min(wanted, writable);
-	if (consumed == 0) {
-		_overruns.fetch_add(1, std::memory_order_relaxed);
-		return 0;
+	size_t writable = writeBegin(dst[0], count[0], dst[1], count[1]);
+	size_t consumed = std::min(wanted, writable);
+
+	if (consumed < wanted) {
+		// ExpandOnce: double capacity on first overflow then re-attempt.
+		// WARNING: not safe during concurrent reads — set before playback.
+		if (_overflowPolicy == OverflowPolicy::ExpandOnce && !_expandedOnce) {
+			allocate(_capacity * 2);
+			_expandedOnce = true;
+			writable = writeBegin(dst[0], count[0], dst[1], count[1]);
+			consumed = std::min(wanted, writable);
+		}
+
+		if (consumed == 0) {
+			_overruns.fetch_add(1, std::memory_order_relaxed);
+			_overflowWarningIssued.store(true, std::memory_order_relaxed);
+			return 0;
+		}
 	}
 
 	if (consumed <= count[0]) {
@@ -146,6 +177,7 @@ size_t ofxVlc4RingBuffer::write(const float * src, size_t wanted) {
 
 	if (consumed < wanted) {
 		_overruns.fetch_add(1, std::memory_order_relaxed);
+		_overflowWarningIssued.store(true, std::memory_order_relaxed);
 	}
 
 	return consumed;

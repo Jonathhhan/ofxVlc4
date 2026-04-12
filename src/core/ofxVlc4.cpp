@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <sstream>
 
 #ifdef TARGET_WIN32
@@ -71,7 +72,8 @@ constexpr int kOfxVlc4AddonVersionMajor = 1;
 constexpr int kOfxVlc4AddonVersionMinor = 0;
 constexpr int kOfxVlc4AddonVersionPatch = 4;
 constexpr const char * kOfxVlc4AddonVersionString = "1.0.4";
-constexpr int kCallbackDrainTimeoutMs = 250;
+// 2s timeout accommodates slower hardware and complex VLC cleanup (e.g. network streams).
+constexpr int kCallbackDrainTimeoutMs = 2000;
 
 bool shouldLog(ofLogLevel level) {
 	const ofLogLevel configuredLevel = static_cast<ofLogLevel>(gLogLevel.load());
@@ -311,27 +313,39 @@ void ofxVlc4::leaveCallbackScope() const {
 	if (!m_impl) {
 		return;
 	}
-	m_impl->lifecycleRuntime.callbackDepth.fetch_sub(1, std::memory_order_acq_rel);
+	const auto prev = m_impl->lifecycleRuntime.callbackDepth.fetch_sub(1, std::memory_order_acq_rel);
+	// If the counter just reached zero, wake the drain waiter.
+	if (prev == 1) {
+		m_impl->lifecycleRuntime.callbackDrainCv.notify_one();
+	}
 }
 
 void ofxVlc4::waitForCallbackScopeDrain() const {
 	if (!m_impl) {
 		return;
 	}
-	for (int i = 0; i < kCallbackDrainTimeoutMs; ++i) {
-		if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) == 0) {
-			return;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	// Fast path: already drained.
+	if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) == 0) {
+		return;
 	}
-	if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) != 0) {
-		logWarning("Release: callback drain wait timed out.");
+	// Block until callbackDepth reaches zero or the timeout expires.
+	std::unique_lock<std::mutex> lock(m_impl->lifecycleRuntime.callbackDrainMutex);
+	const bool drained = m_impl->lifecycleRuntime.callbackDrainCv.wait_for(
+		lock,
+		std::chrono::milliseconds(kCallbackDrainTimeoutMs),
+		[this] { return m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) == 0; });
+	if (!drained) {
+		logWarning("Release: callback drain wait timed out after "
+			+ ofToString(kCallbackDrainTimeoutMs) + " ms (depth="
+			+ ofToString(m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire))
+			+ ").");
 	}
 }
 
 
 ofxVlc4::ofxVlc4()
 	: m_impl(std::make_unique<Impl>())
+	, m_controlBlock(std::make_shared<ControlBlock>(this))
 	{
 	ofGLFWWindowSettings settings;
 	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
@@ -370,6 +384,7 @@ ofxVlc4::ofxVlc4()
 	m_impl->subsystemRuntime.coreSession = std::make_unique<VlcCoreSession>();
 	m_impl->subsystemRuntime.eventRouter = std::make_unique<VlcEventRouter>(*this);
 	m_impl->effectsRuntime.equalizerBandAmps.assign(libvlc_audio_equalizer_get_band_count(), 0.0f);
+
 }
 
 ofxVlc4::~ofxVlc4() {
@@ -789,6 +804,22 @@ ofxVlc4RecordingSessionConfig ofxVlc4::windowRecordingSessionConfig(
 void ofxVlc4::update() {
 	if (m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
+	}
+	if (m_impl->videoFrameRuntime.deferredGlCleanupNeeded.exchange(false)) {
+		if (ofxVlc4Utils::hasCurrentGlContext()) {
+			m_impl->subsystemRuntime.videoComponent->clearPublishedFrameFence();
+			logNotice("Deferred GL fence cleanup completed.");
+		} else {
+			m_impl->videoFrameRuntime.deferredGlCleanupNeeded.store(true);
+		}
+	}
+	if (m_impl->audioRuntime.pendingAudioCallbackWarning.exchange(false, std::memory_order_acquire)) {
+		const int code = m_impl->audioRuntime.pendingAudioCallbackWarningCode.load(std::memory_order_relaxed);
+		if (code == 1) {
+			logWarning("Audio ring buffer overflow detected — samples were dropped.");
+		} else {
+			logWarning("Audio callback warning (code " + std::to_string(code) + ").");
+		}
 	}
 	finalizeRecordingMuxThread();
 	processDeferredRecordingMuxCleanup();
@@ -1228,7 +1259,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		+ ".");
 
 	if (m_impl->playerConfigRuntime.audioCaptureEnabled) {
-		libvlc_audio_set_callbacks(m_impl->subsystemRuntime.coreSession->player(), audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
+		libvlc_audio_set_callbacks(m_impl->subsystemRuntime.coreSession->player(), audioPlay, audioPause, audioResume, audioFlush, audioDrain, m_controlBlock.get());
 		libvlc_audio_set_volume_callback(m_impl->subsystemRuntime.coreSession->player(), audioSetVolume);
 		libvlc_audio_set_format(
 			m_impl->subsystemRuntime.coreSession->player(),
@@ -1242,7 +1273,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
 	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
-		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(this, ofxVlc4::vlcMediaPlayerEventStatic);
+		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(m_controlBlock.get(), ofxVlc4::vlcMediaPlayerEventStatic);
 	}
 
 	const libvlc_dialog_cbs dialogCallbacks = {
@@ -1252,8 +1283,8 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		ofxVlc4::dialogCancelStatic,
 		ofxVlc4::dialogUpdateProgressStatic
 	};
-	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, this);
-	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), ofxVlc4::dialogErrorStatic, this);
+	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, m_controlBlock.get());
+	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), ofxVlc4::dialogErrorStatic, m_controlBlock.get());
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
 		startRendererDiscovery(m_impl->rendererDiscoveryRuntime.discovererName);
@@ -1655,7 +1686,18 @@ void ofxVlc4::finalizeRecordingMuxThread() {
 		return;
 	}
 
-	m_impl->recordingMuxRuntime.worker.join();
+	if (m_impl->recordingMuxRuntime.workerFuture.valid()) {
+		constexpr int kMuxJoinTimeoutMs = 15000;
+		auto status = m_impl->recordingMuxRuntime.workerFuture.wait_for(std::chrono::milliseconds(kMuxJoinTimeoutMs));
+		if (status == std::future_status::timeout) {
+			logError("Recording mux thread did not finish within " + ofToString(kMuxJoinTimeoutMs) + " ms; detaching.");
+			m_impl->recordingMuxRuntime.worker.detach();
+		} else {
+			m_impl->recordingMuxRuntime.worker.join();
+		}
+	} else {
+		m_impl->recordingMuxRuntime.worker.join();
+	}
 	m_impl->recordingMuxRuntime.activeTask.reset();
 	m_impl->recordingMuxRuntime.inProgress.store(false);
 	if (!activeTask->completed.exchange(false)) {
@@ -1837,7 +1879,17 @@ void ofxVlc4::updatePendingRecordingMux() {
 		task->outputPath = outputPath;
 	}
 	setStatus("Muxing recording...");
-	m_impl->recordingMuxRuntime.worker = std::thread([task, resolvedVideoPath, resolvedAudioPath, outputPath, options]() {
+	m_impl->recordingMuxRuntime.videoFileFinalized.store(false, std::memory_order_release);
+	m_impl->recordingMuxRuntime.audioFileFinalized.store(false, std::memory_order_release);
+	m_impl->recordingMuxRuntime.workerFinished = std::promise<void>();
+	m_impl->recordingMuxRuntime.workerFuture = m_impl->recordingMuxRuntime.workerFinished.get_future();
+	auto workerPromise = std::make_shared<std::promise<void>>(std::move(m_impl->recordingMuxRuntime.workerFinished));
+	auto fileCtx = std::make_shared<ofxVlc4MuxHelpers::FileReadinessContext>();
+	fileCtx->videoFinalized = &m_impl->recordingMuxRuntime.videoFileFinalized;
+	fileCtx->audioFinalized = &m_impl->recordingMuxRuntime.audioFileFinalized;
+	fileCtx->mutex = &m_impl->recordingMuxRuntime.fileReadyMutex;
+	fileCtx->cv = &m_impl->recordingMuxRuntime.fileReadyCv;
+	m_impl->recordingMuxRuntime.worker = std::thread([task, resolvedVideoPath, resolvedAudioPath, outputPath, options, workerPromise, fileCtx]() {
 		std::string muxError;
 		const bool muxed = ofxVlc4::muxRecordingFilesInternal(
 			resolvedVideoPath,
@@ -1845,7 +1897,8 @@ void ofxVlc4::updatePendingRecordingMux() {
 			outputPath,
 			options,
 			&task->cancelRequested,
-			&muxError);
+			&muxError,
+			fileCtx.get());
 		{
 			std::lock_guard<std::mutex> lock(task->mutex);
 			task->completedOutputPath = muxed ? outputPath : std::string();
@@ -1853,6 +1906,7 @@ void ofxVlc4::updatePendingRecordingMux() {
 		}
 		task->inProgress.store(false);
 		task->completed.store(true);
+		workerPromise->set_value();
 	});
 }
 
@@ -1863,7 +1917,18 @@ void ofxVlc4::cancelPendingRecordingMux() {
 		activeTask->cancelRequested.store(true, std::memory_order_release);
 	}
 	if (m_impl->recordingMuxRuntime.worker.joinable()) {
-		m_impl->recordingMuxRuntime.worker.join();
+		constexpr int kMuxJoinTimeoutMs = 15000;
+		if (m_impl->recordingMuxRuntime.workerFuture.valid()) {
+			auto status = m_impl->recordingMuxRuntime.workerFuture.wait_for(std::chrono::milliseconds(kMuxJoinTimeoutMs));
+			if (status == std::future_status::timeout) {
+				logError("Recording mux thread did not finish within " + ofToString(kMuxJoinTimeoutMs) + " ms; detaching.");
+				m_impl->recordingMuxRuntime.worker.detach();
+			} else {
+				m_impl->recordingMuxRuntime.worker.join();
+			}
+		} else {
+			m_impl->recordingMuxRuntime.worker.join();
+		}
 	}
 	m_impl->recordingMuxRuntime.inProgress.store(false);
 	m_impl->recordingMuxRuntime.activeTask.reset();
@@ -2015,10 +2080,9 @@ void ofxVlc4::releaseVlcResources() {
 		if (m_impl->subsystemRuntime.coreSession->media()) {
 			libvlc_media_player_set_media(player, nullptr);
 		}
-		libvlc_media_player_release(player);
+		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
 		logVerbose("Release: media player released.");
 		waitForCallbackScopeDrain();
-		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
 		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 		logNotice("Release: player teardown complete.");
 	} else {
@@ -2042,6 +2106,9 @@ void ofxVlc4::releaseVlcResources() {
 		logNotice("Release: activating GL context for resource cleanup.");
 		updateNativeVideoWindowVisibility();
 		cleanupWindow->makeCurrent();
+	} else if (!cleanupWindow && needsGlCleanup) {
+		logWarning("Release: GL resources need cleanup but no GL context window is available; resources may leak.");
+		m_impl->videoFrameRuntime.deferredGlCleanupNeeded.store(true);
 	}
 
 	if (recorderNeedsCleanup) {
@@ -2086,9 +2153,8 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->subsystemRuntime.mediaComponent->closeLibVlcLogFile();
 		libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
 		libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
-		libvlc_release(m_impl->subsystemRuntime.coreSession->instance());
-		logNotice("Release: VLC instance released.");
 		m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
+		logNotice("Release: VLC instance released.");
 	}
 	processDeferredRecordingMuxCleanup(true);
 
@@ -2108,6 +2174,8 @@ void ofxVlc4::releaseVlcResources() {
 }
 
 void ofxVlc4::close() {
+	m_controlBlock->expired.store(true, std::memory_order_release);
+
 	bool expected = false;
 	if (!m_impl->lifecycleRuntime.closeRequested.compare_exchange_strong(expected, true)) {
 		return;
@@ -2384,3 +2452,5 @@ int ofxVlc4::getChannelCount() const {
 int ofxVlc4::getSampleRate() const {
 	return m_impl->audioRuntime.sampleRate.load(std::memory_order_relaxed);
 }
+
+

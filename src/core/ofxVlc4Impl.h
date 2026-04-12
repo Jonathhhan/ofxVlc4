@@ -9,7 +9,9 @@
 #include "support/ofxVlc4RingBuffer.h"
 #include "VlcCoreSession.h"
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
+#include <future>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -204,9 +206,17 @@ struct ofxVlc4::Impl {
 		std::atomic<uint64_t> recorderMaxMicros { 0 };
 		std::atomic<uint64_t> firstCallbackSteadyMicros { 0 };
 		std::atomic<uint64_t> lastCallbackSteadyMicros { 0 };
+		std::atomic<bool> pendingAudioCallbackWarning { false };
+		std::atomic<int> pendingAudioCallbackWarningCode { 0 };
 	};
 
 	struct VideoGeometryRuntimeState {
+		enum class ResizeState : int {
+			Idle = 0,
+			Requested = 1,
+			InProgress = 2
+		};
+
 		std::atomic<unsigned> renderWidth { 0 };
 		std::atomic<unsigned> renderHeight { 0 };
 		std::atomic<unsigned> videoWidth { 0 };
@@ -221,7 +231,7 @@ struct ofxVlc4::Impl {
 		unsigned lastBoundViewportHeight = 0;
 		std::atomic<unsigned> pendingRenderWidth { 0 };
 		std::atomic<unsigned> pendingRenderHeight { 0 };
-		std::atomic<bool> pendingResize { false };
+		std::atomic<int> resizeState { static_cast<int>(ResizeState::Idle) };
 		std::atomic<int> pendingGlPixelFormat { static_cast<int>(GL_RGBA) };
 	};
 
@@ -301,6 +311,13 @@ struct ofxVlc4::Impl {
 		std::atomic<int> sessionState { static_cast<int>(ofxVlc4RecordingSessionState::Idle) };
 		std::shared_ptr<TaskState> activeTask;
 		std::thread worker;
+		std::promise<void> workerFinished;
+		std::future<void> workerFuture;
+
+		std::atomic<bool> videoFileFinalized { false };
+		std::atomic<bool> audioFileFinalized { false };
+		mutable std::mutex fileReadyMutex;
+		mutable std::condition_variable fileReadyCv;
 	};
 
 	struct RecordingSessionRuntimeState {
@@ -326,6 +343,11 @@ struct ofxVlc4::Impl {
 		std::atomic<bool> closeRequested { false };
 		std::atomic<bool> shuttingDown { false };
 		std::atomic<uint32_t> callbackDepth { 0 };
+
+		/// Condition variable notified by leaveCallbackScope() when
+		/// callbackDepth reaches zero, replacing the old 250 ms spin-wait.
+		mutable std::mutex callbackDrainMutex;
+		mutable std::condition_variable callbackDrainCv;
 	};
 
 	struct AnalysisRuntimeState {
@@ -367,6 +389,7 @@ struct ofxVlc4::Impl {
 		std::atomic<bool> hasReceivedVideoFrame { false };
 		std::atomic<bool> exposedTextureDirty { true };
 		std::atomic<bool> vlcFramebufferAttachmentDirty { true };
+		std::atomic<bool> deferredGlCleanupNeeded { false };
 		GLsync publishedVideoFrameFence = nullptr;
 		bool vlcFboBound = false;
 	};
@@ -404,4 +427,5 @@ struct ofxVlc4::Impl {
 	RecordingObjectRuntimeState recordingObjectRuntime;
 	VideoFrameRuntimeState videoFrameRuntime;
 	AudioBufferRuntimeState audioBufferRuntime;
+
 };

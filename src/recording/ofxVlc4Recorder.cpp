@@ -64,7 +64,8 @@ bool ofxVlc4::muxRecordingFilesInternal(
 	const std::string & outputPath,
 	const ofxVlc4MuxOptions & options,
 	const std::atomic<bool> * cancelRequested,
-	std::string * errorOut) {
+	std::string * errorOut,
+	const ofxVlc4MuxHelpers::FileReadinessContext * fileReadiness) {
 	const std::string normalizedMux = ofToLower(trimRecorderText(options.containerMux));
 	const std::string normalizedAudioCodec = ofToLower(trimRecorderText(options.audioCodec));
 	if (!ofxVlc4RecordingHelpers::isValidSoutModuleName(normalizedMux)) {
@@ -97,12 +98,25 @@ bool ofxVlc4::muxRecordingFilesInternal(
 	if (cancelRequested && cancelRequested->load(std::memory_order_acquire)) {
 		return fail("Recording mux cancelled.");
 	}
-	if (!waitForRecordingFile(videoPath, options.inputReadyTimeoutMs, cancelRequested)) {
+
+	const bool hasVideoSignal = fileReadiness && fileReadiness->videoFinalized && fileReadiness->mutex && fileReadiness->cv;
+	const bool hasAudioSignal = fileReadiness && fileReadiness->audioFinalized && fileReadiness->mutex && fileReadiness->cv;
+
+	const bool videoReady = hasVideoSignal
+		? waitForRecordingFile(videoPath, options.inputReadyTimeoutMs, cancelRequested,
+			*fileReadiness->videoFinalized, *fileReadiness->mutex, *fileReadiness->cv)
+		: waitForRecordingFile(videoPath, options.inputReadyTimeoutMs, cancelRequested);
+	if (!videoReady) {
 		return fail(cancelRequested && cancelRequested->load(std::memory_order_acquire)
 			? "Recording mux cancelled."
 			: "Timed out waiting for recorded video file.");
 	}
-	if (!waitForRecordingFile(audioPath, options.inputReadyTimeoutMs, cancelRequested)) {
+
+	const bool audioReady = hasAudioSignal
+		? waitForRecordingFile(audioPath, options.inputReadyTimeoutMs, cancelRequested,
+			*fileReadiness->audioFinalized, *fileReadiness->mutex, *fileReadiness->cv)
+		: waitForRecordingFile(audioPath, options.inputReadyTimeoutMs, cancelRequested);
+	if (!audioReady) {
 		return fail(cancelRequested && cancelRequested->load(std::memory_order_acquire)
 			? "Recording mux cancelled."
 			: "Timed out waiting for recorded audio file.");
@@ -465,8 +479,16 @@ void ofxVlc4::stopActiveRecorderSessions() {
 	const bool hadActiveSession = m_impl->recordingObjectRuntime.recorder.hasActiveCaptureSession();
 	m_impl->recordingObjectRuntime.recorder.clearCaptureState();
 	clearRecordingSessionConfig();
-	if (hadActiveSession && !m_impl->recordingMuxRuntime.pending.load() && !m_impl->recordingMuxRuntime.inProgress.load()) {
-		setRecordingSessionState(ofxVlc4RecordingSessionState::Done);
+	if (hadActiveSession) {
+		{
+			std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.fileReadyMutex);
+			m_impl->recordingMuxRuntime.videoFileFinalized.store(true, std::memory_order_release);
+			m_impl->recordingMuxRuntime.audioFileFinalized.store(true, std::memory_order_release);
+		}
+		m_impl->recordingMuxRuntime.fileReadyCv.notify_all();
+		if (!m_impl->recordingMuxRuntime.pending.load() && !m_impl->recordingMuxRuntime.inProgress.load()) {
+			setRecordingSessionState(ofxVlc4RecordingSessionState::Done);
+		}
 	}
 }
 

@@ -1401,6 +1401,8 @@ void ofxVlc4::AudioComponent::resetAudioStateInfo() {
 	owner.m_impl->audioRuntime.recorderMaxMicros.store(0, std::memory_order_relaxed);
 	owner.m_impl->audioRuntime.firstCallbackSteadyMicros.store(0, std::memory_order_relaxed);
 	owner.m_impl->audioRuntime.lastCallbackSteadyMicros.store(0, std::memory_order_relaxed);
+	owner.m_impl->audioRuntime.pendingAudioCallbackWarning.store(false, std::memory_order_relaxed);
+	owner.m_impl->audioRuntime.pendingAudioCallbackWarningCode.store(0, std::memory_order_relaxed);
 
 	std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.audioStateMutex);
 	owner.m_impl->stateCacheRuntime.audio = {};
@@ -1650,13 +1652,15 @@ void ofxVlc4::AudioComponent::audioPlay(const void * samples, unsigned int count
 	uint64_t recorderMicros = 0;
 	const auto writeCapturedSamples = [&](const float * inputSamples, size_t inputSampleCount) {
 		const auto ringWriteStart = std::chrono::steady_clock::now();
-		{
-			std::lock_guard<std::mutex> lock(owner.m_impl->synchronizationRuntime.audioMutex);
-			owner.m_impl->audioBufferRuntime.ringBuffer.write(inputSamples, inputSampleCount);
-		}
+		owner.m_impl->audioBufferRuntime.ringBuffer.write(inputSamples, inputSampleCount);
 		ringWriteMicros = static_cast<uint64_t>(
 			std::chrono::duration_cast<std::chrono::microseconds>(
 				std::chrono::steady_clock::now() - ringWriteStart).count());
+
+		if (owner.m_impl->audioBufferRuntime.ringBuffer.wasOverflowWarningIssued()) {
+			owner.m_impl->audioRuntime.pendingAudioCallbackWarning.store(true, std::memory_order_relaxed);
+			owner.m_impl->audioRuntime.pendingAudioCallbackWarningCode.store(1, std::memory_order_relaxed);
+		}
 
 		const auto recorderStart = std::chrono::steady_clock::now();
 		captureRecorderAudioSamples(inputSamples, inputSampleCount);
@@ -1802,6 +1806,7 @@ void ofxVlc4::clearAudioPtsState() {
 }
 
 ofxVlc4::AudioStateInfo ofxVlc4::getAudioStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.audioComponent) return {};
 	return m_impl->subsystemRuntime.audioComponent->getAudioStateInfo();
 }
 
@@ -2028,54 +2033,61 @@ void ofxVlc4::readAudioIntoBuffer(ofSoundBuffer & buffer, float gain) {
 }
 
 void ofxVlc4::audioPlay(void * data, const void * samples, unsigned int count, int64_t pts) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) return;
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioPlay(samples, count, pts);
 }
 
 void ofxVlc4::audioSetVolume(void * data, float volume, bool mute) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) return;
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioSetVolume(volume, mute);
 }
 
 void ofxVlc4::audioPause(void * data, int64_t pts) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) return;
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioPause(pts);
 }
 
 void ofxVlc4::audioResume(void * data, int64_t pts) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) return;
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioResume(pts);
 }
 
 void ofxVlc4::audioFlush(void * data, int64_t pts) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) return;
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioFlush(pts);
 }
 
 void ofxVlc4::audioDrain(void * data) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) return;
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioDrain();
 }
 
 bool ofxVlc4::audioIsReady() const {
+	if (!m_impl || !m_impl->subsystemRuntime.audioComponent) return false;
 	return m_impl->subsystemRuntime.audioComponent->audioIsReady();
 }
 

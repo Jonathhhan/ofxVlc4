@@ -115,13 +115,6 @@ void ofxVlc4::setPlaybackMode(PlaybackMode mode) {
 	m_impl->subsystemRuntime.playbackController->setPlaybackMode(mode);
 }
 
-void ofxVlc4::setPlaybackMode(const std::string & mode) {
-	m_impl->subsystemRuntime.playbackController->setPlaybackMode(mode);
-}
-
-std::string ofxVlc4::getPlaybackModeString() const {
-	return m_impl->subsystemRuntime.playbackController->getPlaybackModeString();
-}
 
 ofxVlc4::PlaybackMode ofxVlc4::getPlaybackMode() const {
 	return m_impl->subsystemRuntime.playbackController->getPlaybackMode();
@@ -192,10 +185,11 @@ float ofxVlc4::getLength() const {
 }
 
 void ofxVlc4::vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * data) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire)) {
 		return;
 	}
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope || !event) {
 		return;

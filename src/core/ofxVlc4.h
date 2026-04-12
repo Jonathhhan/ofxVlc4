@@ -18,6 +18,10 @@
 typedef struct libvlc_renderer_discoverer_t libvlc_renderer_discoverer_t;
 typedef struct libvlc_renderer_item_t libvlc_renderer_item_t;
 typedef struct libvlc_dialog_id libvlc_dialog_id;
+
+namespace ofxVlc4MuxHelpers {
+struct FileReadinessContext;
+}
 typedef struct libvlc_media_discoverer_t libvlc_media_discoverer_t;
 typedef struct libvlc_media_list_t libvlc_media_list_t;
 class VlcCoreSession;
@@ -798,6 +802,17 @@ private:
 	struct Impl;
 	std::unique_ptr<Impl> m_impl;
 
+	/// Prevent dangling-pointer crashes in VLC callbacks.
+	/// Every VLC callback receives a raw `void *` pointing to a ControlBlock
+	/// instead of the ofxVlc4 instance.  The callback loads `expired` before
+	/// dereferencing `owner`, so a concurrent `close()` is safely detected.
+	struct ControlBlock {
+		ofxVlc4 * owner;
+		std::atomic<bool> expired { false };
+		explicit ControlBlock(ofxVlc4 * o) : owner(o) {}
+	};
+	std::shared_ptr<ControlBlock> m_controlBlock;
+
 	class CallbackScope {
 	public:
 		CallbackScope() = default;
@@ -1031,7 +1046,8 @@ private:
 		const std::string & outputPath,
 		const ofxVlc4MuxOptions & options,
 		const std::atomic<bool> * cancelRequested,
-		std::string * errorOut);
+		std::string * errorOut,
+		const ofxVlc4MuxHelpers::FileReadinessContext * fileReadiness = nullptr);
 	CallbackScope enterCallbackScope() const;
 	bool tryEnterCallbackScope() const;
 	void leaveCallbackScope() const;
@@ -1364,11 +1380,8 @@ public:
 	std::string getVlcModuleHelpText(const std::string & moduleName) const;
 	void printVlcModuleHelp(const std::string & moduleName) const;
 
-	// The enum overload is the canonical API; the string overload remains for compatibility.
 	void setPlaybackMode(PlaybackMode mode);
-	void setPlaybackMode(const std::string & mode);
 	PlaybackMode getPlaybackMode() const;
-	std::string getPlaybackModeString() const;
 
 	void setShuffleEnabled(bool enabled);
 	bool isShuffleEnabled() const;
