@@ -192,10 +192,11 @@ float ofxVlc4::getLength() const {
 }
 
 void ofxVlc4::vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * data) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire)) {
 		return;
 	}
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope || !event) {
 		return;

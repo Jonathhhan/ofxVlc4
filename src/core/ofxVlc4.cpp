@@ -332,6 +332,7 @@ void ofxVlc4::waitForCallbackScopeDrain() const {
 
 ofxVlc4::ofxVlc4()
 	: m_impl(std::make_unique<Impl>())
+	, m_controlBlock(std::make_shared<ControlBlock>(this))
 	{
 	ofGLFWWindowSettings settings;
 	m_impl->videoResourceRuntime.mainWindow = std::dynamic_pointer_cast<ofAppGLFWWindow>(ofGetCurrentWindow());
@@ -1228,7 +1229,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		+ ".");
 
 	if (m_impl->playerConfigRuntime.audioCaptureEnabled) {
-		libvlc_audio_set_callbacks(m_impl->subsystemRuntime.coreSession->player(), audioPlay, audioPause, audioResume, audioFlush, audioDrain, this);
+		libvlc_audio_set_callbacks(m_impl->subsystemRuntime.coreSession->player(), audioPlay, audioPause, audioResume, audioFlush, audioDrain, m_controlBlock.get());
 		libvlc_audio_set_volume_callback(m_impl->subsystemRuntime.coreSession->player(), audioSetVolume);
 		libvlc_audio_set_format(
 			m_impl->subsystemRuntime.coreSession->player(),
@@ -1242,7 +1243,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
 	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
-		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(this, ofxVlc4::vlcMediaPlayerEventStatic);
+		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(m_controlBlock.get(), ofxVlc4::vlcMediaPlayerEventStatic);
 	}
 
 	const libvlc_dialog_cbs dialogCallbacks = {
@@ -1252,8 +1253,8 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		ofxVlc4::dialogCancelStatic,
 		ofxVlc4::dialogUpdateProgressStatic
 	};
-	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, this);
-	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), ofxVlc4::dialogErrorStatic, this);
+	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, m_controlBlock.get());
+	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), ofxVlc4::dialogErrorStatic, m_controlBlock.get());
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
 		startRendererDiscovery(m_impl->rendererDiscoveryRuntime.discovererName);
@@ -2108,6 +2109,8 @@ void ofxVlc4::releaseVlcResources() {
 }
 
 void ofxVlc4::close() {
+	m_controlBlock->expired.store(true, std::memory_order_release);
+
 	bool expected = false;
 	if (!m_impl->lifecycleRuntime.closeRequested.compare_exchange_strong(expected, true)) {
 		return;

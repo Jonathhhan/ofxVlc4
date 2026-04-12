@@ -716,7 +716,7 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 			&ofxVlc4::make_current,
 			&ofxVlc4::get_proc_address,
 			nullptr, nullptr,
-			&owner);
+			owner.m_controlBlock.get());
 		if (!configured) {
 			owner.setError("Texture video output callbacks could not be configured.");
 			return false;
@@ -740,7 +740,7 @@ bool ofxVlc4::VideoComponent::applyVideoOutputBackend() {
 			nullptr,
 			&ofxVlc4::videoFrameMetadata,
 			nullptr,
-			&owner);
+			owner.m_controlBlock.get());
 		if (!configured) {
 			owner.setError("D3D11 video output callbacks could not be configured.");
 			return false;
@@ -2249,10 +2249,11 @@ bool ofxVlc4::applyPendingVideoResize() {
 }
 
 bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, libvlc_video_output_cfg_t * render_cfg) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire)) {
 		return false;
 	}
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return false;
@@ -2261,10 +2262,11 @@ bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, li
 }
 
 void ofxVlc4::videoSwap(void * data) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire)) {
 		return;
 	}
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return;
@@ -2273,17 +2275,18 @@ void ofxVlc4::videoSwap(void * data) {
 }
 
 bool ofxVlc4::make_current(void * data, bool current) {
-	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || !cb->owner || !cb->owner->m_impl) {
 		return false;
 	}
-	// NOTE: This callback intentionally does NOT check shuttingDown.
+	// NOTE: This callback intentionally does NOT check the expired flag.
 	// VLC's OpenGL display module calls make_current(true) from inside
 	// libvlc_media_player_release() to obtain a GL context for its own
 	// resource cleanup (shader/VAO deletion).  If we blocked that call,
 	// VLC would delete GL objects without a context, which crashes.
 	// The member function has its own safety checks (vlcWindow validity,
 	// videoMutex, FBO state) that prevent unsafe resource access.
+	auto * that = cb->owner;
 	const bool ok = that->m_impl->subsystemRuntime.videoComponent->makeCurrent(current);
 	if (!ok) {
 		that->logWarning(current
@@ -2294,15 +2297,15 @@ bool ofxVlc4::make_current(void * data, bool current) {
 }
 
 void * ofxVlc4::get_proc_address(void * data, const char * name) {
-	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || !cb->owner || !cb->owner->m_impl) {
 		return nullptr;
 	}
-	// NOTE: This callback intentionally does NOT check shuttingDown.
+	// NOTE: This callback intentionally does NOT check the expired flag.
 	// VLC may call get_proc_address during player release for its own
 	// GL cleanup.  Returning nullptr would cause VLC to fail resolving
 	// GL function pointers needed for safe resource deletion.
-	return that->m_impl->subsystemRuntime.videoComponent->getProcAddress(name);
+	return cb->owner->m_impl->subsystemRuntime.videoComponent->getProcAddress(name);
 }
 
 bool ofxVlc4::videoOutputSetup(
@@ -2310,10 +2313,11 @@ bool ofxVlc4::videoOutputSetup(
 	const libvlc_video_setup_device_cfg_t * cfg,
 	libvlc_video_setup_device_info_t * out) {
 #ifdef TARGET_WIN32
-	auto * owner = (data && *data) ? static_cast<ofxVlc4 *>(*data) : nullptr;
-	if (!owner) {
+	auto * cb = (data && *data) ? static_cast<ControlBlock *>(*data) : nullptr;
+	if (!cb || cb->expired.load(std::memory_order_acquire)) {
 		return false;
 	}
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return false;
@@ -2328,10 +2332,11 @@ bool ofxVlc4::videoOutputSetup(
 }
 
 void ofxVlc4::videoOutputCleanup(void * data) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire)) {
 		return;
 	}
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return;
@@ -2340,10 +2345,11 @@ void ofxVlc4::videoOutputCleanup(void * data) {
 }
 
 void ofxVlc4::videoFrameMetadata(void * data, libvlc_video_metadata_type_t type, const void * metadata) {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner) {
+	auto * cb = static_cast<ControlBlock *>(data);
+	if (!cb || cb->expired.load(std::memory_order_acquire)) {
 		return;
 	}
+	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return;

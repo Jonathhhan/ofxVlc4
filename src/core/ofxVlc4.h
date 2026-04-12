@@ -798,6 +798,17 @@ private:
 	struct Impl;
 	std::unique_ptr<Impl> m_impl;
 
+	/// Prevent dangling-pointer crashes in VLC callbacks.
+	/// Every VLC callback receives a raw `void *` pointing to a ControlBlock
+	/// instead of the ofxVlc4 instance.  The callback loads `expired` before
+	/// dereferencing `owner`, so a concurrent `close()` is safely detected.
+	struct ControlBlock {
+		ofxVlc4 * owner;
+		std::atomic<bool> expired { false };
+		explicit ControlBlock(ofxVlc4 * o) : owner(o) {}
+	};
+	std::shared_ptr<ControlBlock> m_controlBlock;
+
 	class CallbackScope {
 	public:
 		CallbackScope() = default;
