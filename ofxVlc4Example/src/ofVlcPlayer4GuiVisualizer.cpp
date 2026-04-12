@@ -275,6 +275,9 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 			_TRUNCATE);
 	}
 
+	const auto settingsBefore = pendingVlcVisualizerSettings;
+	bool comboChanged = false;
+
 	int moduleIndex = static_cast<int>(pendingVlcVisualizerSettings.module);
 	const auto previousModule = pendingVlcVisualizerSettings.module;
 	if (ImGui::BeginCombo("VLC Module", audioVisualizerModuleLabel(pendingVlcVisualizerSettings.module))) {
@@ -294,6 +297,7 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 	}
 	pendingVlcVisualizerSettings.module = static_cast<ofxVlc4AudioVisualizerModule>(moduleIndex);
 	if (pendingVlcVisualizerSettings.module != previousModule) {
+		comboChanged = true;
 		applyModuleSpecificVisualizerDefaults(pendingVlcVisualizerSettings);
 		if (pendingVlcVisualizerSettings.module == ofxVlc4AudioVisualizerModule::ProjectM) {
 			strncpy_s(
@@ -304,8 +308,11 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 		}
 	}
 
+	bool inputDeactivated = false;
+
 	if (pendingVlcVisualizerSettings.module == ofxVlc4AudioVisualizerModule::Visual) {
 		int effectIndex = static_cast<int>(pendingVlcVisualizerSettings.visualEffect);
+		const auto previousEffect = pendingVlcVisualizerSettings.visualEffect;
 		if (ImGui::BeginCombo("Visual Effect", audioVisualizerEffectLabel(pendingVlcVisualizerSettings.visualEffect))) {
 			for (int candidateIndex = static_cast<int>(ofxVlc4AudioVisualizerEffect::Spectrum);
 				candidateIndex <= static_cast<int>(ofxVlc4AudioVisualizerEffect::VuMeter);
@@ -322,19 +329,25 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 			ImGui::EndCombo();
 		}
 		pendingVlcVisualizerSettings.visualEffect = static_cast<ofxVlc4AudioVisualizerEffect>(effectIndex);
+		if (pendingVlcVisualizerSettings.visualEffect != previousEffect) {
+			comboChanged = true;
+		}
 	}
 
 	if (pendingVlcVisualizerSettings.module != ofxVlc4AudioVisualizerModule::None) {
 		int width = pendingVlcVisualizerSettings.width;
 		int height = pendingVlcVisualizerSettings.height;
 		ImGui::InputInt("Module Width", &width);
+		inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 		ImGui::InputInt("Module Height", &height);
+		inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 		pendingVlcVisualizerSettings.width = std::max(64, width);
 		pendingVlcVisualizerSettings.height = std::max(64, height);
 
 		if (pendingVlcVisualizerSettings.module == ofxVlc4AudioVisualizerModule::Goom) {
 			int goomSpeed = pendingVlcVisualizerSettings.goomSpeed;
 			ImGui::SliderInt("Goom Speed", &goomSpeed, 1, 10);
+			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 			pendingVlcVisualizerSettings.goomSpeed = goomSpeed;
 		}
 
@@ -348,49 +361,43 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 					_TRUNCATE);
 			}
 			ImGui::InputText("Preset Path", projectMPresetPath, IM_ARRAYSIZE(projectMPresetPath));
+			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 			pendingVlcVisualizerSettings.projectMPresetPath = ofTrim(std::string(projectMPresetPath));
 
 			int textureSize = pendingVlcVisualizerSettings.projectMTextureSize;
 			ImGui::InputInt("Texture Size", &textureSize);
+			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 			ImGui::SameLine();
 			ImGui::TextDisabled("(0=default)");
 			pendingVlcVisualizerSettings.projectMTextureSize = std::max(0, textureSize);
 
 			int meshX = pendingVlcVisualizerSettings.projectMMeshX;
 			ImGui::InputInt("Mesh Width", &meshX);
+			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 			ImGui::SameLine();
 			ImGui::TextDisabled("(0=default)");
 			pendingVlcVisualizerSettings.projectMMeshX = std::max(0, meshX);
 
 			int meshY = pendingVlcVisualizerSettings.projectMMeshY;
 			ImGui::InputInt("Mesh Height", &meshY);
+			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 			ImGui::SameLine();
 			ImGui::TextDisabled("(0=default)");
 			pendingVlcVisualizerSettings.projectMMeshY = std::max(0, meshY);
 		}
 	}
 
-	ImGui::TextDisabled("Apply from Video > Geometry after choosing renderer settings.");
-	ImGui::PopItemWidth();
-	ImGui::PopStyleVar();
-}
-
-void ofVlcPlayer4GuiVisualizer::drawVlcApplyButton(
-	ofxVlc4 & player,
-	float compactControlWidth,
-	const std::function<void()> & applyAudioVisualizerSettings) {
-	if (!vlcVisualizerStateInitialized) {
-		pendingVlcVisualizerSettings = player.getAudioVisualizerSettings();
-		vlcVisualizerStateInitialized = true;
-	}
-
-	if (ImGui::Button("Apply Video Settings", ImVec2(compactControlWidth, 0.0f))) {
+	const bool settingsChanged = (pendingVlcVisualizerSettings != settingsBefore);
+	if (settingsChanged && (comboChanged || inputDeactivated)) {
 		player.setAudioVisualizerSettings(pendingVlcVisualizerSettings);
 		if (applyAudioVisualizerSettings) {
 			applyAudioVisualizerSettings();
 		}
 	}
+
 	ImGui::TextDisabled("Reinitializes the player. 'None' disables VLC visualizer modules.");
+	ImGui::PopItemWidth();
+	ImGui::PopStyleVar();
 }
 
 void ofVlcPlayer4GuiVisualizer::drawContent(

@@ -192,6 +192,21 @@ struct ofxVlc4AudioVisualizerSettings {
 	int projectMTextureSize = 0; // --projectm-texture-size (power-of-two pixels, e.g. 512, 1024)
 	int projectMMeshX = 0;       // --projectm-meshx (horizontal mesh density)
 	int projectMMeshY = 0;       // --projectm-meshy (vertical mesh density)
+
+	bool operator==(const ofxVlc4AudioVisualizerSettings & other) const {
+		return module == other.module
+			&& visualEffect == other.visualEffect
+			&& width == other.width
+			&& height == other.height
+			&& goomSpeed == other.goomSpeed
+			&& projectMPresetPath == other.projectMPresetPath
+			&& projectMTextureSize == other.projectMTextureSize
+			&& projectMMeshX == other.projectMMeshX
+			&& projectMMeshY == other.projectMMeshY;
+	}
+	bool operator!=(const ofxVlc4AudioVisualizerSettings & other) const {
+		return !(*this == other);
+	}
 };
 
 // ---------------------------------------------------------------------------
