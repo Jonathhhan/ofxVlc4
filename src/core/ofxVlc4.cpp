@@ -71,7 +71,7 @@ constexpr int kOfxVlc4AddonVersionMajor = 1;
 constexpr int kOfxVlc4AddonVersionMinor = 0;
 constexpr int kOfxVlc4AddonVersionPatch = 4;
 constexpr const char * kOfxVlc4AddonVersionString = "1.0.4";
-constexpr int kCallbackDrainTimeoutMs = 250;
+constexpr int kCallbackDrainTimeoutMs = 2000;
 
 bool shouldLog(ofLogLevel level) {
 	const ofLogLevel configuredLevel = static_cast<ofLogLevel>(gLogLevel.load());
@@ -311,21 +311,32 @@ void ofxVlc4::leaveCallbackScope() const {
 	if (!m_impl) {
 		return;
 	}
-	m_impl->lifecycleRuntime.callbackDepth.fetch_sub(1, std::memory_order_acq_rel);
+	const auto prev = m_impl->lifecycleRuntime.callbackDepth.fetch_sub(1, std::memory_order_acq_rel);
+	// If the counter just reached zero, wake the drain waiter.
+	if (prev == 1) {
+		m_impl->lifecycleRuntime.callbackDrainCv.notify_one();
+	}
 }
 
 void ofxVlc4::waitForCallbackScopeDrain() const {
 	if (!m_impl) {
 		return;
 	}
-	for (int i = 0; i < kCallbackDrainTimeoutMs; ++i) {
-		if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) == 0) {
-			return;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	// Fast path: already drained.
+	if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) == 0) {
+		return;
 	}
-	if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) != 0) {
-		logWarning("Release: callback drain wait timed out.");
+	// Block until callbackDepth reaches zero or the timeout expires.
+	std::unique_lock<std::mutex> lock(m_impl->lifecycleRuntime.callbackDrainMutex);
+	const bool drained = m_impl->lifecycleRuntime.callbackDrainCv.wait_for(
+		lock,
+		std::chrono::milliseconds(kCallbackDrainTimeoutMs),
+		[this] { return m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) == 0; });
+	if (!drained) {
+		logWarning("Release: callback drain wait timed out after "
+			+ ofToString(kCallbackDrainTimeoutMs) + " ms (depth="
+			+ ofToString(m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire))
+			+ ").");
 	}
 }
 

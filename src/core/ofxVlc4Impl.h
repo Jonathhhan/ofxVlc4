@@ -9,6 +9,7 @@
 #include "support/ofxVlc4RingBuffer.h"
 #include "VlcCoreSession.h"
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <mutex>
 #include <thread>
@@ -326,6 +327,11 @@ struct ofxVlc4::Impl {
 		std::atomic<bool> closeRequested { false };
 		std::atomic<bool> shuttingDown { false };
 		std::atomic<uint32_t> callbackDepth { 0 };
+
+		/// Condition variable notified by leaveCallbackScope() when
+		/// callbackDepth reaches zero, replacing the old 250 ms spin-wait.
+		mutable std::mutex callbackDrainMutex;
+		mutable std::condition_variable callbackDrainCv;
 	};
 
 	struct AnalysisRuntimeState {
