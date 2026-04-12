@@ -1565,8 +1565,8 @@ void ofVlcPlayer4Gui::drawPlaylistSection(ofxVlc4 & player) {
 
 			const bool drawHighlighted = isSelected || isPlaying;
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + playlistInsetX);
-			const bool clicked = ImGui::Selectable(label.c_str(), drawHighlighted, 0, ImVec2(ImGui::GetContentRegionAvail().x - playlistInsetX, 0.0f));
-			const bool doubleClicked = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0);
+			const bool clicked = ImGui::Selectable(label.c_str(), drawHighlighted, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(ImGui::GetContentRegionAvail().x - playlistInsetX, 0.0f));
+			const bool doubleClicked = clicked && ImGui::IsMouseDoubleClicked(0);
 
 			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
 				PlaylistDragPayload newDragPayload;

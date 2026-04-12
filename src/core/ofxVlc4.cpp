@@ -1138,6 +1138,11 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		+ ".");
 	m_impl->lifecycleRuntime.closeRequested.store(false);
 	m_impl->lifecycleRuntime.shuttingDown.store(false, std::memory_order_release);
+	// Reset the ControlBlock expired flag so that VLC audio/video callbacks
+	// are no longer blocked after a close() → init() cycle.  close() sets
+	// expired=true to prevent late callbacks during teardown, but init()
+	// starts a fresh session and callbacks must be accepted again.
+	m_controlBlock->expired.store(false, std::memory_order_release);
 	m_impl->subsystemRuntime.playbackController->resetTransportState();
 	m_impl->subsystemRuntime.audioComponent->clearPendingEqualizerApplyOnPlay();
 	m_impl->subsystemRuntime.videoComponent->clearPendingVideoAdjustApplyOnPlay();
