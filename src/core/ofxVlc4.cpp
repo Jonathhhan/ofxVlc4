@@ -2136,8 +2136,22 @@ void ofxVlc4::releaseVlcResources() {
 		}
 		m_impl->videoResourceRuntime.videoAdjustShaderReady = false;
 		m_impl->videoResourceRuntime.videoTexture.clear();
-		clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
+		// NOTE: exposedTextureFbo is intentionally NOT cleared here.  The FBO
+		// may have been allocated on a different GL context (e.g. the main
+		// window context in the constructor), and binding it on the vlcWindow
+		// context would generate GL_INVALID_OPERATION — an error that persists
+		// in the GL error state and triggers a fatal assertion in VLC's OpenGL
+		// display module when the next playback session starts.  The stale
+		// frame data is harmless; the FBO will be reallocated on the next
+		// videoResize callback.
 		logNotice("Release: GL resources cleared.");
+		// Drain any GL errors accumulated during the cleanup operations above.
+		// VLC's OpenGL display module checks glGetError() after every GL call
+		// and asserts on unexpected errors.  Without this drain, a stale error
+		// from texture/FBO/shader teardown would survive on the vlcWindow
+		// context and cause a GL_INVALID_OPERATION assertion the next time VLC
+		// starts rendering on a new playback session.
+		ofxVlc4GlOps::drainGlErrors();
 	}
 	if (cleanupWindow && needsGlCleanup) {
 		// Restore the main window GL context so that callers invoked from

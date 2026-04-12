@@ -114,6 +114,12 @@ typedef void * GLsync;
 #ifndef GL_FRAMEBUFFER_COMPLETE
 #define GL_FRAMEBUFFER_COMPLETE         0x8CD5
 #endif
+#ifndef GL_NO_ERROR
+#define GL_NO_ERROR                     0
+#endif
+#ifndef GL_INVALID_OPERATION
+#define GL_INVALID_OPERATION            0x0502
+#endif
 
 // ---------------------------------------------------------------------------
 // GL call log – records every GL stub invocation for test assertions.
@@ -143,6 +149,7 @@ inline bool g_glGenBuffersFail = false;
 inline bool g_glGenFramebuffersFail = false;
 inline GLenum g_glCheckFramebufferStatusResult = GL_FRAMEBUFFER_COMPLETE;
 inline GLuint g_glNextObjectId = 1;
+inline int g_glGetErrorRemaining = 0;
 
 // ---------------------------------------------------------------------------
 // GL function stubs
@@ -240,6 +247,15 @@ inline void glFlush() {
 	glCallLog().push_back({"glFlush", {}});
 }
 
+inline GLenum glGetError() {
+	glCallLog().push_back({"glGetError", {}});
+	if (g_glGetErrorRemaining > 0) {
+		--g_glGetErrorRemaining;
+		return GL_INVALID_OPERATION;
+	}
+	return GL_NO_ERROR;
+}
+
 inline void glPixelStorei(GLenum pname, GLint param) {
 	glCallLog().push_back({"glPixelStorei", {pname, static_cast<uint64_t>(param)}});
 }
@@ -261,6 +277,7 @@ inline void resetGlStubs() {
 	g_glGenFramebuffersFail = false;
 	g_glCheckFramebufferStatusResult = GL_FRAMEBUFFER_COMPLETE;
 	g_glNextObjectId = 1;
+	g_glGetErrorRemaining = 0;
 }
 
 // ---------------------------------------------------------------------------

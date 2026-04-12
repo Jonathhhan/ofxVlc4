@@ -218,4 +218,17 @@ inline void flushCommands() {
 	glFlush();
 }
 
+// Drain all pending GL errors from the current context.  This should be
+// called after bulk GL resource cleanup (e.g. during releaseVlcResources)
+// so that stale errors do not leak into the next user of the context.
+// VLC's OpenGL display module wraps every GL call with glGetError() checks
+// and asserts on any unexpected error; a leftover error from prior cleanup
+// operations triggers a fatal GL_INVALID_OPERATION assertion when the next
+// playback session starts.
+inline void drainGlErrors() {
+	while (glGetError() != GL_NO_ERROR) {
+		// Consume all pending errors.
+	}
+}
+
 } // namespace ofxVlc4GlOps
