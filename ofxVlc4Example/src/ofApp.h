@@ -43,7 +43,6 @@ public:
 	void setCustomSubtitleFontSelection(int index);
 	void loadPlayerProjectMTexture();
 	void initializePlayer(const std::vector<std::string> * playlistOverride = nullptr, int restoreIndex = -1, RestorePlaybackState restorePlaybackState = RestorePlaybackState::Stopped, int restoreTimeMs = 0, int restoreVolume = 50, ofxVlc4::PlaybackMode restoreMode = ofxVlc4::PlaybackMode::Default);
-	void applyAudioVisualizerSettings();
 	void drawPlayerToFbo(ofxVlc4 & sourcePlayer, ofFbo & targetFbo, float width, float height, bool preserveAspect);
 	void refreshProjectMSourceTexture();
 	void applyProjectMTexture();

@@ -257,8 +257,7 @@ std::string formatMicroseconds(double microseconds) {
 void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 	ofxVlc4 & player,
 	const ImVec2 & labelInnerSpacing,
-	float compactControlWidth,
-	const std::function<void()> & applyAudioVisualizerSettings) {
+	float compactControlWidth) {
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, labelInnerSpacing);
 	ImGui::PushItemWidth(compactControlWidth);
 
@@ -384,17 +383,6 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 			ImGui::SameLine();
 			ImGui::TextDisabled("(0=default)");
 			pendingVlcVisualizerSettings.projectMMeshY = std::max(0, meshY);
-		}
-
-		bool continuousMode = pendingVlcVisualizerSettings.continuousMode;
-		if (ImGui::Checkbox("Continuous Mode", &continuousMode)) {
-			pendingVlcVisualizerSettings.continuousMode = continuousMode;
-			comboChanged = true;
-		}
-		ImGui::SameLine();
-		ImGui::TextDisabled("(?)");
-		if (ImGui::IsItemHovered()) {
-			ImGui::SetTooltip("Feeds silence into the audio ring buffer when no\naudio is playing, keeping the visualizer active.");
 		}
 	}
 

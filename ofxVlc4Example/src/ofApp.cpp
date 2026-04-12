@@ -523,7 +523,7 @@ void ofApp::initializePlayer(
 		}
 	}
 
-	player.setAudioCaptureEnabled(visualizerSettings.module == ofxVlc4AudioVisualizerModule::None);
+	player.setAudioCaptureEnabled(true);
 	player.init(vlc_argc, vlc_argv);
 	player.setWatchTimeEnabled(true);
 	player.setWatchTimeMinPeriodUs(50000);
@@ -551,21 +551,6 @@ void ofApp::initializePlayer(
 	} else {
 		addFirstExistingSeedMedia(player, defaultSeedMediaCandidates());
 	}
-}
-
-void ofApp::applyAudioVisualizerSettings() {
-	const std::vector<std::string> playlist = player.getPlaylist();
-	const int currentIndex = player.getCurrentIndex();
-	RestorePlaybackState restorePlaybackState = RestorePlaybackState::Stopped;
-	if (player.isPlaying()) {
-		restorePlaybackState = RestorePlaybackState::Playing;
-	} else if (!player.isStopped()) {
-		restorePlaybackState = RestorePlaybackState::Paused;
-	}
-	const int restoreTimeMs = std::max(0, player.getTime());
-	const int restoreVolume = player.getVolume();
-	const ofxVlc4::PlaybackMode restoreMode = player.getPlaybackMode();
-	initializePlayer(&playlist, currentIndex, restorePlaybackState, restoreTimeMs, restoreVolume, restoreMode);
 }
 
 //--------------------------------------------------------------
@@ -757,9 +742,6 @@ void ofApp::draw() {
 		},
 		[this](const std::string & rawPath) {
 			return loadCustomProjectMTexture(rawPath);
-		},
-		[this]() {
-			applyAudioVisualizerSettings();
 		},
 		[this](const std::string & rawPath) {
 			return loadCustomSubtitleFile(rawPath);

@@ -5,7 +5,6 @@
 #include "ofxVlc4.h"
 
 #include <array>
-#include <functional>
 #include <vector>
 
 class ofVlcPlayer4GuiVisualizer {
@@ -32,8 +31,7 @@ public:
 	void drawVlcModuleControls(
 		ofxVlc4 & player,
 		const ImVec2 & labelInnerSpacing,
-		float compactControlWidth,
-		const std::function<void()> & applyAudioVisualizerSettings);
+		float compactControlWidth);
 
 private:
 	DisplayStyle displayStyle = DisplayStyle::Studio;
