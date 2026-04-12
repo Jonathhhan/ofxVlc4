@@ -1920,10 +1920,11 @@ void ofxVlc4::releaseVlcResources() {
 		logVerbose("Release: shuttingDown flag set before player release.");
 
 		logVerbose("Release: releasing media player.");
-		if (m_impl->watchTimeRuntime.registered) {
-			libvlc_media_player_unwatch_time(player);
-			m_impl->watchTimeRuntime.registered = false;
-		}
+		// Do not call libvlc_media_player_unwatch_time() during teardown.
+		// The player release path owns final cleanup of watch-time observers,
+		// and explicit unwatch here can race/double-release internal VLC
+		// watch-time state on some builds.
+		m_impl->watchTimeRuntime.registered = false;
 		libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 0);
 
 		// Detach the media from the player BEFORE releasing the player so
