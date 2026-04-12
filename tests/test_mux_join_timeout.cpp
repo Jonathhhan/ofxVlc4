@@ -1,0 +1,98 @@
+#include <chrono>
+#include <cstdio>
+#include <future>
+#include <string>
+#include <thread>
+
+// ---------------------------------------------------------------------------
+// Minimal test harness
+// ---------------------------------------------------------------------------
+
+static int g_passed = 0;
+static int g_failed = 0;
+
+static void check(bool condition, const char * expr, const char * file, int line) {
+	if (condition) {
+		++g_passed;
+		std::printf("  PASS  %s\n", expr);
+	} else {
+		++g_failed;
+		std::printf("  FAIL  %s  (%s:%d)\n", expr, file, line);
+	}
+}
+
+#define CHECK(expr) check((expr), #expr, __FILE__, __LINE__)
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+static void testWaitForTimeout() {
+	std::printf("\n[wait_for returns timeout then ready]\n");
+
+	std::promise<void> promise;
+	auto future = promise.get_future();
+
+	std::thread worker([&] {
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		promise.set_value();
+	});
+
+	// Should timeout after 100ms.
+	auto status1 = future.wait_for(std::chrono::milliseconds(100));
+	CHECK(status1 == std::future_status::timeout);
+
+	// Should be ready within 1000ms.
+	auto status2 = future.wait_for(std::chrono::milliseconds(1000));
+	CHECK(status2 == std::future_status::ready);
+
+	worker.join();
+}
+
+static void testFutureAlreadySet() {
+	std::printf("\n[future already set returns immediately]\n");
+
+	std::promise<void> promise;
+	auto future = promise.get_future();
+
+	promise.set_value();
+
+	auto t0 = std::chrono::steady_clock::now();
+	auto status = future.wait_for(std::chrono::milliseconds(1000));
+	auto elapsed = std::chrono::steady_clock::now() - t0;
+
+	CHECK(status == std::future_status::ready);
+	CHECK(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() < 50);
+}
+
+static void testThreadDetach() {
+	std::printf("\n[thread detach safety]\n");
+
+	std::promise<void> promise;
+	auto future = promise.get_future();
+
+	{
+		std::thread worker([p = std::move(promise)]() mutable {
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			p.set_value();
+		});
+		worker.detach();
+	}
+
+	// The detached thread should still complete and set the future.
+	auto status = future.wait_for(std::chrono::milliseconds(500));
+	CHECK(status == std::future_status::ready);
+}
+
+// ---------------------------------------------------------------------------
+// main
+// ---------------------------------------------------------------------------
+
+int main() {
+	testWaitForTimeout();
+	testFutureAlreadySet();
+	testThreadDetach();
+
+	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
+	return g_failed == 0 ? 0 : 1;
+}

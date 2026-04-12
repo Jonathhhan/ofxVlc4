@@ -479,3 +479,92 @@ target_include_directories(test_crash_handler PRIVATE
 )
 
 add_test(NAME crash_handler COMMAND test_crash_handler)
+
+# ---------------------------------------------------------------------------
+# Threading support (needed by several tests below)
+# ---------------------------------------------------------------------------
+
+find_package(Threads REQUIRED)
+
+# ---------------------------------------------------------------------------
+# test_callback_drain
+# Tests the condition-variable-based callback drain pattern used during
+# lifecycle shutdown.  Pure C++17, no OF/VLC/GL dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_callback_drain
+    test_callback_drain.cpp
+)
+
+target_link_libraries(test_callback_drain PRIVATE Threads::Threads)
+
+add_test(NAME callback_drain COMMAND test_callback_drain)
+
+# ---------------------------------------------------------------------------
+# test_concurrent_shutdown
+# Stress-tests the ControlBlock + shuttingDown pattern to ensure callbacks
+# cannot race with owner destruction.  Pure C++17.
+# ---------------------------------------------------------------------------
+
+add_executable(test_concurrent_shutdown
+    test_concurrent_shutdown.cpp
+)
+
+target_link_libraries(test_concurrent_shutdown PRIVATE Threads::Threads)
+
+add_test(NAME concurrent_shutdown COMMAND test_concurrent_shutdown)
+
+# ---------------------------------------------------------------------------
+# test_gl_context_loss
+# Tests hasCurrentGlContext() and the deferred-cleanup pattern using the
+# controllable stubs_gl/ GLFW stub.
+# ---------------------------------------------------------------------------
+
+add_executable(test_gl_context_loss
+    test_gl_context_loss.cpp
+)
+
+target_include_directories(test_gl_context_loss PRIVATE
+    "${STUBS_GL_DIR}"
+    "${SRC_DIR}/support"
+)
+
+add_test(NAME gl_context_loss COMMAND test_gl_context_loss)
+
+# ---------------------------------------------------------------------------
+# test_ringbuffer_overflow
+# Tests ring buffer overflow policies (Drop / ExpandOnce), the one-shot
+# warning flag, and a producer/consumer stress test.
+# ---------------------------------------------------------------------------
+
+add_executable(test_ringbuffer_overflow
+    test_ringbuffer_overflow.cpp
+    "${SRC_DIR}/support/ofxVlc4RingBuffer.cpp"
+)
+
+target_include_directories(test_ringbuffer_overflow PRIVATE
+    "${STUBS_DIR}"
+    "${SRC_DIR}/support"
+)
+
+target_compile_definitions(test_ringbuffer_overflow PRIVATE
+    OFXVLC4_RINGBUFFER_STUB
+)
+
+target_link_libraries(test_ringbuffer_overflow PRIVATE Threads::Threads)
+
+add_test(NAME ringbuffer_overflow COMMAND test_ringbuffer_overflow)
+
+# ---------------------------------------------------------------------------
+# test_mux_join_timeout
+# Tests the future-based timeout pattern used for recording mux thread joins.
+# Pure C++17, no OF/VLC/GL dependencies.
+# ---------------------------------------------------------------------------
+
+add_executable(test_mux_join_timeout
+    test_mux_join_timeout.cpp
+)
+
+target_link_libraries(test_mux_join_timeout PRIVATE Threads::Threads)
+
+add_test(NAME mux_join_timeout COMMAND test_mux_join_timeout)
