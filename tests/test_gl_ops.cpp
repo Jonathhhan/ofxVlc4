@@ -456,6 +456,34 @@ static void testFlushCommands() {
 	CHECK_EQ(logAt(0).name, std::string("glFlush"));
 }
 
+static void testDrainGlErrors() {
+	beginSuite("drainGlErrors");
+
+	// No pending errors – single glGetError returning GL_NO_ERROR.
+	{
+		resetAll();
+		g_glGetErrorRemaining = 0;
+		ofxVlc4GlOps::drainGlErrors();
+		CHECK_EQ(logCount("glGetError"), 1u);
+	}
+
+	// One pending error – two glGetError calls (error + GL_NO_ERROR).
+	{
+		resetAll();
+		g_glGetErrorRemaining = 1;
+		ofxVlc4GlOps::drainGlErrors();
+		CHECK_EQ(logCount("glGetError"), 2u);
+	}
+
+	// Multiple pending errors – drained until GL_NO_ERROR.
+	{
+		resetAll();
+		g_glGetErrorRemaining = 5;
+		ofxVlc4GlOps::drainGlErrors();
+		CHECK_EQ(logCount("glGetError"), 6u);
+	}
+}
+
 // ===================================================================
 // Integration-style tests – verify composite patterns
 // ===================================================================
@@ -619,6 +647,7 @@ int main() {
 	testMapPixelPackBuffer();
 	testUnmapPixelPackBuffer();
 	testFlushCommands();
+	testDrainGlErrors();
 
 	// Integration tests.
 	testPlaybackFenceLifecycle();
