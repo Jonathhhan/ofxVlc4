@@ -1120,18 +1120,14 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			+ ", state="
 			+ ofToString(static_cast<int>(existingState))
 			+ ").");
-		// Mark the ControlBlock as expired BEFORE teardown so that all VLC
-		// callbacks (audio, video, events) that check the expired flag will
-		// early-return.  This mirrors the gating that close() performs.
-		// Without this, callbacks arriving between the start of teardown
-		// and the shuttingDown flag (set inside releaseVlcResources() just
-		// before player release) could access partially-torn-down state.
-		// The make_current and get_proc_address callbacks are exempt from
-		// the expired check so VLC's OpenGL display module can still obtain
-		// a GL context for its own resource cleanup during the release.
+		// The expired flag is now set inside releaseVlcResources() AFTER
+		// the player reaches a terminal stop state, rather than here
+		// before teardown begins.  This allows VLC's video/audio output
+		// callbacks to keep functioning while the player is stopping,
+		// which prevents h264 "get_buffer() failed" error floods from
+		// decoders that cannot deliver frames to a blocked output.
 		// After releaseVlcResources() returns, expired is reset below to
 		// allow the new session to operate normally.
-		m_controlBlock->expired.store(true, std::memory_order_release);
 		logNotice("Reinit: tearing down previous VLC session.");
 		releaseVlcResources();
 	}
@@ -2062,6 +2058,15 @@ void ofxVlc4::releaseVlcResources() {
 			}
 		}
 
+		// Mark the ControlBlock as expired now that the player has reached
+		// (or timed out waiting for) a terminal stop state.  While the
+		// player was still stopping, callbacks needed to remain active so
+		// VLC's video decoder could deliver frames and obtain buffers
+		// normally — blocking them prematurely caused h264 "get_buffer()
+		// failed" floods.  With the player stopped, no new frames will
+		// arrive so it is safe to block callbacks for the teardown phase.
+		m_controlBlock->expired.store(true, std::memory_order_release);
+
 		// Set shuttingDown BEFORE player release to block all VLC callbacks
 		// (audio, video, events) during the release window.  The make_current
 		// and get_proc_address callbacks are exempt — they do NOT check this
@@ -2096,7 +2101,8 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 		logNotice("Release: player teardown complete.");
 	} else {
-		// No player exists, but still set the flag to guard resource cleanup.
+		// No player exists, but still set the flags to guard resource cleanup.
+		m_controlBlock->expired.store(true, std::memory_order_release);
 		m_impl->lifecycleRuntime.shuttingDown.store(true, std::memory_order_release);
 		waitForCallbackScopeDrain();
 	}
@@ -2216,8 +2222,6 @@ void ofxVlc4::releaseVlcResources() {
 }
 
 void ofxVlc4::close() {
-	m_controlBlock->expired.store(true, std::memory_order_release);
-
 	bool expected = false;
 	if (!m_impl->lifecycleRuntime.closeRequested.compare_exchange_strong(expected, true)) {
 		return;
@@ -2225,10 +2229,13 @@ void ofxVlc4::close() {
 
 	m_impl->subsystemRuntime.playbackController->prepareForClose();
 
-	// shuttingDown is set inside releaseVlcResources() before the player
-	// release.  The make_current and get_proc_address callbacks are exempt
-	// from the flag so VLC's OpenGL display module can still clean up its
-	// GL resources with a valid context during the release.
+	// The expired flag and shuttingDown are set inside releaseVlcResources()
+	// AFTER the player reaches a terminal stop state but before the player
+	// release.  This avoids blocking video/audio output callbacks while the
+	// player is still stopping, which would cause h264 decoder error floods.
+	// The make_current and get_proc_address callbacks are exempt from the
+	// flags so VLC's OpenGL display module can still clean up its GL
+	// resources with a valid context during the release.
 	releaseVlcResources();
 	m_impl->audioRuntime.ready.store(false);
 	m_impl->videoFrameRuntime.isVideoLoaded.store(false);
