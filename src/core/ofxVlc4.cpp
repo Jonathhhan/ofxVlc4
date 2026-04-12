@@ -1925,8 +1925,8 @@ void ofxVlc4::releaseVlcResources() {
 		// still attached when libvlc_media_player_release() runs.
 		// Call unwatch unconditionally to recover from any stale local
 		// registration flag state.
-		libvlc_media_player_unwatch_time(player);
 		m_impl->watchTimeRuntime.registered = false;
+		libvlc_media_player_unwatch_time(player);
 		libvlc_video_set_adjust_int(player, libvlc_adjust_Enable, 0);
 
 		// Detach the media from the player BEFORE releasing the player so
