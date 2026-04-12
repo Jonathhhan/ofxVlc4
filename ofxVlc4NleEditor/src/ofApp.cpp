@@ -443,7 +443,7 @@ void ofApp::keyReleased(int key) {
 
 void ofApp::dragEvent(ofDragInfo dragInfo) {
 	for (const auto & file : dragInfo.files) {
-		std::string id = addMasterClip(file);
+		std::string id = addMasterClip(file.string());
 		loadSourceClip(id);
 	}
 }

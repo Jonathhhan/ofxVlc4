@@ -148,7 +148,7 @@ void ofApp::keyPressed(int key) {
 
 void ofApp::dragEvent(ofDragInfo dragInfo) {
 	for (const auto & file : dragInfo.files) {
-		addClipFromFile(file);
+		addClipFromFile(file.string());
 	}
 }
 
