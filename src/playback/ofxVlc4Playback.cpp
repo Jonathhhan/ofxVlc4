@@ -192,11 +192,18 @@ float ofxVlc4::getLength() const {
 }
 
 void ofxVlc4::vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * data) {
-	((ofxVlc4 *)data)->vlcMediaPlayerEvent(event);
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
+		return;
+	}
+	CallbackScope scope = owner->enterCallbackScope(data);
+	if (!scope || !event) {
+		return;
+	}
+	scope.get()->vlcMediaPlayerEvent(event);
 }
 
 void ofxVlc4::vlcMediaPlayerEvent(const libvlc_event_t * event) {
 	m_impl->subsystemRuntime.playbackController->handleMediaPlayerEvent(event);
 }
-
 

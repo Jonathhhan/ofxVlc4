@@ -252,6 +252,83 @@ libvlc_media_player_t * ofxVlc4::sessionPlayer() const {
 	return m_impl->subsystemRuntime.coreSession ? m_impl->subsystemRuntime.coreSession->player() : nullptr;
 }
 
+ofxVlc4::CallbackScope::CallbackScope(ofxVlc4 * ownerRef)
+	: owner(ownerRef) {
+}
+
+ofxVlc4::CallbackScope::~CallbackScope() {
+	if (owner) {
+		owner->leaveCallbackScope();
+	}
+}
+
+ofxVlc4::CallbackScope::CallbackScope(CallbackScope && other) noexcept
+	: owner(other.owner) {
+	other.owner = nullptr;
+}
+
+ofxVlc4::CallbackScope & ofxVlc4::CallbackScope::operator=(CallbackScope && other) noexcept {
+	if (this == &other) {
+		return *this;
+	}
+	if (owner) {
+		owner->leaveCallbackScope();
+	}
+	owner = other.owner;
+	other.owner = nullptr;
+	return *this;
+}
+
+ofxVlc4::CallbackScope::operator bool() const {
+	return owner != nullptr;
+}
+
+ofxVlc4 * ofxVlc4::CallbackScope::get() const {
+	return owner;
+}
+
+ofxVlc4::CallbackScope ofxVlc4::enterCallbackScope(void * data) const {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner || !owner->tryEnterCallbackScope()) {
+		return {};
+	}
+	return CallbackScope(owner);
+}
+
+bool ofxVlc4::tryEnterCallbackScope() const {
+	if (!m_impl || m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return false;
+	}
+	m_impl->lifecycleRuntime.callbackDepth.fetch_add(1, std::memory_order_acq_rel);
+	if (m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		m_impl->lifecycleRuntime.callbackDepth.fetch_sub(1, std::memory_order_acq_rel);
+		return false;
+	}
+	return true;
+}
+
+void ofxVlc4::leaveCallbackScope() const {
+	if (!m_impl) {
+		return;
+	}
+	m_impl->lifecycleRuntime.callbackDepth.fetch_sub(1, std::memory_order_acq_rel);
+}
+
+void ofxVlc4::waitForCallbackScopeDrain() const {
+	if (!m_impl) {
+		return;
+	}
+	for (int i = 0; i < 250; ++i) {
+		if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) == 0) {
+			return;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) != 0) {
+		logWarning("Release: callback drain wait timed out.");
+	}
+}
+
 
 ofxVlc4::ofxVlc4()
 	: m_impl(std::make_unique<Impl>())
@@ -1164,19 +1241,19 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
-	if (m_impl->subsystemRuntime.coreSession->playerEvents() && m_impl->subsystemRuntime.eventRouter) {
-		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
+	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
+		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(this, ofxVlc4::vlcMediaPlayerEventStatic);
 	}
 
 	const libvlc_dialog_cbs dialogCallbacks = {
-		VlcEventRouter::dialogDisplayLoginStatic,
-		VlcEventRouter::dialogDisplayQuestionStatic,
-		VlcEventRouter::dialogDisplayProgressStatic,
-		VlcEventRouter::dialogCancelStatic,
-		VlcEventRouter::dialogUpdateProgressStatic
+		ofxVlc4::dialogDisplayLoginStatic,
+		ofxVlc4::dialogDisplayQuestionStatic,
+		ofxVlc4::dialogDisplayProgressStatic,
+		ofxVlc4::dialogCancelStatic,
+		ofxVlc4::dialogUpdateProgressStatic
 	};
-	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, m_impl->subsystemRuntime.eventRouter.get());
-	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), VlcEventRouter::dialogErrorStatic, m_impl->subsystemRuntime.eventRouter.get());
+	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, this);
+	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), ofxVlc4::dialogErrorStatic, this);
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
 		startRendererDiscovery(m_impl->rendererDiscoveryRuntime.discovererName);
@@ -1940,12 +2017,14 @@ void ofxVlc4::releaseVlcResources() {
 		}
 		libvlc_media_player_release(player);
 		logVerbose("Release: media player released.");
+		waitForCallbackScopeDrain();
 		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
 		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 		logNotice("Release: player teardown complete.");
 	} else {
 		// No player exists, but still set the flag to guard resource cleanup.
 		m_impl->lifecycleRuntime.shuttingDown.store(true, std::memory_order_release);
+		waitForCallbackScopeDrain();
 	}
 
 	// The player is now fully released — VLC has joined all internal threads

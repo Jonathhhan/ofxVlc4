@@ -798,6 +798,22 @@ private:
 	struct Impl;
 	std::unique_ptr<Impl> m_impl;
 
+	class CallbackScope {
+	public:
+		CallbackScope() = default;
+		explicit CallbackScope(ofxVlc4 * owner);
+		~CallbackScope();
+		CallbackScope(const CallbackScope &) = delete;
+		CallbackScope & operator=(const CallbackScope &) = delete;
+		CallbackScope(CallbackScope && other) noexcept;
+		CallbackScope & operator=(CallbackScope && other) noexcept;
+		explicit operator bool() const;
+		ofxVlc4 * get() const;
+
+	private:
+		ofxVlc4 * owner = nullptr;
+	};
+
 
 	// VLC Video callbacks
 	static bool videoResize(void * data, const libvlc_video_render_cfg_t * cfg, libvlc_video_output_cfg_t * render_cfg);
@@ -1016,6 +1032,10 @@ private:
 		const ofxVlc4MuxOptions & options,
 		const std::atomic<bool> * cancelRequested,
 		std::string * errorOut);
+	CallbackScope enterCallbackScope(void * data) const;
+	bool tryEnterCallbackScope() const;
+	void leaveCallbackScope() const;
+	void waitForCallbackScopeDrain() const;
 
 public:
 	/// @brief Construct a new ofxVlc4 instance.  Call init() to create the VLC player.

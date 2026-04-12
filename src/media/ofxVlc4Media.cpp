@@ -679,8 +679,8 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 	}
 
 	owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(libvlc_media_event_manager(owner.m_impl->subsystemRuntime.coreSession->media()));
-	if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.coreSession->mediaEvents() && owner.m_impl->subsystemRuntime.eventRouter) {
-		owner.m_impl->subsystemRuntime.coreSession->attachMediaEvents(owner.m_impl->subsystemRuntime.eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
+	if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.coreSession->mediaEvents()) {
+		owner.m_impl->subsystemRuntime.coreSession->attachMediaEvents(&owner, ofxVlc4::vlcMediaEventStatic);
 	}
 
 	if (instance) {
@@ -720,7 +720,6 @@ bool ofxVlc4::MediaComponent::loadMediaAtIndex(int index) {
 void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 	prepareForMediaDetach();
 	auto * coreSession = owner.m_impl->subsystemRuntime.coreSession.get();
-	auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	libvlc_media_t * currentMedia = owner.sessionMedia();
 
@@ -729,10 +728,10 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 	}
 
 	if (coreSession && coreSession->mediaEvents()) {
-		if (currentMedia && eventRouter) {
+		if (currentMedia) {
 			coreSession->detachMediaEvents(
-				eventRouter,
-				VlcEventRouter::vlcMediaEventStatic);
+				&owner,
+				ofxVlc4::vlcMediaEventStatic);
 		}
 		coreSession->setMediaEvents(nullptr);
 	}
@@ -1166,12 +1165,9 @@ void ofxVlc4::applyMediaPlayerRole() {
 
 void ofxVlc4::detachEvents() {
 	auto & coreSession = m_impl->subsystemRuntime.coreSession;
-	auto & eventRouter = m_impl->subsystemRuntime.eventRouter;
 
 	if (coreSession && coreSession->playerEvents()) {
-		if (eventRouter) {
-			coreSession->detachPlayerEvents(eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
-		}
+		coreSession->detachPlayerEvents(this, ofxVlc4::vlcMediaPlayerEventStatic);
 		// Null the pointer unconditionally: if the router existed, callbacks
 		// are already unregistered above; if it didn't, nothing was registered
 		// so there is nothing to detach.  Either way the stale pointer must
@@ -1180,9 +1176,7 @@ void ofxVlc4::detachEvents() {
 	}
 
 	if (coreSession && coreSession->mediaEvents()) {
-		if (eventRouter) {
-			coreSession->detachMediaEvents(eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
-		}
+		coreSession->detachMediaEvents(this, ofxVlc4::vlcMediaEventStatic);
 		// Null the pointer so that clearCurrentMedia() does not attempt a
 		// redundant detach on the same event manager.
 		coreSession->setMediaEvents(nullptr);
@@ -1603,14 +1597,15 @@ void ofxVlc4::MediaComponent::handleMediaEvent(const libvlc_event_t * event) {
 
 
 void ofxVlc4::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
-	if (!data) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
 		return;
 	}
-	auto * that = static_cast<ofxVlc4 *>(data);
-	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	CallbackScope scope = owner->enterCallbackScope(data);
+	if (!scope || !event) {
 		return;
 	}
-	that->vlcMediaEvent(event);
+	scope.get()->vlcMediaEvent(event);
 }
 
 

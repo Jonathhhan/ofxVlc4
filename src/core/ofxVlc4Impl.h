@@ -325,6 +325,7 @@ struct ofxVlc4::Impl {
 	struct LifecycleRuntimeState {
 		std::atomic<bool> closeRequested { false };
 		std::atomic<bool> shuttingDown { false };
+		std::atomic<uint32_t> callbackDepth { 0 };
 	};
 
 	struct AnalysisRuntimeState {

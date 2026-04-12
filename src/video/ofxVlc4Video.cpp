@@ -2249,19 +2249,27 @@ bool ofxVlc4::applyPendingVideoResize() {
 }
 
 bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, libvlc_video_output_cfg_t * render_cfg) {
-	ofxVlc4 * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
 		return false;
 	}
-	return that->m_impl->subsystemRuntime.videoComponent->videoResize(cfg, render_cfg);
+	CallbackScope scope = owner->enterCallbackScope(data);
+	if (!scope) {
+		return false;
+	}
+	return scope.get()->m_impl->subsystemRuntime.videoComponent->videoResize(cfg, render_cfg);
 }
 
 void ofxVlc4::videoSwap(void * data) {
-	ofxVlc4 * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
 		return;
 	}
-	that->m_impl->subsystemRuntime.videoComponent->videoSwap();
+	CallbackScope scope = owner->enterCallbackScope(data);
+	if (!scope) {
+		return;
+	}
+	scope.get()->m_impl->subsystemRuntime.videoComponent->videoSwap();
 }
 
 bool ofxVlc4::make_current(void * data, bool current) {
@@ -2302,11 +2310,15 @@ bool ofxVlc4::videoOutputSetup(
 	const libvlc_video_setup_device_cfg_t * cfg,
 	libvlc_video_setup_device_info_t * out) {
 #ifdef TARGET_WIN32
-	auto * that = (data && *data) ? static_cast<ofxVlc4 *>(*data) : nullptr;
-	if (!that || !that->m_impl || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	auto * owner = (data && *data) ? static_cast<ofxVlc4 *>(*data) : nullptr;
+	if (!owner) {
 		return false;
 	}
-	return that->m_impl->subsystemRuntime.videoComponent->videoOutputSetup(cfg, out);
+	CallbackScope scope = owner->enterCallbackScope(*data);
+	if (!scope) {
+		return false;
+	}
+	return scope.get()->m_impl->subsystemRuntime.videoComponent->videoOutputSetup(cfg, out);
 #else
 	(void)data;
 	(void)cfg;
@@ -2316,24 +2328,27 @@ bool ofxVlc4::videoOutputSetup(
 }
 
 void ofxVlc4::videoOutputCleanup(void * data) {
-	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
 		return;
 	}
-	if (that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
-		that->logVerbose("Video callback videoOutputCleanup ignored: shuttingDown flag is set.");
+	CallbackScope scope = owner->enterCallbackScope(data);
+	if (!scope) {
 		return;
 	}
-	that->logVerbose("Video callback videoOutputCleanup invoked.");
-	that->m_impl->subsystemRuntime.videoComponent->videoOutputCleanup();
+	scope.get()->m_impl->subsystemRuntime.videoComponent->videoOutputCleanup();
 }
 
 void ofxVlc4::videoFrameMetadata(void * data, libvlc_video_metadata_type_t type, const void * metadata) {
-	auto * that = static_cast<ofxVlc4 *>(data);
-	if (!that || !that->m_impl || that->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
 		return;
 	}
-	that->m_impl->subsystemRuntime.videoComponent->videoFrameMetadata(type, metadata);
+	CallbackScope scope = owner->enterCallbackScope(data);
+	if (!scope) {
+		return;
+	}
+	scope.get()->m_impl->subsystemRuntime.videoComponent->videoFrameMetadata(type, metadata);
 }
 
 void ofxVlc4::bindVlcRenderTarget() {
