@@ -1947,9 +1947,10 @@ void ofxVlc4::releaseVlcResources() {
 		libvlc_media_parse_stop(instanceBeforeMediaClear, mediaBeforeClear);
 	}
 	clearCurrentMedia(false);
-	logVerbose("Release: current media cleared.");
+	logNotice("Release: current media cleared.");
 
 	if (cleanupWindow && needsGlCleanup) {
+		logNotice("Release: activating GL context for resource cleanup.");
 		updateNativeVideoWindowVisibility();
 		cleanupWindow->makeCurrent();
 	}
@@ -1970,7 +1971,7 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->videoResourceRuntime.videoAdjustShaderReady = false;
 		m_impl->videoResourceRuntime.videoTexture.clear();
 		clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
-		logVerbose("Release: GL resources cleared.");
+		logNotice("Release: GL resources cleared.");
 	}
 	if (cleanupWindow && needsGlCleanup) {
 		// Restore the main window GL context so that callers invoked from
@@ -1991,13 +1992,13 @@ void ofxVlc4::releaseVlcResources() {
 	m_impl->videoGeometryRuntime.allocatedVideoHeight = 1;
 
 	if (m_impl->subsystemRuntime.coreSession->instance()) {
-		logVerbose("Release: releasing VLC instance.");
+		logNotice("Release: releasing VLC instance.");
 		libvlc_log_unset(m_impl->subsystemRuntime.coreSession->instance());
 		m_impl->subsystemRuntime.mediaComponent->closeLibVlcLogFile();
 		libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
 		libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
 		libvlc_release(m_impl->subsystemRuntime.coreSession->instance());
-		logVerbose("Release: VLC instance released.");
+		logNotice("Release: VLC instance released.");
 		m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
 	}
 	processDeferredRecordingMuxCleanup(true);
