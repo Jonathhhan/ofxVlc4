@@ -153,8 +153,8 @@ size_t ofxVlc4RingBuffer::write(const float * src, size_t wanted) {
 		// ExpandOnce: double capacity on first overflow then re-attempt.
 		// WARNING: not safe during concurrent reads — set before playback.
 		if (_overflowPolicy == OverflowPolicy::ExpandOnce && !_expandedOnce) {
-			_expandedOnce = true;
 			allocate(_capacity * 2);
+			_expandedOnce = true;
 			writable = writeBegin(dst[0], count[0], dst[1], count[1]);
 			consumed = std::min(wanted, writable);
 		}

@@ -72,6 +72,7 @@ constexpr int kOfxVlc4AddonVersionMajor = 1;
 constexpr int kOfxVlc4AddonVersionMinor = 0;
 constexpr int kOfxVlc4AddonVersionPatch = 4;
 constexpr const char * kOfxVlc4AddonVersionString = "1.0.4";
+// 2s timeout accommodates slower hardware and complex VLC cleanup (e.g. network streams).
 constexpr int kCallbackDrainTimeoutMs = 2000;
 
 bool shouldLog(ofLogLevel level) {
