@@ -78,6 +78,15 @@ inline bool setupFboWithTexture(GLuint & fboId, GLenum texTarget, GLuint texId) 
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texTarget, texId, 0);
+
+	const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE) {
+		ofLogError("ofxVlc4") << "FBO incomplete after texture attachment (status=0x"
+			<< std::hex << status << std::dec << "). Video rendering may fail.";
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		return false;
+	}
+
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	ofClear(0, 0, 0, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
