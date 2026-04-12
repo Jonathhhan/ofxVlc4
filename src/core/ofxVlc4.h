@@ -18,6 +18,10 @@
 typedef struct libvlc_renderer_discoverer_t libvlc_renderer_discoverer_t;
 typedef struct libvlc_renderer_item_t libvlc_renderer_item_t;
 typedef struct libvlc_dialog_id libvlc_dialog_id;
+
+namespace ofxVlc4MuxHelpers {
+struct FileReadinessContext;
+}
 typedef struct libvlc_media_discoverer_t libvlc_media_discoverer_t;
 typedef struct libvlc_media_list_t libvlc_media_list_t;
 class VlcCoreSession;
@@ -1042,7 +1046,8 @@ private:
 		const std::string & outputPath,
 		const ofxVlc4MuxOptions & options,
 		const std::atomic<bool> * cancelRequested,
-		std::string * errorOut);
+		std::string * errorOut,
+		const ofxVlc4MuxHelpers::FileReadinessContext * fileReadiness = nullptr);
 	CallbackScope enterCallbackScope() const;
 	bool tryEnterCallbackScope() const;
 	void leaveCallbackScope() const;

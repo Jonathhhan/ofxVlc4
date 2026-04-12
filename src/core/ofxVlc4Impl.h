@@ -11,6 +11,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
+#include <future>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -308,6 +309,13 @@ struct ofxVlc4::Impl {
 		std::atomic<int> sessionState { static_cast<int>(ofxVlc4RecordingSessionState::Idle) };
 		std::shared_ptr<TaskState> activeTask;
 		std::thread worker;
+		std::promise<void> workerFinished;
+		std::future<void> workerFuture;
+
+		std::atomic<bool> videoFileFinalized { false };
+		std::atomic<bool> audioFileFinalized { false };
+		mutable std::mutex fileReadyMutex;
+		mutable std::condition_variable fileReadyCv;
 	};
 
 	struct RecordingSessionRuntimeState {

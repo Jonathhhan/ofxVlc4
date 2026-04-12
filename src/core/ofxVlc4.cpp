@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <sstream>
 
 #ifdef TARGET_WIN32
@@ -1675,7 +1676,18 @@ void ofxVlc4::finalizeRecordingMuxThread() {
 		return;
 	}
 
-	m_impl->recordingMuxRuntime.worker.join();
+	if (m_impl->recordingMuxRuntime.workerFuture.valid()) {
+		constexpr int kMuxJoinTimeoutMs = 15000;
+		auto status = m_impl->recordingMuxRuntime.workerFuture.wait_for(std::chrono::milliseconds(kMuxJoinTimeoutMs));
+		if (status == std::future_status::timeout) {
+			logError("Recording mux thread did not finish within " + ofToString(kMuxJoinTimeoutMs) + " ms; detaching.");
+			m_impl->recordingMuxRuntime.worker.detach();
+		} else {
+			m_impl->recordingMuxRuntime.worker.join();
+		}
+	} else {
+		m_impl->recordingMuxRuntime.worker.join();
+	}
 	m_impl->recordingMuxRuntime.activeTask.reset();
 	m_impl->recordingMuxRuntime.inProgress.store(false);
 	if (!activeTask->completed.exchange(false)) {
@@ -1857,7 +1869,17 @@ void ofxVlc4::updatePendingRecordingMux() {
 		task->outputPath = outputPath;
 	}
 	setStatus("Muxing recording...");
-	m_impl->recordingMuxRuntime.worker = std::thread([task, resolvedVideoPath, resolvedAudioPath, outputPath, options]() {
+	m_impl->recordingMuxRuntime.videoFileFinalized.store(false, std::memory_order_release);
+	m_impl->recordingMuxRuntime.audioFileFinalized.store(false, std::memory_order_release);
+	m_impl->recordingMuxRuntime.workerFinished = std::promise<void>();
+	m_impl->recordingMuxRuntime.workerFuture = m_impl->recordingMuxRuntime.workerFinished.get_future();
+	auto workerPromise = std::make_shared<std::promise<void>>(std::move(m_impl->recordingMuxRuntime.workerFinished));
+	auto fileCtx = std::make_shared<ofxVlc4MuxHelpers::FileReadinessContext>();
+	fileCtx->videoFinalized = &m_impl->recordingMuxRuntime.videoFileFinalized;
+	fileCtx->audioFinalized = &m_impl->recordingMuxRuntime.audioFileFinalized;
+	fileCtx->mutex = &m_impl->recordingMuxRuntime.fileReadyMutex;
+	fileCtx->cv = &m_impl->recordingMuxRuntime.fileReadyCv;
+	m_impl->recordingMuxRuntime.worker = std::thread([task, resolvedVideoPath, resolvedAudioPath, outputPath, options, workerPromise, fileCtx]() {
 		std::string muxError;
 		const bool muxed = ofxVlc4::muxRecordingFilesInternal(
 			resolvedVideoPath,
@@ -1865,7 +1887,8 @@ void ofxVlc4::updatePendingRecordingMux() {
 			outputPath,
 			options,
 			&task->cancelRequested,
-			&muxError);
+			&muxError,
+			fileCtx.get());
 		{
 			std::lock_guard<std::mutex> lock(task->mutex);
 			task->completedOutputPath = muxed ? outputPath : std::string();
@@ -1873,6 +1896,7 @@ void ofxVlc4::updatePendingRecordingMux() {
 		}
 		task->inProgress.store(false);
 		task->completed.store(true);
+		workerPromise->set_value();
 	});
 }
 
@@ -1883,7 +1907,18 @@ void ofxVlc4::cancelPendingRecordingMux() {
 		activeTask->cancelRequested.store(true, std::memory_order_release);
 	}
 	if (m_impl->recordingMuxRuntime.worker.joinable()) {
-		m_impl->recordingMuxRuntime.worker.join();
+		constexpr int kMuxJoinTimeoutMs = 15000;
+		if (m_impl->recordingMuxRuntime.workerFuture.valid()) {
+			auto status = m_impl->recordingMuxRuntime.workerFuture.wait_for(std::chrono::milliseconds(kMuxJoinTimeoutMs));
+			if (status == std::future_status::timeout) {
+				logError("Recording mux thread did not finish within " + ofToString(kMuxJoinTimeoutMs) + " ms; detaching.");
+				m_impl->recordingMuxRuntime.worker.detach();
+			} else {
+				m_impl->recordingMuxRuntime.worker.join();
+			}
+		} else {
+			m_impl->recordingMuxRuntime.worker.join();
+		}
 	}
 	m_impl->recordingMuxRuntime.inProgress.store(false);
 	m_impl->recordingMuxRuntime.activeTask.reset();
