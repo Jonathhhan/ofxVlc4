@@ -1834,6 +1834,22 @@ void ofxVlc4::releaseVlcResources() {
 	const auto releaseStart = std::chrono::steady_clock::now();
 	finalizeRecordingMuxThread();
 	cancelPendingRecordingMux();
+
+	// Stop any pending media parse BEFORE detaching events.  The parse is
+	// asynchronous (started by libvlc_media_parse_request in loadMediaSource)
+	// and runs on the instance, not the player.  If the parse fires a
+	// MediaParsedChanged event right as detachEvents() calls
+	// libvlc_event_detach, the callback can race with the teardown sequence.
+	// Stopping the parse first eliminates the window for that race.
+	{
+		libvlc_instance_t * inst = m_impl->subsystemRuntime.coreSession->instance();
+		libvlc_media_t * med = m_impl->subsystemRuntime.coreSession->media();
+		if (inst && med) {
+			logNotice("Release: stopping pending media parse.");
+			libvlc_media_parse_stop(inst, med);
+		}
+	}
+
 	detachEvents();
 	dismissAllDialogs();
 	stopMediaDiscoveryInternal();
@@ -1936,20 +1952,12 @@ void ofxVlc4::releaseVlcResources() {
 	// the release window.
 	logVerbose("Release: player released, shuttingDown already set.");
 
-	// Stop any pending media parse BEFORE releasing the media.  The parse
-	// is asynchronous (started by libvlc_media_parse_request in
-	// loadMediaSource) and runs on the instance, not the player.  If the
-	// parse is still active when the media is released, VLC's internal
-	// parse thread may race with the instance teardown that follows.
-	libvlc_instance_t * instanceBeforeMediaClear = m_impl->subsystemRuntime.coreSession->instance();
-	libvlc_media_t * mediaBeforeClear = m_impl->subsystemRuntime.coreSession->media();
-	if (instanceBeforeMediaClear && mediaBeforeClear) {
-		libvlc_media_parse_stop(instanceBeforeMediaClear, mediaBeforeClear);
-	}
+	logNotice("Release: clearing current media.");
 	clearCurrentMedia(false);
-	logVerbose("Release: current media cleared.");
+	logNotice("Release: current media cleared.");
 
 	if (cleanupWindow && needsGlCleanup) {
+		logNotice("Release: activating GL context for resource cleanup.");
 		updateNativeVideoWindowVisibility();
 		cleanupWindow->makeCurrent();
 	}
@@ -1970,7 +1978,7 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->videoResourceRuntime.videoAdjustShaderReady = false;
 		m_impl->videoResourceRuntime.videoTexture.clear();
 		clearAllocatedFbo(m_impl->videoResourceRuntime.exposedTextureFbo);
-		logVerbose("Release: GL resources cleared.");
+		logNotice("Release: GL resources cleared.");
 	}
 	if (cleanupWindow && needsGlCleanup) {
 		// Restore the main window GL context so that callers invoked from
@@ -1991,13 +1999,13 @@ void ofxVlc4::releaseVlcResources() {
 	m_impl->videoGeometryRuntime.allocatedVideoHeight = 1;
 
 	if (m_impl->subsystemRuntime.coreSession->instance()) {
-		logVerbose("Release: releasing VLC instance.");
+		logNotice("Release: releasing VLC instance.");
 		libvlc_log_unset(m_impl->subsystemRuntime.coreSession->instance());
 		m_impl->subsystemRuntime.mediaComponent->closeLibVlcLogFile();
 		libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
 		libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
 		libvlc_release(m_impl->subsystemRuntime.coreSession->instance());
-		logVerbose("Release: VLC instance released.");
+		logNotice("Release: VLC instance released.");
 		m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
 	}
 	processDeferredRecordingMuxCleanup(true);

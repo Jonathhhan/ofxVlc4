@@ -1171,17 +1171,21 @@ void ofxVlc4::detachEvents() {
 	if (coreSession && coreSession->playerEvents()) {
 		if (eventRouter) {
 			coreSession->detachPlayerEvents(eventRouter.get(), VlcEventRouter::vlcMediaPlayerEventStatic);
-		} else {
-			coreSession->setPlayerEvents(nullptr);
 		}
+		// Null the pointer unconditionally: if the router existed, callbacks
+		// are already unregistered above; if it didn't, nothing was registered
+		// so there is nothing to detach.  Either way the stale pointer must
+		// not be kept.
+		coreSession->setPlayerEvents(nullptr);
 	}
 
 	if (coreSession && coreSession->mediaEvents()) {
 		if (eventRouter) {
 			coreSession->detachMediaEvents(eventRouter.get(), VlcEventRouter::vlcMediaEventStatic);
-		} else {
-			coreSession->setMediaEvents(nullptr);
 		}
+		// Null the pointer so that clearCurrentMedia() does not attempt a
+		// redundant detach on the same event manager.
+		coreSession->setMediaEvents(nullptr);
 	}
 }
 
