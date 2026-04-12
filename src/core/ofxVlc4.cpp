@@ -1944,7 +1944,23 @@ void ofxVlc4::releaseVlcResources() {
 	libvlc_instance_t * instanceBeforeMediaClear = m_impl->subsystemRuntime.coreSession->instance();
 	libvlc_media_t * mediaBeforeClear = m_impl->subsystemRuntime.coreSession->media();
 	if (instanceBeforeMediaClear && mediaBeforeClear) {
-		libvlc_media_parse_stop(instanceBeforeMediaClear, mediaBeforeClear);
+		const libvlc_media_parsed_status_t parseStatusBeforeStop = libvlc_media_get_parsed_status(mediaBeforeClear);
+		if (parseStatusBeforeStop == libvlc_media_parsed_status_pending) {
+			libvlc_media_parse_stop(instanceBeforeMediaClear, mediaBeforeClear);
+			constexpr int kParseStopPollMs = 5;
+			constexpr int kParseStopMaxWaitMs = 250;
+			bool parseSettled = false;
+			for (int waitedMs = 0; waitedMs < kParseStopMaxWaitMs; waitedMs += kParseStopPollMs) {
+				if (libvlc_media_get_parsed_status(mediaBeforeClear) != libvlc_media_parsed_status_pending) {
+					parseSettled = true;
+					break;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(kParseStopPollMs));
+			}
+			if (!parseSettled) {
+				logWarning("Release: media parse remained pending after parse_stop; continuing teardown.");
+			}
+		}
 	}
 	clearCurrentMedia(false);
 	logVerbose("Release: current media cleared.");
