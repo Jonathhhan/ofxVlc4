@@ -16,12 +16,27 @@ void VlcEventRouter::vlcMediaPlayerEventStatic(const libvlc_event_t * event, voi
 		return;
 	}
 
+	// Drop player events while the session is shutting down.  The
+	// shuttingDown flag is set before player release to prevent callbacks
+	// from accessing the player after it has been freed.
+	if (router->owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
+
 	router->owner.vlcMediaPlayerEvent(event);
 }
 
 void VlcEventRouter::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
 	auto * router = static_cast<VlcEventRouter *>(data);
 	if (!router || !event) {
+		return;
+	}
+
+	// Drop media events while the session is shutting down.  A late
+	// MediaParsedChanged event from a recently-cancelled parse could
+	// otherwise call into teardown-unsafe code paths (e.g.
+	// queryVideoTrackGeometry on an already-released player).
+	if (router->owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 
