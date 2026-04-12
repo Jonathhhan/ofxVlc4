@@ -192,12 +192,7 @@ struct ofxVlc4AudioVisualizerSettings {
 	int projectMTextureSize = 0; // --projectm-texture-size (power-of-two pixels, e.g. 512, 1024)
 	int projectMMeshX = 0;       // --projectm-meshx (horizontal mesh density)
 	int projectMMeshY = 0;       // --projectm-meshy (vertical mesh density)
-	// When true and a visualizer module is active, silence is written into
-	// the audio ring buffer whenever VLC is not delivering audio, keeping
-	// the visualizer display active even when no media is playing.
-	bool continuousMode = false;
-
-	/// @brief Compare all fields including runtime-only fields.
+	/// @brief Compare all fields.
 	bool operator==(const ofxVlc4AudioVisualizerSettings & other) const {
 		return module == other.module
 			&& visualEffect == other.visualEffect
@@ -207,26 +202,10 @@ struct ofxVlc4AudioVisualizerSettings {
 			&& projectMPresetPath == other.projectMPresetPath
 			&& projectMTextureSize == other.projectMTextureSize
 			&& projectMMeshX == other.projectMMeshX
-			&& projectMMeshY == other.projectMMeshY
-			&& continuousMode == other.continuousMode;
+			&& projectMMeshY == other.projectMMeshY;
 	}
 	bool operator!=(const ofxVlc4AudioVisualizerSettings & other) const {
 		return !(*this == other);
-	}
-
-	/// @brief Compare only the fields that map to libvlc init arguments.
-	/// Runtime-only fields (e.g. continuousMode) are excluded so that
-	/// changing them does not trigger an unnecessary VLC reinit.
-	bool libvlcInitArgsEqual(const ofxVlc4AudioVisualizerSettings & other) const {
-		return module == other.module
-			&& visualEffect == other.visualEffect
-			&& width == other.width
-			&& height == other.height
-			&& goomSpeed == other.goomSpeed
-			&& projectMPresetPath == other.projectMPresetPath
-			&& projectMTextureSize == other.projectMTextureSize
-			&& projectMMeshX == other.projectMMeshX
-			&& projectMMeshY == other.projectMMeshY;
 	}
 };
 
