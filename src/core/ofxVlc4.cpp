@@ -1337,15 +1337,20 @@ ofxVlc4AudioVisualizerSettings ofxVlc4::getAudioVisualizerSettings() const {
 }
 
 void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & settings) {
-	m_impl->playerConfigRuntime.audioVisualizerSettings.module = settings.module;
-	m_impl->playerConfigRuntime.audioVisualizerSettings.visualEffect = settings.visualEffect;
-	m_impl->playerConfigRuntime.audioVisualizerSettings.width = std::max(64, settings.width);
-	m_impl->playerConfigRuntime.audioVisualizerSettings.height = std::max(64, settings.height);
-	m_impl->playerConfigRuntime.audioVisualizerSettings.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
-	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMPresetPath = settings.projectMPresetPath;
-	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMTextureSize = std::max(0, settings.projectMTextureSize);
-	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMMeshX = std::max(0, settings.projectMMeshX);
-	m_impl->playerConfigRuntime.audioVisualizerSettings.projectMMeshY = std::max(0, settings.projectMMeshY);
+	ofxVlc4AudioVisualizerSettings normalized;
+	normalized.module = settings.module;
+	normalized.visualEffect = settings.visualEffect;
+	normalized.width = std::max(64, settings.width);
+	normalized.height = std::max(64, settings.height);
+	normalized.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
+	normalized.projectMPresetPath = settings.projectMPresetPath;
+	normalized.projectMTextureSize = std::max(0, settings.projectMTextureSize);
+	normalized.projectMMeshX = std::max(0, settings.projectMMeshX);
+	normalized.projectMMeshY = std::max(0, settings.projectMMeshY);
+	if (normalized == m_impl->playerConfigRuntime.audioVisualizerSettings) {
+		return;
+	}
+	m_impl->playerConfigRuntime.audioVisualizerSettings = normalized;
 	if (sessionPlayer()) {
 		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
 			return;
