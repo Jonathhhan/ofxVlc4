@@ -459,8 +459,10 @@ void ofxVlc4::libVlcLogStatic(void * data, int level, const libvlc_log_t * ctx, 
 	if (!owner || !ctx) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 
 	LibVlcLogEntry entry;
 	entry.level = level;
@@ -751,8 +753,10 @@ void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * val
 	if (!owner || !value) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	auto * player = scope.get();
 
 	WatchTimeCallback callback;
@@ -792,8 +796,10 @@ void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	auto * player = scope.get();
 
 	WatchTimeCallback callback;
@@ -829,8 +835,10 @@ void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	auto * player = scope.get();
 
 	WatchTimeCallback callback;
@@ -941,8 +949,10 @@ void ofxVlc4::dialogDisplayLoginStatic(
 	if (!owner || !id) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	owner = scope.get();
 
 	DialogInfo dialog;
@@ -969,8 +979,10 @@ void ofxVlc4::dialogDisplayQuestionStatic(
 	if (!owner || !id) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	owner = scope.get();
 
 	DialogInfo dialog;
@@ -998,8 +1010,10 @@ void ofxVlc4::dialogDisplayProgressStatic(
 	if (!owner || !id) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	owner = scope.get();
 
 	DialogInfo dialog;
@@ -1019,8 +1033,10 @@ void ofxVlc4::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
 	if (!owner || !id) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	owner = scope.get();
 
 	const std::uintptr_t token = reinterpret_cast<std::uintptr_t>(id);
@@ -1033,8 +1049,10 @@ void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, flo
 	if (!owner || !id) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	owner = scope.get();
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -1066,8 +1084,10 @@ void ofxVlc4::dialogErrorStatic(void * data, const char * title, const char * te
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
-	if (!scope) return;
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
 	owner = scope.get();
 	{
 		std::lock_guard<std::mutex> lock(owner->m_impl->synchronizationRuntime.dialogMutex);

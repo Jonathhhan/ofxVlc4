@@ -951,7 +951,7 @@ void ofxVlc4::mediaDiscovererMediaListEventStatic(const libvlc_event_t * event, 
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope || !event) {
 		return;
 	}
@@ -963,7 +963,7 @@ void ofxVlc4::rendererDiscovererEventStatic(const libvlc_event_t * event, void *
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope || !event) {
 		return;
 	}

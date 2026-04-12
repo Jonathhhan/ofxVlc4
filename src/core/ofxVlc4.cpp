@@ -71,6 +71,7 @@ constexpr int kOfxVlc4AddonVersionMajor = 1;
 constexpr int kOfxVlc4AddonVersionMinor = 0;
 constexpr int kOfxVlc4AddonVersionPatch = 4;
 constexpr const char * kOfxVlc4AddonVersionString = "1.0.4";
+constexpr int kCallbackDrainTimeoutMs = 250;
 
 bool shouldLog(ofLogLevel level) {
 	const ofLogLevel configuredLevel = static_cast<ofLogLevel>(gLogLevel.load());
@@ -287,12 +288,11 @@ ofxVlc4 * ofxVlc4::CallbackScope::get() const {
 	return owner;
 }
 
-ofxVlc4::CallbackScope ofxVlc4::enterCallbackScope(void * data) const {
-	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (!owner || !owner->tryEnterCallbackScope()) {
+ofxVlc4::CallbackScope ofxVlc4::enterCallbackScope() const {
+	if (!tryEnterCallbackScope()) {
 		return {};
 	}
-	return CallbackScope(owner);
+	return CallbackScope(const_cast<ofxVlc4 *>(this));
 }
 
 bool ofxVlc4::tryEnterCallbackScope() const {
@@ -318,7 +318,7 @@ void ofxVlc4::waitForCallbackScopeDrain() const {
 	if (!m_impl) {
 		return;
 	}
-	for (int i = 0; i < 250; ++i) {
+	for (int i = 0; i < kCallbackDrainTimeoutMs; ++i) {
 		if (m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire) == 0) {
 			return;
 		}

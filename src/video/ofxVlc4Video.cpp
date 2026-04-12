@@ -2253,7 +2253,7 @@ bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, li
 	if (!owner) {
 		return false;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return false;
 	}
@@ -2265,7 +2265,7 @@ void ofxVlc4::videoSwap(void * data) {
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return;
 	}
@@ -2314,7 +2314,7 @@ bool ofxVlc4::videoOutputSetup(
 	if (!owner) {
 		return false;
 	}
-	CallbackScope scope = owner->enterCallbackScope(*data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return false;
 	}
@@ -2332,7 +2332,7 @@ void ofxVlc4::videoOutputCleanup(void * data) {
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return;
 	}
@@ -2344,7 +2344,7 @@ void ofxVlc4::videoFrameMetadata(void * data, libvlc_video_metadata_type_t type,
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) {
 		return;
 	}

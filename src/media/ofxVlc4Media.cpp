@@ -1601,7 +1601,7 @@ void ofxVlc4::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
 	if (!owner) {
 		return;
 	}
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope || !event) {
 		return;
 	}

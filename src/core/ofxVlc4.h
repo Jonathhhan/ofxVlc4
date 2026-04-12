@@ -1032,7 +1032,7 @@ private:
 		const ofxVlc4MuxOptions & options,
 		const std::atomic<bool> * cancelRequested,
 		std::string * errorOut);
-	CallbackScope enterCallbackScope(void * data) const;
+	CallbackScope enterCallbackScope() const;
 	bool tryEnterCallbackScope() const;
 	void leaveCallbackScope() const;
 	void waitForCallbackScopeDrain() const;

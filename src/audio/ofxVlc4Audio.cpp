@@ -2030,7 +2030,7 @@ void ofxVlc4::readAudioIntoBuffer(ofSoundBuffer & buffer, float gain) {
 void ofxVlc4::audioPlay(void * data, const void * samples, unsigned int count, int64_t pts) {
 	auto * owner = static_cast<ofxVlc4 *>(data);
 	if (!owner) return;
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioPlay(samples, count, pts);
 }
@@ -2038,7 +2038,7 @@ void ofxVlc4::audioPlay(void * data, const void * samples, unsigned int count, i
 void ofxVlc4::audioSetVolume(void * data, float volume, bool mute) {
 	auto * owner = static_cast<ofxVlc4 *>(data);
 	if (!owner) return;
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioSetVolume(volume, mute);
 }
@@ -2046,7 +2046,7 @@ void ofxVlc4::audioSetVolume(void * data, float volume, bool mute) {
 void ofxVlc4::audioPause(void * data, int64_t pts) {
 	auto * owner = static_cast<ofxVlc4 *>(data);
 	if (!owner) return;
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioPause(pts);
 }
@@ -2054,7 +2054,7 @@ void ofxVlc4::audioPause(void * data, int64_t pts) {
 void ofxVlc4::audioResume(void * data, int64_t pts) {
 	auto * owner = static_cast<ofxVlc4 *>(data);
 	if (!owner) return;
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioResume(pts);
 }
@@ -2062,7 +2062,7 @@ void ofxVlc4::audioResume(void * data, int64_t pts) {
 void ofxVlc4::audioFlush(void * data, int64_t pts) {
 	auto * owner = static_cast<ofxVlc4 *>(data);
 	if (!owner) return;
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioFlush(pts);
 }
@@ -2070,7 +2070,7 @@ void ofxVlc4::audioFlush(void * data, int64_t pts) {
 void ofxVlc4::audioDrain(void * data) {
 	auto * owner = static_cast<ofxVlc4 *>(data);
 	if (!owner) return;
-	CallbackScope scope = owner->enterCallbackScope(data);
+	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
 	scope.get()->m_impl->subsystemRuntime.audioComponent->audioDrain();
 }
