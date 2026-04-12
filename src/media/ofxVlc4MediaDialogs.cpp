@@ -455,8 +455,12 @@ void ofxVlc4::MediaComponent::appendLibVlcLog(const LibVlcLogEntry & entry) {
 }
 
 void ofxVlc4::libVlcLogStatic(void * data, int level, const libvlc_log_t * ctx, const char * fmt, va_list args) {
-	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player || !ctx || player->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner || !ctx) {
+		return;
+	}
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
 		return;
 	}
 
@@ -480,7 +484,7 @@ void ofxVlc4::libVlcLogStatic(void * data, int level, const libvlc_log_t * ctx, 
 	entry.objectHeader = objectHeader ? objectHeader : "";
 	entry.objectId = objectId;
 
-	player->m_impl->subsystemRuntime.mediaComponent->appendLibVlcLog(entry);
+	scope.get()->m_impl->subsystemRuntime.mediaComponent->appendLibVlcLog(entry);
 }
 
 
@@ -745,10 +749,15 @@ void ofxVlc4::applyWatchTimeObserver() {
 }
 
 void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data) {
-	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player || !value || player->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner || !value) {
 		return;
 	}
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
+	auto * player = scope.get();
 
 	WatchTimeCallback callback;
 	WatchTimeInfo info;
@@ -783,10 +792,15 @@ void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * val
 }
 
 void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
-	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player || player->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
 		return;
 	}
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
+	auto * player = scope.get();
 
 	WatchTimeCallback callback;
 	WatchTimeInfo info;
@@ -817,10 +831,15 @@ void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
 }
 
 void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value, void * data) {
-	auto * player = static_cast<ofxVlc4 *>(data);
-	if (!player || player->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
 		return;
 	}
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
+	auto * player = scope.get();
 
 	WatchTimeCallback callback;
 	WatchTimeInfo info;
@@ -926,13 +945,15 @@ void ofxVlc4::dialogDisplayLoginStatic(
 	const char * text,
 	const char * defaultUsername,
 	bool askStore) {
-	if (!data || !id) {
-		return;
-	}
 	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	if (!owner || !id) {
 		return;
 	}
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
+	owner = scope.get();
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -954,13 +975,15 @@ void ofxVlc4::dialogDisplayQuestionStatic(
 	const char * cancel,
 	const char * action1,
 	const char * action2) {
-	if (!data || !id) {
-		return;
-	}
 	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	if (!owner || !id) {
 		return;
 	}
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
+	owner = scope.get();
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -983,13 +1006,15 @@ void ofxVlc4::dialogDisplayProgressStatic(
 	bool indeterminate,
 	float position,
 	const char * cancel) {
-	if (!data || !id) {
-		return;
-	}
 	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	if (!owner || !id) {
 		return;
 	}
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
+	owner = scope.get();
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -1004,13 +1029,15 @@ void ofxVlc4::dialogDisplayProgressStatic(
 }
 
 void ofxVlc4::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
-	if (!data || !id) {
-		return;
-	}
 	auto * owner = static_cast<ofxVlc4 *>(data);
-	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	if (!owner || !id) {
 		return;
 	}
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
+	owner = scope.get();
 
 	const std::uintptr_t token = reinterpret_cast<std::uintptr_t>(id);
 	owner->removeDialog(token);
@@ -1018,14 +1045,15 @@ void ofxVlc4::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
 }
 
 void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, float position, const char * text) {
-	if (!data || !id) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner || !id) {
 		return;
 	}
-
-	ofxVlc4 * owner = static_cast<ofxVlc4 *>(data);
-	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
 		return;
 	}
+	owner = scope.get();
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
 	dialog.type = DialogType::Progress;
@@ -1052,14 +1080,15 @@ void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, flo
 }
 
 void ofxVlc4::dialogErrorStatic(void * data, const char * title, const char * text) {
-	if (!data) {
+	auto * owner = static_cast<ofxVlc4 *>(data);
+	if (!owner) {
 		return;
 	}
-
-	ofxVlc4 * owner = static_cast<ofxVlc4 *>(data);
-	if (owner->m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+	CallbackScope scope = owner->enterCallbackScope();
+	if (!scope) {
 		return;
 	}
+	owner = scope.get();
 	{
 		std::lock_guard<std::mutex> lock(owner->m_impl->synchronizationRuntime.dialogMutex);
 		owner->m_impl->diagnosticsRuntime.lastDialogError.available = true;
@@ -1071,4 +1100,3 @@ void ofxVlc4::dialogErrorStatic(void * data, const char * title, const char * te
 		owner->setError(text);
 	}
 }
-
