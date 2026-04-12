@@ -1356,10 +1356,14 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
 			return;
 		}
-		logNotice("Audio visualizer settings updated. Reinit to apply.");
-		setStatus("Audio visualizer settings updated. Reinit to apply.");
+		// No active media — reinitialize the player so visualizer args are
+		// applied immediately instead of waiting for the next play/start.
+		init(0, nullptr);
+		updateNativeVideoWindowVisibility();
+		setStatus("Audio visualizer settings applied.");
 		return;
 	}
+	updateNativeVideoWindowVisibility();
 	setStatus("Audio visualizer settings updated.");
 }
 

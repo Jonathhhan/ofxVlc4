@@ -690,7 +690,17 @@ void ofxVlc4::VideoComponent::updateNativeVideoWindowVisibility() {
 		return;
 	}
 
-	if (owner.m_impl->videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::NativeWindow && owner.sessionPlayer()) {
+	// Show the native window when:
+	// 1. The active backend is NativeWindow and a player session exists (normal playback), OR
+	// 2. The requested backend is NativeWindow and an audio visualizer module is selected
+	//    (visualizers should always be visible, even when no media is loaded or playing).
+	const bool hasActiveNativeWindow =
+		owner.m_impl->videoPresentationRuntime.activeVideoOutputBackend == VideoOutputBackend::NativeWindow
+		&& owner.sessionPlayer();
+	const bool hasVisualizerWithNativeWindow =
+		owner.m_impl->videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::NativeWindow
+		&& owner.m_impl->playerConfigRuntime.audioVisualizerSettings.module != ofxVlc4AudioVisualizerModule::None;
+	if (hasActiveNativeWindow || hasVisualizerWithNativeWindow) {
 		owner.m_impl->videoResourceRuntime.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
 		if (!owner.m_impl->videoResourceRuntime.nativeWindowGeometryInitialized) {
 			owner.m_impl->videoResourceRuntime.vlcWindow->setWindowShape(960, 540);
