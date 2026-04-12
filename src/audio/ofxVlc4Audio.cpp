@@ -1806,6 +1806,7 @@ void ofxVlc4::clearAudioPtsState() {
 }
 
 ofxVlc4::AudioStateInfo ofxVlc4::getAudioStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.audioComponent) return {};
 	return m_impl->subsystemRuntime.audioComponent->getAudioStateInfo();
 }
 
@@ -2033,7 +2034,7 @@ void ofxVlc4::readAudioIntoBuffer(ofSoundBuffer & buffer, float gain) {
 
 void ofxVlc4::audioPlay(void * data, const void * samples, unsigned int count, int64_t pts) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) return;
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
 	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
@@ -2042,7 +2043,7 @@ void ofxVlc4::audioPlay(void * data, const void * samples, unsigned int count, i
 
 void ofxVlc4::audioSetVolume(void * data, float volume, bool mute) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) return;
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
 	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
@@ -2051,7 +2052,7 @@ void ofxVlc4::audioSetVolume(void * data, float volume, bool mute) {
 
 void ofxVlc4::audioPause(void * data, int64_t pts) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) return;
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
 	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
@@ -2060,7 +2061,7 @@ void ofxVlc4::audioPause(void * data, int64_t pts) {
 
 void ofxVlc4::audioResume(void * data, int64_t pts) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) return;
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
 	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
@@ -2069,7 +2070,7 @@ void ofxVlc4::audioResume(void * data, int64_t pts) {
 
 void ofxVlc4::audioFlush(void * data, int64_t pts) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) return;
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
 	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
@@ -2078,7 +2079,7 @@ void ofxVlc4::audioFlush(void * data, int64_t pts) {
 
 void ofxVlc4::audioDrain(void * data) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) return;
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) return;
 	ofxVlc4 * owner = cb->owner;
 	CallbackScope scope = owner->enterCallbackScope();
 	if (!scope) return;
@@ -2086,6 +2087,7 @@ void ofxVlc4::audioDrain(void * data) {
 }
 
 bool ofxVlc4::audioIsReady() const {
+	if (!m_impl || !m_impl->subsystemRuntime.audioComponent) return false;
 	return m_impl->subsystemRuntime.audioComponent->audioIsReady();
 }
 

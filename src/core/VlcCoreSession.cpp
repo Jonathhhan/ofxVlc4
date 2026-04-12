@@ -55,9 +55,10 @@ VlcCoreSession::~VlcCoreSession() {
 
 void VlcCoreSession::reset() {
 	closeLogFile();
-	libvlc = nullptr;
-	mediaHandle = nullptr;
-	mediaPlayer = nullptr;
+	// RAII handles release their owned resources automatically.
+	mediaPlayerHandle.reset();
+	mediaHandleOwner.reset();
+	libvlcHandle.reset();
 	mediaPlayerEventManager = nullptr;
 	mediaEventManager = nullptr;
 	mediaDiscovererHandle = nullptr;
@@ -72,27 +73,27 @@ void VlcCoreSession::reset() {
 }
 
 libvlc_instance_t * VlcCoreSession::instance() const {
-	return libvlc;
+	return libvlcHandle.get();
 }
 
 void VlcCoreSession::setInstance(libvlc_instance_t * value) {
-	libvlc = value;
+	libvlcHandle.reset(value);
 }
 
 libvlc_media_t * VlcCoreSession::media() const {
-	return mediaHandle;
+	return mediaHandleOwner.get();
 }
 
 void VlcCoreSession::setMedia(libvlc_media_t * value) {
-	mediaHandle = value;
+	mediaHandleOwner.reset(value);
 }
 
 libvlc_media_player_t * VlcCoreSession::player() const {
-	return mediaPlayer;
+	return mediaPlayerHandle.get();
 }
 
 void VlcCoreSession::setPlayer(libvlc_media_player_t * value) {
-	mediaPlayer = value;
+	mediaPlayerHandle.reset(value);
 }
 
 libvlc_event_manager_t * VlcCoreSession::playerEvents() const {

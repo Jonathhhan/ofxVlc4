@@ -725,6 +725,7 @@ void ofxVlc4::MediaComponent::refreshRendererStateInfo() {
 }
 
 ofxVlc4::RendererStateInfo ofxVlc4::getRendererStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getRendererStateInfo();
 }
 

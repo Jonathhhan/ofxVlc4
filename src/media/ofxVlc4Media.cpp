@@ -737,7 +737,6 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 	}
 
 	if (currentMedia) {
-		libvlc_media_release(currentMedia);
 		if (coreSession) {
 			coreSession->setMedia(nullptr);
 		}
@@ -1563,6 +1562,7 @@ void ofxVlc4::refreshSubtitleStateInfo() {
 }
 
 ofxVlc4::SubtitleStateInfo ofxVlc4::getSubtitleStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getSubtitleStateInfo();
 }
 
@@ -1571,6 +1571,7 @@ void ofxVlc4::refreshNavigationStateInfo() {
 }
 
 ofxVlc4::NavigationStateInfo ofxVlc4::getNavigationStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getNavigationStateInfo();
 }
 
@@ -1948,10 +1949,12 @@ void ofxVlc4::stopCurrentMediaParse() {
 }
 
 ofxVlc4::PlaybackStateInfo ofxVlc4::getPlaybackStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getPlaybackStateInfo();
 }
 
 ofxVlc4::MediaReadinessInfo ofxVlc4::getMediaReadinessInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.mediaComponent) return {};
 	return m_impl->subsystemRuntime.mediaComponent->getMediaReadinessInfo();
 }
 

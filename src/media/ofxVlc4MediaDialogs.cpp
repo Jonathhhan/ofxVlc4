@@ -456,7 +456,7 @@ void ofxVlc4::MediaComponent::appendLibVlcLog(const LibVlcLogEntry & entry) {
 
 void ofxVlc4::libVlcLogStatic(void * data, int level, const libvlc_log_t * ctx, const char * fmt, va_list args) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !ctx) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !ctx) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -751,7 +751,7 @@ void ofxVlc4::applyWatchTimeObserver() {
 
 void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !value) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !value) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -795,7 +795,7 @@ void ofxVlc4::watchTimeUpdateStatic(const libvlc_media_player_time_point_t * val
 
 void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -835,7 +835,7 @@ void ofxVlc4::watchTimePausedStatic(int64_t system_date_us, void * data) {
 
 void ofxVlc4::watchTimeSeekStatic(const libvlc_media_player_time_point_t * value, void * data) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -950,7 +950,7 @@ void ofxVlc4::dialogDisplayLoginStatic(
 	const char * defaultUsername,
 	bool askStore) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !id) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -981,7 +981,7 @@ void ofxVlc4::dialogDisplayQuestionStatic(
 	const char * action1,
 	const char * action2) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !id) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -1013,7 +1013,7 @@ void ofxVlc4::dialogDisplayProgressStatic(
 	float position,
 	const char * cancel) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !id) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -1037,7 +1037,7 @@ void ofxVlc4::dialogDisplayProgressStatic(
 
 void ofxVlc4::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !id) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -1054,7 +1054,7 @@ void ofxVlc4::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
 
 void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, float position, const char * text) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !id) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -1090,7 +1090,7 @@ void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, flo
 
 void ofxVlc4::dialogErrorStatic(void * data, const char * title, const char * text) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;

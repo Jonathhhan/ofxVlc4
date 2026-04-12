@@ -49,12 +49,20 @@ void VlcEventRouter::mediaDiscovererMediaListEventStatic(const libvlc_event_t * 
 		return;
 	}
 
+	if (router->owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
+		return;
+	}
+
 	router->owner.mediaDiscovererMediaListEvent(event);
 }
 
 void VlcEventRouter::rendererDiscovererEventStatic(const libvlc_event_t * event, void * data) {
 	auto * router = static_cast<VlcEventRouter *>(data);
 	if (!router || !event) {
+		return;
+	}
+
+	if (router->owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire)) {
 		return;
 	}
 

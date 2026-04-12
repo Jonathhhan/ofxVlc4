@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vlc/vlc.h"
+#include "VlcHandleWrappers.h"
 
 #include <cstdio>
 #include <cstdint>
@@ -96,9 +97,9 @@ public:
 	void appendLog(const VlcCoreLogEntry & entry);
 
 private:
-	libvlc_instance_t * libvlc = nullptr;
-	libvlc_media_t * mediaHandle = nullptr;
-	libvlc_media_player_t * mediaPlayer = nullptr;
+	vlc::InstanceHandle libvlcHandle;
+	vlc::MediaHandle mediaHandleOwner;
+	vlc::PlayerHandle mediaPlayerHandle;
 	libvlc_event_manager_t * mediaPlayerEventManager = nullptr;
 	libvlc_event_manager_t * mediaEventManager = nullptr;
 	libvlc_media_discoverer_t * mediaDiscovererHandle = nullptr;

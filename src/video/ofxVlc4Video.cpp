@@ -2274,7 +2274,7 @@ bool ofxVlc4::applyPendingVideoResize() {
 
 bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, libvlc_video_output_cfg_t * render_cfg) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
 		return false;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -2287,7 +2287,7 @@ bool ofxVlc4::videoResize(void * data, const libvlc_video_render_cfg_t * cfg, li
 
 void ofxVlc4::videoSwap(void * data) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -2338,7 +2338,7 @@ bool ofxVlc4::videoOutputSetup(
 	libvlc_video_setup_device_info_t * out) {
 #ifdef TARGET_WIN32
 	auto * cb = (data && *data) ? static_cast<ControlBlock *>(*data) : nullptr;
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
 		return false;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -2357,7 +2357,7 @@ bool ofxVlc4::videoOutputSetup(
 
 void ofxVlc4::videoOutputCleanup(void * data) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -2370,7 +2370,7 @@ void ofxVlc4::videoOutputCleanup(void * data) {
 
 void ofxVlc4::videoFrameMetadata(void * data, libvlc_video_metadata_type_t type, const void * metadata) {
 	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
+	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
 		return;
 	}
 	ofxVlc4 * owner = cb->owner;
@@ -2430,6 +2430,7 @@ ofxVlc4::VideoHdrMetadataInfo ofxVlc4::getVideoHdrMetadata() const {
 }
 
 ofxVlc4::VideoStateInfo ofxVlc4::getVideoStateInfo() const {
+	if (!m_impl || !m_impl->subsystemRuntime.videoComponent) return {};
 	return m_impl->subsystemRuntime.videoComponent->getVideoStateInfo();
 }
 

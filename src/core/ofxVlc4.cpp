@@ -2080,10 +2080,9 @@ void ofxVlc4::releaseVlcResources() {
 		if (m_impl->subsystemRuntime.coreSession->media()) {
 			libvlc_media_player_set_media(player, nullptr);
 		}
-		libvlc_media_player_release(player);
+		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
 		logVerbose("Release: media player released.");
 		waitForCallbackScopeDrain();
-		m_impl->subsystemRuntime.coreSession->setPlayer(nullptr);
 		m_impl->subsystemRuntime.coreSession->setPlayerEvents(nullptr);
 		logNotice("Release: player teardown complete.");
 	} else {
@@ -2154,9 +2153,8 @@ void ofxVlc4::releaseVlcResources() {
 		m_impl->subsystemRuntime.mediaComponent->closeLibVlcLogFile();
 		libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
 		libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), nullptr, nullptr);
-		libvlc_release(m_impl->subsystemRuntime.coreSession->instance());
-		logNotice("Release: VLC instance released.");
 		m_impl->subsystemRuntime.coreSession->setInstance(nullptr);
+		logNotice("Release: VLC instance released.");
 	}
 	processDeferredRecordingMuxCleanup(true);
 
