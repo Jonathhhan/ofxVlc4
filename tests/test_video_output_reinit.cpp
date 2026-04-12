@@ -479,6 +479,98 @@ static void testCallbacksWorkDuringPlayerRelease() {
 	simulateTeardown(state);
 }
 
+static void testFboRecreationWhenTexturePreAllocated() {
+	beginSuite("FBO recreation when texture is pre-allocated but FBO is missing");
+
+	// Simulates the real scenario where:
+	//   1. prepareStartupVideoResources() allocates the texture on the main
+	//      window (shared) context but the FBO created there is per-context.
+	//   2. The player is released and the FBO is deleted.
+	//   3. On the vlcWindow context, the texture is already allocated (shared)
+	//      and dimensions match, but vlcFramebufferId is 0.
+	//   4. ensureVideoRenderTargetCapacity() must detect the missing FBO and
+	//      (re)create it on the current (vlcWindow) context.
+	//
+	// Without the fix, the FBO creation is skipped when the texture dimensions
+	// match, and bindVlcRenderTarget() tries to bind a non-existent FBO → 
+	// GL_INVALID_OPERATION.
+
+	resetAll();
+	MockVideoState state;
+	g_glClientWaitSyncResult = GL_ALREADY_SIGNALED;
+
+	// --- Step 1: normal session ---
+	bool ok = simulateSetup(state, 1920, 1080);
+	CHECK(ok);
+	CHECK(state.vlcFramebufferId != 0u);
+	GLuint firstFbo = state.vlcFramebufferId;
+
+	runProducerFrame(state);
+	CHECK(state.hasReceivedVideoFrame);
+
+	// --- Step 2: teardown ---
+	state.shuttingDown.store(true, std::memory_order_release);
+	// Delete only the FBO (not the texture) to simulate per-context cleanup.
+	ofxVlc4GlOps::deleteFbo(state.vlcFramebufferId);
+	CHECK_EQ(state.vlcFramebufferId, 0u);
+	// Texture is still allocated (shared across contexts).
+	CHECK(state.textureId != 0u);
+
+	state.shuttingDown.store(false, std::memory_order_release);
+	state.hasReceivedVideoFrame = false;
+	state.vlcFboBound = false;
+
+	// --- Step 3: re-setup on vlcWindow context ---
+	// The texture is already allocated with matching dimensions, so the
+	// texture-reallocation block in ensureVideoRenderTargetCapacity would
+	// be skipped.  The new else-if branch must detect vlcFramebufferId == 0
+	// and re-create the FBO.
+	resetAll();
+	ok = ofxVlc4GlOps::setupFboWithTexture(state.vlcFramebufferId, state.textureTarget, state.textureId);
+	CHECK(ok);
+	CHECK(state.vlcFramebufferId != 0u);
+	// The new FBO should have a fresh ID (different from the deleted one).
+	CHECK(state.vlcFramebufferId != firstFbo);
+
+	// Verify the pipeline works after FBO re-creation.
+	state.vlcFramebufferAttachmentDirty = true;
+	simulateMakeCurrentTrue(state);
+	CHECK(state.vlcFboBound);
+	runProducerFrame(state);
+	CHECK(state.hasReceivedVideoFrame);
+	simulateConsumerRefresh(state);
+
+	simulateTeardown(state);
+}
+
+static void testGlErrorDrainInMakeCurrent() {
+	beginSuite("GL error drain in makeCurrent prevents stale errors leaking to VLC");
+
+	// Simulate a scenario where our GL operations in makeCurrent(true)
+	// leave a stale error.  The drainGlErrors() call at the end of
+	// makeCurrent(true) should clear it before VLC starts rendering.
+
+	resetAll();
+	MockVideoState state;
+	g_glClientWaitSyncResult = GL_ALREADY_SIGNALED;
+
+	simulateSetup(state, 640, 480);
+
+	// Inject a stale GL error (as if one of our GL operations failed).
+	// g_glGetErrorRemaining controls how many calls to glGetError return
+	// GL_INVALID_OPERATION before returning GL_NO_ERROR.
+	g_glGetErrorRemaining = 1;
+
+	// drainGlErrors should clear the injected error.
+	ofxVlc4GlOps::drainGlErrors();
+
+	// After the drain, glGetError should return GL_NO_ERROR.
+	GLenum err = glGetError();
+	CHECK_EQ(err, static_cast<GLenum>(GL_NO_ERROR));
+
+	simulateTeardown(state);
+}
+
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
@@ -490,6 +582,8 @@ int main() {
 	testMultipleReinitCycles();
 	testTeardownWithPendingFence();
 	testCallbacksWorkDuringPlayerRelease();
+	testFboRecreationWhenTexturePreAllocated();
+	testGlErrorDrainInMakeCurrent();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

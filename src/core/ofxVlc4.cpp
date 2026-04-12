@@ -2136,14 +2136,22 @@ void ofxVlc4::releaseVlcResources() {
 		}
 		m_impl->videoResourceRuntime.videoAdjustShaderReady = false;
 		m_impl->videoResourceRuntime.videoTexture.clear();
-		// NOTE: exposedTextureFbo is intentionally NOT cleared here.  The FBO
-		// may have been allocated on a different GL context (e.g. the main
-		// window context in the constructor), and binding it on the vlcWindow
-		// context would generate GL_INVALID_OPERATION — an error that persists
-		// in the GL error state and triggers a fatal assertion in VLC's OpenGL
-		// display module when the next playback session starts.  The stale
-		// frame data is harmless; the FBO will be reallocated on the next
-		// videoResize callback.
+		// Clear the exposed-texture FBO on the main window context (where it
+		// was originally allocated) to avoid leaking GL resources across
+		// sessions.  FBOs are per-context objects, so this must happen on the
+		// context that owns the FBO.  The vlcWindow context cleanup above
+		// only handles resources allocated there (vlcFramebufferId, shader).
+		if (m_impl->videoResourceRuntime.mainWindow &&
+			m_impl->videoResourceRuntime.mainWindow->getGLFWWindow() &&
+			m_impl->videoResourceRuntime.exposedTextureFbo.isAllocated()) {
+			m_impl->videoResourceRuntime.mainWindow->makeCurrent();
+			m_impl->videoResourceRuntime.exposedTextureFbo.clear();
+			ofxVlc4GlOps::drainGlErrors();
+			// Restore the cleanup context for the remaining drain below.
+			if (cleanupWindow && cleanupWindow != m_impl->videoResourceRuntime.mainWindow) {
+				cleanupWindow->makeCurrent();
+			}
+		}
 		logNotice("Release: GL resources cleared.");
 		// Drain any GL errors accumulated during the cleanup operations above.
 		// VLC's OpenGL display module checks glGetError() after every GL call
@@ -2153,6 +2161,16 @@ void ofxVlc4::releaseVlcResources() {
 		// starts rendering on a new playback session.
 		ofxVlc4GlOps::drainGlErrors();
 	}
+	// Reset video frame state so that stale flags from the previous session
+	// do not carry over into the next init() → playback cycle.  close()
+	// resets these as well, but reinit (close→init) calls releaseVlcResources
+	// directly, so the reset must happen here too.
+	m_impl->videoFrameRuntime.isVideoLoaded.store(false);
+	m_impl->videoFrameRuntime.startupPlaybackStatePrepared.store(false);
+	m_impl->videoFrameRuntime.hasReceivedVideoFrame.store(false);
+	m_impl->videoFrameRuntime.exposedTextureDirty.store(true);
+	m_impl->videoFrameRuntime.vlcFramebufferAttachmentDirty.store(true);
+	m_impl->videoFrameRuntime.vlcFboBound = false;
 	if (cleanupWindow && needsGlCleanup) {
 		// Restore the main window GL context so that callers invoked from
 		// within draw() (e.g. an ImGui "Apply" button) can continue issuing

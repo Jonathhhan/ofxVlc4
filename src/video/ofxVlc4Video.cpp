@@ -883,6 +883,21 @@ void ofxVlc4::VideoComponent::ensureVideoRenderTargetCapacity(unsigned requiredW
 			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureTarget,
 			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID);
 		owner.m_impl->videoFrameRuntime.vlcFramebufferAttachmentDirty.store(true);
+	} else if (owner.m_impl->videoResourceRuntime.vlcFramebufferId == 0 &&
+		owner.m_impl->videoResourceRuntime.videoTexture.isAllocated()) {
+		// The texture was pre-allocated on a shared context (e.g. by
+		// prepareStartupVideoResources() on the main window context) but the
+		// FBO was deleted during release or never created on this context.
+		// OpenGL FBOs are per-context objects (not shared between contexts),
+		// so the FBO must be (re)created on the current context — typically
+		// the vlcWindow context where VLC renders.  Without this, binding a
+		// stale or non-existent FBO ID produces GL_INVALID_OPERATION, which
+		// trips VLC's internal glGetError() assertion on the next GL call.
+		setupFboWithTexture(
+			owner.m_impl->videoResourceRuntime.vlcFramebufferId,
+			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureTarget,
+			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID);
+		owner.m_impl->videoFrameRuntime.vlcFramebufferAttachmentDirty.store(true);
 	}
 }
 
@@ -1267,6 +1282,14 @@ bool ofxVlc4::VideoComponent::makeCurrent(bool current) {
 		owner.m_impl->videoResourceRuntime.vlcWindow->makeCurrent();
 		applyPendingVideoResize();
 		bindVlcRenderTarget();
+		// Drain any GL errors accumulated by our resource allocation
+		// (texture creation, FBO setup, viewport changes) before
+		// returning control to VLC.  VLC's OpenGL display module wraps
+		// every GL call with glGetError() and asserts on unexpected
+		// errors.  Without this drain, a stale error from our
+		// operations triggers a fatal GL_INVALID_OPERATION assertion
+		// the first time VLC issues a GL call in the new session.
+		ofxVlc4GlOps::drainGlErrors();
 	} else {
 		unbindVlcRenderTarget();
 		// Insert the GL fence sync BEFORE releasing the context.  VLC 4
