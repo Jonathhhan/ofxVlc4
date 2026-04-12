@@ -1800,7 +1800,8 @@ void ofxVlc4::AudioComponent::writeSilenceForContinuousMode() {
 
 	// Write one frame-worth of silence (~1/60s) so that peekLatest() always
 	// has fresh data for the visualizer to consume.
-	const size_t frameSamples = static_cast<size_t>(sampleRate / 60) * static_cast<size_t>(channels);
+	constexpr int kSilenceChunksPerSecond = 60;
+	const size_t frameSamples = static_cast<size_t>(sampleRate / kSilenceChunksPerSecond) * static_cast<size_t>(channels);
 	thread_local std::vector<float> silence;
 	if (silence.size() < frameSamples) {
 		silence.resize(frameSamples, 0.0f);
