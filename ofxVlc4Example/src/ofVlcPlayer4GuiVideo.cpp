@@ -1,6 +1,5 @@
 #include "ofVlcPlayer4GuiVideo.h"
 #include "ofVlcPlayer4GuiControls.h"
-#include "ofVlcPlayer4GuiVisualizer.h"
 #include "ofMain.h"
 #include "ofxVlc4.h"
 
@@ -91,12 +90,12 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 				preferredDecoderDevices,
 				IM_ARRAYSIZE(preferredDecoderDevices))) {
 			player.setPreferredDecoderDevice(static_cast<ofxVlc4::PreferredDecoderDevice>(preferredDecoderDeviceIndex));
+			if (player.isInitialized() && applyAudioVisualizerSettings) {
+				applyAudioVisualizerSettings();
+			}
 		}
 		if (player.isInitialized() && videoState.outputBackend != videoState.activeOutputBackend) {
 			ImGui::TextDisabled("Backend changes apply on the next init.");
-		}
-		if (player.isInitialized()) {
-			ImGui::TextDisabled("Decoder hardware changes apply on the next init.");
 		}
 		if (videoState.outputBackend == ofxVlc4::VideoOutputBackend::NativeWindow) {
 			ImGui::TextDisabled("Native mode uses the separate VLC window.");
@@ -105,10 +104,6 @@ void ofVlcPlayer4GuiVideo::drawViewContent(
 		}
 		if (videoState.preferredDecoderDevice == ofxVlc4::PreferredDecoderDevice::Nvdec) {
 			ImGui::TextDisabled("NVDEC requires a supported NVIDIA GPU, driver, and compatible media.");
-		}
-		if (visualizerSection) {
-			ImGui::Separator();
-			visualizerSection->drawVlcApplyButton(player, compactControlWidth, applyAudioVisualizerSettings);
 		}
 		ImGui::Separator();
 

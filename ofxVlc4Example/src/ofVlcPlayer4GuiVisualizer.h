@@ -34,10 +34,6 @@ public:
 		const ImVec2 & labelInnerSpacing,
 		float compactControlWidth,
 		const std::function<void()> & applyAudioVisualizerSettings);
-	void drawVlcApplyButton(
-		ofxVlc4 & player,
-		float compactControlWidth,
-		const std::function<void()> & applyAudioVisualizerSettings);
 
 private:
 	DisplayStyle displayStyle = DisplayStyle::Studio;

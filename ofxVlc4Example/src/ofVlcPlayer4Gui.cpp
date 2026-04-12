@@ -1115,7 +1115,6 @@ void ofVlcPlayer4Gui::drawVideoViewSection(
 		return;
 	}
 
-	videoSection.setVisualizerSection(&visualizerSection);
 	videoSection.drawViewContent(player, kLabelInnerSpacing, layout.compactControlWidth, applyAudioVisualizerSettings);
 	ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::ContentThenNested);
 }

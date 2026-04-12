@@ -5,7 +5,6 @@
 #include <functional>
 
 class ofxVlc4;
-class ofVlcPlayer4GuiVisualizer;
 
 enum class AnaglyphColorMode {
 	RedCyan = 0,
@@ -42,13 +41,10 @@ public:
 	AnaglyphSettings getAnaglyphSettings() const;
 
 private:
-	ofVlcPlayer4GuiVisualizer * visualizerSection = nullptr;
 	char videoFilterChain[256] = {};
 	bool anaglyphEnabled = false;
 	AnaglyphColorMode anaglyphColorMode = AnaglyphColorMode::RedCyan;
 	bool anaglyphSwapEyes = false;
 	float anaglyphEyeSeparation = 0.0f;
 
-public:
-	void setVisualizerSection(ofVlcPlayer4GuiVisualizer * section) { visualizerSection = section; }
 };
