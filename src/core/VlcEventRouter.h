@@ -17,6 +17,7 @@ public:
 	explicit VlcEventRouter(ofxVlc4 & owner);
 
 	ofxVlc4 & getOwner() const;
+	bool isOwnerShuttingDown() const;
 	void * callbackData() const;
 	EventCallback playerEventCallback() const;
 	EventCallback mediaEventCallback() const;

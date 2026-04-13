@@ -10,8 +10,9 @@ ofxVlc4 * resolveOwnerFromRouterData(void * data) {
 	return router ? &router->getOwner() : nullptr;
 }
 
-bool isShuttingDown(const ofxVlc4 & owner) {
-	return owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire);
+bool isShuttingDown(void * data) {
+	auto * router = static_cast<VlcEventRouter *>(data);
+	return router && router->isOwnerShuttingDown();
 }
 
 template <typename HandlerFn>
@@ -20,7 +21,7 @@ void dispatchToOwner(void * data, bool dropDuringShutdown, HandlerFn && handler)
 	if (!ownerPtr) {
 		return;
 	}
-	if (dropDuringShutdown && isShuttingDown(*ownerPtr)) {
+	if (dropDuringShutdown && isShuttingDown(data)) {
 		return;
 	}
 
@@ -40,6 +41,10 @@ VlcEventRouter::VlcEventRouter(ofxVlc4 & ownerRef)
 
 ofxVlc4 & VlcEventRouter::getOwner() const {
 	return owner;
+}
+
+bool VlcEventRouter::isOwnerShuttingDown() const {
+	return owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire);
 }
 
 void * VlcEventRouter::callbackData() const {
