@@ -1356,15 +1356,14 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
 			return;
 		}
-		// No active media — reinitialize the player so visualizer args are
-		// applied immediately instead of waiting for the next play/start.
-		init(0, nullptr);
-		updateNativeVideoWindowVisibility();
-		setStatus("Audio visualizer settings applied.");
-		return;
 	}
+	// Reinitialize the player so the visualizer module is applied
+	// immediately, independent of whether media is loaded or playing.
+	// This mirrors the ofxProjectM behaviour where the visualizer can
+	// be toggled on and off at any time.
+	init(0, nullptr);
 	updateNativeVideoWindowVisibility();
-	setStatus("Audio visualizer settings updated.");
+	setStatus("Audio visualizer settings applied.");
 }
 
 ofxVlc4SubtitleTextRenderer ofxVlc4::getSubtitleTextRenderer() const {

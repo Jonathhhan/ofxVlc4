@@ -1761,13 +1761,15 @@ void ofxVlc4::VideoComponent::setVideoOutputBackend(VideoOutputBackend backend) 
 		if (media().reinitAndReapplyCurrentMedia("Video output backend")) {
 			return;
 		}
-		owner.logNotice(std::string("Video output backend set to ") +
-			videoOutputBackendLabel(backend) + ". Reinit to apply.");
-		owner.setStatus("Video output backend updated. Reinit to apply.");
-		return;
 	}
-
+	// Reinitialize the player so the backend is applied immediately
+	// instead of waiting for the next play/start.  This mirrors the
+	// ofxProjectM behaviour where the visualizer window appears or
+	// disappears right away when the user toggles it, independent of
+	// whether media is currently loaded or playing.
+	owner.init(0, nullptr);
 	updateNativeVideoWindowVisibility();
+	owner.setStatus("Video output backend applied.");
 }
 
 void ofxVlc4::VideoComponent::setPreferredDecoderDevice(PreferredDecoderDevice device) {
