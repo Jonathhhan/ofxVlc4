@@ -106,6 +106,7 @@ Manual layout if you prefer:
 
 - presets from `presets-cream-of-the-crop` go in the `presets` folder
 - textures from `presets-milkdrop-texture-pack` go in the `textures` folder
+- for custom VLC builds that expose `--projectm-texture-path`, the GUI also supports an explicit texture directory override
 
 Inside `Advanced` the example now also exposes:
 

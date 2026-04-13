@@ -157,6 +157,7 @@ static void testAudioVisualizerSettingsDefaults() {
 	CHECK_EQ(settings.height, 720);
 	CHECK_EQ(settings.goomSpeed, 6);
 	CHECK(settings.projectMPresetPath.empty());
+	CHECK(settings.projectMTexturePath.empty());
 	CHECK_EQ(settings.projectMTextureSize, 0);
 	CHECK_EQ(settings.projectMMeshX, 0);
 	CHECK_EQ(settings.projectMMeshY, 0);
@@ -445,6 +446,7 @@ static void testAudioVisualizerSettingsCopy() {
 	original.height = 600;
 	original.goomSpeed = 10;
 	original.projectMPresetPath = "/presets";
+	original.projectMTexturePath = "/textures";
 	original.projectMTextureSize = 1024;
 
 	ofxVlc4AudioVisualizerSettings copy = original;
@@ -454,6 +456,7 @@ static void testAudioVisualizerSettingsCopy() {
 	CHECK_EQ(copy.height, 600);
 	CHECK_EQ(copy.goomSpeed, 10);
 	CHECK_EQ(copy.projectMPresetPath, "/presets");
+	CHECK_EQ(copy.projectMTexturePath, "/textures");
 	CHECK_EQ(copy.projectMTextureSize, 1024);
 
 	copy.module = ofxVlc4AudioVisualizerModule::Goom;
@@ -479,6 +482,11 @@ static void testAudioVisualizerSettingsEquality() {
 	ofxVlc4AudioVisualizerSettings d = a;
 	d.width = 640;
 	CHECK(a != d);
+
+	// Changing projectM texture path: should differ.
+	ofxVlc4AudioVisualizerSettings d2 = a;
+	d2.projectMTexturePath = "/tmp/projectm/textures";
+	CHECK(a != d2);
 
 	// Identical settings: should be equal.
 	ofxVlc4AudioVisualizerSettings e = a;

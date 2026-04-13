@@ -109,6 +109,14 @@ std::string defaultProjectMPresetPath() {
 	return "";
 }
 
+std::string defaultProjectMTexturePath() {
+	const std::string texturesPath = ofToDataPath("presets/textures", true);
+	if (ofDirectory::doesDirectoryExist(texturesPath, true)) {
+		return ofFilePath::getAbsolutePath(texturesPath, true);
+	}
+	return "";
+}
+
 void applyModuleSpecificVisualizerDefaults(ofxVlc4AudioVisualizerSettings & settings) {
 	switch (settings.module) {
 	case ofxVlc4AudioVisualizerModule::Goom:
@@ -121,6 +129,9 @@ void applyModuleSpecificVisualizerDefaults(ofxVlc4AudioVisualizerSettings & sett
 		settings.height = 720;
 		if (settings.projectMPresetPath.empty()) {
 			settings.projectMPresetPath = defaultProjectMPresetPath();
+		}
+		if (settings.projectMTexturePath.empty()) {
+			settings.projectMTexturePath = defaultProjectMTexturePath();
 		}
 		break;
 	case ofxVlc4AudioVisualizerModule::Visual:
@@ -273,6 +284,13 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 			pendingVlcVisualizerSettings.projectMPresetPath.c_str(),
 			_TRUNCATE);
 	}
+	if (projectMTexturePath[0] == '\0' && !pendingVlcVisualizerSettings.projectMTexturePath.empty()) {
+		strncpy_s(
+			projectMTexturePath,
+			sizeof(projectMTexturePath),
+			pendingVlcVisualizerSettings.projectMTexturePath.c_str(),
+			_TRUNCATE);
+	}
 
 	const auto settingsBefore = pendingVlcVisualizerSettings;
 	bool comboChanged = false;
@@ -303,6 +321,11 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 				projectMPresetPath,
 				sizeof(projectMPresetPath),
 				pendingVlcVisualizerSettings.projectMPresetPath.c_str(),
+				_TRUNCATE);
+			strncpy_s(
+				projectMTexturePath,
+				sizeof(projectMTexturePath),
+				pendingVlcVisualizerSettings.projectMTexturePath.c_str(),
 				_TRUNCATE);
 		}
 	}
@@ -362,6 +385,19 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 			ImGui::InputText("Preset Path", projectMPresetPath, IM_ARRAYSIZE(projectMPresetPath));
 			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 			pendingVlcVisualizerSettings.projectMPresetPath = ofTrim(std::string(projectMPresetPath));
+
+			if (pendingVlcVisualizerSettings.projectMTexturePath.empty()) {
+				pendingVlcVisualizerSettings.projectMTexturePath = defaultProjectMTexturePath();
+				strncpy_s(
+					projectMTexturePath,
+					sizeof(projectMTexturePath),
+					pendingVlcVisualizerSettings.projectMTexturePath.c_str(),
+					_TRUNCATE);
+			}
+			ImGui::InputText("Texture Path", projectMTexturePath, IM_ARRAYSIZE(projectMTexturePath));
+			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+			pendingVlcVisualizerSettings.projectMTexturePath = ofTrim(std::string(projectMTexturePath));
+			ImGui::TextDisabled("Requires VLC builds exposing --projectm-texture-path.");
 
 			int textureSize = pendingVlcVisualizerSettings.projectMTextureSize;
 			ImGui::InputInt("Texture Size", &textureSize);
