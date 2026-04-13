@@ -1714,14 +1714,12 @@ void ofxVlc4::finalizeRecordingMuxThread() {
 		constexpr int kMuxJoinTimeoutMs = 15000;
 		auto status = m_impl->recordingMuxRuntime.workerFuture.wait_for(std::chrono::milliseconds(kMuxJoinTimeoutMs));
 		if (status == std::future_status::timeout) {
-			logError("Recording mux thread did not finish within " + ofToString(kMuxJoinTimeoutMs) + " ms; detaching.");
-			m_impl->recordingMuxRuntime.worker.detach();
-		} else {
-			m_impl->recordingMuxRuntime.worker.join();
+			logWarning("Recording mux thread did not finish within "
+				+ ofToString(kMuxJoinTimeoutMs)
+				+ " ms; waiting for a safe join.");
 		}
-	} else {
-		m_impl->recordingMuxRuntime.worker.join();
 	}
+	m_impl->recordingMuxRuntime.worker.join();
 	m_impl->recordingMuxRuntime.activeTask.reset();
 	m_impl->recordingMuxRuntime.inProgress.store(false);
 	if (!activeTask->completed.exchange(false)) {
@@ -1945,14 +1943,12 @@ void ofxVlc4::cancelPendingRecordingMux() {
 		if (m_impl->recordingMuxRuntime.workerFuture.valid()) {
 			auto status = m_impl->recordingMuxRuntime.workerFuture.wait_for(std::chrono::milliseconds(kMuxJoinTimeoutMs));
 			if (status == std::future_status::timeout) {
-				logError("Recording mux thread did not finish within " + ofToString(kMuxJoinTimeoutMs) + " ms; detaching.");
-				m_impl->recordingMuxRuntime.worker.detach();
-			} else {
-				m_impl->recordingMuxRuntime.worker.join();
+				logWarning("Recording mux thread did not finish within "
+					+ ofToString(kMuxJoinTimeoutMs)
+					+ " ms; waiting for a safe join.");
 			}
-		} else {
-			m_impl->recordingMuxRuntime.worker.join();
 		}
+		m_impl->recordingMuxRuntime.worker.join();
 	}
 	m_impl->recordingMuxRuntime.inProgress.store(false);
 	m_impl->recordingMuxRuntime.activeTask.reset();

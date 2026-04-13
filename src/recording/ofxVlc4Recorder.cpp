@@ -17,45 +17,6 @@ namespace {
 
 using namespace ofxVlc4MuxHelpers;
 
-struct RecordingOutputPaths {
-	std::string audioPath;
-	std::string videoPath;
-};
-
-std::string trimRecorderText(const std::string & value) {
-	const size_t first = value.find_first_not_of(" \t\r\n");
-	if (first == std::string::npos) {
-		return {};
-	}
-
-	const size_t last = value.find_last_not_of(" \t\r\n");
-	return value.substr(first, (last - first) + 1);
-}
-
-std::string buildRecordingOutputStem(const std::string & name, std::string * extensionOut = nullptr) {
-	std::string normalizedName = trimRecorderText(name);
-	if (normalizedName.empty()) normalizedName = "recording";
-
-	const std::string detectedExtension = ofFilePath::getFileExt(normalizedName);
-	if (extensionOut) *extensionOut = detectedExtension;
-	if (!detectedExtension.empty()) normalizedName = ofFilePath::removeExt(normalizedName);
-
-	return normalizedName + ofGetTimestampString("-%Y-%m-%d-%H-%M-%S");
-}
-
-std::string buildRecordingOutputPath(const std::string & name, const std::string & fallbackExtension) {
-	std::string detectedExtension;
-	const std::string outputStem = buildRecordingOutputStem(name, &detectedExtension);
-	return !detectedExtension.empty()
-		? outputStem + "." + detectedExtension
-		: outputStem + fallbackExtension;
-}
-
-RecordingOutputPaths buildRecordingOutputPaths(const std::string & name, const std::string & videoFallbackExtension = ".ts") {
-	const std::string outputStem = buildRecordingOutputStem(name);
-	return {outputStem + ".wav", outputStem + videoFallbackExtension};
-}
-
 }
 
 bool ofxVlc4::muxRecordingFilesInternal(
@@ -66,8 +27,8 @@ bool ofxVlc4::muxRecordingFilesInternal(
 	const std::atomic<bool> * cancelRequested,
 	std::string * errorOut,
 	const ofxVlc4MuxHelpers::FileReadinessContext * fileReadiness) {
-	const std::string normalizedMux = ofToLower(trimRecorderText(options.containerMux));
-	const std::string normalizedAudioCodec = ofToLower(trimRecorderText(options.audioCodec));
+	const std::string normalizedMux = ofToLower(ofxVlc4RecordingHelpers::trimRecorderText(options.containerMux));
+	const std::string normalizedAudioCodec = ofToLower(ofxVlc4RecordingHelpers::trimRecorderText(options.audioCodec));
 	if (!ofxVlc4RecordingHelpers::isValidSoutModuleName(normalizedMux)) {
 		if (errorOut) {
 			*errorOut = normalizedMux.empty()
@@ -444,12 +405,13 @@ bool ofxVlc4::startNamedTextureCaptureSession(
 	};
 	if (!options.includeAudioCapture) {
 		const std::string videoFallbackExt = recordingVideoCodecUsesMovContainer(getVideoRecordingCodecPreset()) ? ".mov" : ".mp4";
-		const std::string videoPath = buildRecordingOutputPath(name, videoFallbackExt);
+		const std::string videoPath = ofxVlc4RecordingHelpers::buildRecordingOutputPath(name, videoFallbackExt);
 		return startTextureRecordingPlayback(videoPath, "Video recording started: " + videoPath);
 	}
 
 	const std::string videoFallbackExt = recordingVideoCodecUsesMovContainer(getVideoRecordingCodecPreset()) ? ".mov" : ".ts";
-	const RecordingOutputPaths outputPaths = buildRecordingOutputPaths(name, videoFallbackExt);
+	const ofxVlc4RecordingHelpers::RecordingOutputPaths outputPaths =
+		ofxVlc4RecordingHelpers::buildRecordingOutputPaths(name, videoFallbackExt);
 	if (!startTextureRecordingPlayback(outputPaths.videoPath, "Video recording started: " + outputPaths.videoPath)) {
 		return false;
 	}
@@ -502,7 +464,7 @@ void ofxVlc4::recordAudio(std::string name) {
 		return;
 	}
 
-	const std::string audioPath = buildRecordingOutputPath(name, ".wav");
+	const std::string audioPath = ofxVlc4RecordingHelpers::buildRecordingOutputPath(name, ".wav");
 	clearRecordingSessionConfig();
 	if (!startNamedAudioCaptureSession(audioPath)) {
 		return;
@@ -712,7 +674,7 @@ bool ofxVlc4::startAudioRecordingForActiveVideo(std::string name) {
 		return false;
 	}
 
-	const std::string audioPath = buildRecordingOutputPath(name, ".wav");
+	const std::string audioPath = ofxVlc4RecordingHelpers::buildRecordingOutputPath(name, ".wav");
 	if (!startNamedAudioCaptureSession(audioPath)) {
 		return false;
 	}
@@ -1033,7 +995,7 @@ int ofxVlc4Recorder::getVideoCaptureBitrateKbps() const {
 
 bool ofxVlc4Recorder::setVideoCaptureCodec(const std::string & codec, std::string & errorOut) {
 	errorOut.clear();
-	std::string normalizedCodec = trimRecorderText(codec);
+	std::string normalizedCodec = ofxVlc4RecordingHelpers::trimRecorderText(codec);
 	normalizedCodec = ofToUpper(normalizedCodec);
 	if (normalizedCodec.empty()) {
 		errorOut = "Video recording codec is empty.";
