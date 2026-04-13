@@ -1444,12 +1444,7 @@ void ofVlcPlayer4Gui::handleImGuiShortcuts(
 
 	if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) {
 		const bool wasPlaying = player.isPlaying();
-		if (player.isPlaying()) {
-			ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::PlayPause);
-		} else {
-			followPlaybackSelectionEnabled = true;
-			ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::PlayPause);
-		}
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::PlayPause);
 		if (!wasPlaying) {
 			followPlaybackSelectionEnabled = true;
 		}
