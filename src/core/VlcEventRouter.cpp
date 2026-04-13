@@ -3,25 +3,23 @@
 #include "ofxVlc4.h"
 #include "ofxVlc4Impl.h"
 
-namespace {
-
-ofxVlc4 * resolveOwnerFromRouterData(void * data) {
+ofxVlc4 * VlcEventRouter::resolveOwnerFromRouterData(void * data) {
 	auto * router = static_cast<VlcEventRouter *>(data);
 	return router ? &router->getOwner() : nullptr;
 }
 
-bool isShuttingDown(void * data) {
+bool VlcEventRouter::shouldDropEventDuringShutdown(void * data, bool dropDuringShutdown) {
 	auto * router = static_cast<VlcEventRouter *>(data);
-	return router && router->isOwnerShuttingDown();
+	return dropDuringShutdown && router && router->isOwnerShuttingDown();
 }
 
 template <typename HandlerFn>
-void dispatchToOwner(void * data, bool dropDuringShutdown, HandlerFn && handler) {
+void VlcEventRouter::dispatchToOwner(void * data, bool dropDuringShutdown, HandlerFn && handler) {
 	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
 	if (!ownerPtr) {
 		return;
 	}
-	if (dropDuringShutdown && isShuttingDown(data)) {
+	if (shouldDropEventDuringShutdown(data, dropDuringShutdown)) {
 		return;
 	}
 
@@ -32,8 +30,6 @@ void dispatchToOwner(void * data, bool dropDuringShutdown, HandlerFn && handler)
 
 	handler(*scope.get());
 }
-
-} // namespace
 
 VlcEventRouter::VlcEventRouter(ofxVlc4 & ownerRef)
 	: owner(ownerRef) {
