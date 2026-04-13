@@ -14,6 +14,24 @@ bool isShuttingDown(const ofxVlc4 & owner) {
 	return owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire);
 }
 
+template <typename HandlerFn>
+void dispatchToOwner(void * data, bool dropDuringShutdown, HandlerFn && handler) {
+	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
+	if (!ownerPtr) {
+		return;
+	}
+	if (dropDuringShutdown && isShuttingDown(*ownerPtr)) {
+		return;
+	}
+
+	ofxVlc4::CallbackScope scope = ownerPtr->enterCallbackScope();
+	if (!scope) {
+		return;
+	}
+
+	handler(*scope.get());
+}
+
 } // namespace
 
 VlcEventRouter::VlcEventRouter(ofxVlc4 & ownerRef)
@@ -104,62 +122,31 @@ void VlcEventRouter::applyDialogCallbacks(libvlc_instance_t * instance) const {
 }
 
 void VlcEventRouter::vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * data) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr || !event) {
+	if (!event) {
 		return;
 	}
-
-	// Drop player events while the session is shutting down.  The
-	// shuttingDown flag is set before player release to prevent callbacks
-	// from accessing the player after it has been freed.
-	if (isShuttingDown(*ownerPtr)) {
-		return;
-	}
-
-	ofxVlc4::vlcMediaPlayerEventStatic(event, ownerPtr->m_controlBlock.get());
+	dispatchToOwner(data, true, [event](ofxVlc4 & owner) { owner.vlcMediaPlayerEvent(event); });
 }
 
 void VlcEventRouter::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr || !event) {
+	if (!event) {
 		return;
 	}
-
-	// Drop media events while the session is shutting down.  A late
-	// MediaParsedChanged event from a recently-cancelled parse could
-	// otherwise call into teardown-unsafe code paths (e.g.
-	// queryVideoTrackGeometry on an already-released player).
-	if (isShuttingDown(*ownerPtr)) {
-		return;
-	}
-
-	ofxVlc4::vlcMediaEventStatic(event, ownerPtr->m_controlBlock.get());
+	dispatchToOwner(data, true, [event](ofxVlc4 & owner) { owner.vlcMediaEvent(event); });
 }
 
 void VlcEventRouter::mediaDiscovererMediaListEventStatic(const libvlc_event_t * event, void * data) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr || !event) {
+	if (!event) {
 		return;
 	}
-
-	if (isShuttingDown(*ownerPtr)) {
-		return;
-	}
-
-	ofxVlc4::mediaDiscovererMediaListEventStatic(event, ownerPtr->m_controlBlock.get());
+	dispatchToOwner(data, true, [event](ofxVlc4 & owner) { owner.mediaDiscovererMediaListEvent(event); });
 }
 
 void VlcEventRouter::rendererDiscovererEventStatic(const libvlc_event_t * event, void * data) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr || !event) {
+	if (!event) {
 		return;
 	}
-
-	if (isShuttingDown(*ownerPtr)) {
-		return;
-	}
-
-	ofxVlc4::rendererDiscovererEventStatic(event, ownerPtr->m_controlBlock.get());
+	dispatchToOwner(data, true, [event](ofxVlc4 & owner) { owner.rendererDiscovererEvent(event); });
 }
 
 void VlcEventRouter::dialogDisplayLoginStatic(
@@ -169,18 +156,15 @@ void VlcEventRouter::dialogDisplayLoginStatic(
 	const char * text,
 	const char * defaultUsername,
 	bool askStore) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr) {
+	if (!id) {
 		return;
 	}
-
-	ofxVlc4::dialogDisplayLoginStatic(
-		ownerPtr->m_controlBlock.get(),
-		id,
-		title,
-		text,
-		defaultUsername,
-		askStore);
+	dispatchToOwner(
+		data,
+		true,
+		[id, title, text, defaultUsername, askStore](ofxVlc4 & owner) {
+			owner.handleDialogDisplayLogin(id, title, text, defaultUsername, askStore);
+		});
 }
 
 void VlcEventRouter::dialogDisplayQuestionStatic(
@@ -192,20 +176,15 @@ void VlcEventRouter::dialogDisplayQuestionStatic(
 	const char * cancel,
 	const char * action1,
 	const char * action2) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr) {
+	if (!id) {
 		return;
 	}
-
-	ofxVlc4::dialogDisplayQuestionStatic(
-		ownerPtr->m_controlBlock.get(),
-		id,
-		title,
-		text,
-		type,
-		cancel,
-		action1,
-		action2);
+	dispatchToOwner(
+		data,
+		true,
+		[id, title, text, type, cancel, action1, action2](ofxVlc4 & owner) {
+			owner.handleDialogDisplayQuestion(id, title, text, type, cancel, action1, action2);
+		});
 }
 
 void VlcEventRouter::dialogDisplayProgressStatic(
@@ -216,44 +195,34 @@ void VlcEventRouter::dialogDisplayProgressStatic(
 	bool indeterminate,
 	float position,
 	const char * cancel) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr) {
+	if (!id) {
 		return;
 	}
-
-	ofxVlc4::dialogDisplayProgressStatic(
-		ownerPtr->m_controlBlock.get(),
-		id,
-		title,
-		text,
-		indeterminate,
-		position,
-		cancel);
+	dispatchToOwner(
+		data,
+		true,
+		[id, title, text, indeterminate, position, cancel](ofxVlc4 & owner) {
+			owner.handleDialogDisplayProgress(id, title, text, indeterminate, position, cancel);
+		});
 }
 
 void VlcEventRouter::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr) {
+	if (!id) {
 		return;
 	}
-
-	ofxVlc4::dialogCancelStatic(ownerPtr->m_controlBlock.get(), id);
+	dispatchToOwner(data, true, [id](ofxVlc4 & owner) { owner.handleDialogCancel(id); });
 }
 
 void VlcEventRouter::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, float position, const char * text) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr) {
+	if (!id) {
 		return;
 	}
-
-	ofxVlc4::dialogUpdateProgressStatic(ownerPtr->m_controlBlock.get(), id, position, text);
+	dispatchToOwner(
+		data,
+		true,
+		[id, position, text](ofxVlc4 & owner) { owner.handleDialogUpdateProgress(id, position, text); });
 }
 
 void VlcEventRouter::dialogErrorStatic(void * data, const char * title, const char * text) {
-	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
-	if (!ownerPtr) {
-		return;
-	}
-
-	ofxVlc4::dialogErrorStatic(ownerPtr->m_controlBlock.get(), title, text);
+	dispatchToOwner(data, true, [title, text](ofxVlc4 & owner) { owner.handleDialogError(title, text); });
 }

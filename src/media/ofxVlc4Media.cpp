@@ -1602,20 +1602,6 @@ void ofxVlc4::MediaComponent::handleMediaEvent(const libvlc_event_t * event) {
 }
 
 
-void ofxVlc4::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
-	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire)) {
-		return;
-	}
-	ofxVlc4 * owner = cb->owner;
-	CallbackScope scope = owner->enterCallbackScope();
-	if (!scope || !event) {
-		return;
-	}
-	scope.get()->vlcMediaEvent(event);
-}
-
-
 void ofxVlc4::vlcMediaEvent(const libvlc_event_t * event) {
 	m_impl->subsystemRuntime.mediaComponent->handleMediaEvent(event);
 }

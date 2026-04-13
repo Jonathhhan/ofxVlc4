@@ -2,6 +2,8 @@
 
 ## 1.0.4
 
+- **phase 3 callback boundary cleanup** — removed callback-facing static event/dialog declarations from `src/core/ofxVlc4.h`; `VlcEventRouter` now owns callback dispatch and forwards to internal instance handlers while dropping late event/dialog callbacks during shutdown; added focused router regression coverage in `tests/test_event_router_lifecycle.cpp` for attach/detach wiring and shutdown drop behavior
+
 - **code review: recording mux thread safety** — `finalizeRecordingMuxThread()` and `cancelPendingRecordingMux()` no longer `detach()` the worker on timeout; both now keep ownership-safe, deterministic shutdown by waiting for a safe `join()` (with timeout warnings logged before continuing to wait)
 
 - **code review: log file close error reporting** — `VlcCoreSession::closeLogFile()` now logs a warning through `ofLogWarning` when `fflush()` or `fclose()` fails, replacing the previous placeholder comments

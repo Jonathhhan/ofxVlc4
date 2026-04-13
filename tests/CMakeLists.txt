@@ -570,20 +570,17 @@ target_link_libraries(test_mux_join_timeout PRIVATE Threads::Threads)
 add_test(NAME mux_join_timeout COMMAND test_mux_join_timeout)
 
 # ---------------------------------------------------------------------------
-# test_callback_policy
-# Tests shared callback policy selection helpers used by player/media/dialog
-# callback wiring.
+# test_event_router_lifecycle
+# Mock seam coverage for router-owned callback wiring contract:
+# attach/detach data+callback pairing and shutdown-time drop behavior for
+# late player/media/discoverer/renderer and dialog callbacks.
 # ---------------------------------------------------------------------------
 
-add_executable(test_callback_policy
-    test_callback_policy.cpp
+add_executable(test_event_router_lifecycle
+    test_event_router_lifecycle.cpp
 )
 
-target_include_directories(test_callback_policy PRIVATE
-    "${SRC_DIR}"
-)
-
-add_test(NAME callback_policy COMMAND test_callback_policy)
+add_test(NAME event_router_lifecycle COMMAND test_event_router_lifecycle)
 
 # ---------------------------------------------------------------------------
 # test_module_state_seams

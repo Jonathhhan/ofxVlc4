@@ -846,23 +846,17 @@ private:
 	static void audioFlush(void * data, int64_t pts);
 	static void audioDrain(void * data);
 
-	static void vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * data);
 	void vlcMediaPlayerEvent(const libvlc_event_t * event);
-	static void vlcMediaEventStatic(const libvlc_event_t * event, void * data);
 	void vlcMediaEvent(const libvlc_event_t * event);
-	static void mediaDiscovererMediaListEventStatic(const libvlc_event_t * event, void * data);
 	void mediaDiscovererMediaListEvent(const libvlc_event_t * event);
-	static void rendererDiscovererEventStatic(const libvlc_event_t * event, void * data);
 	void rendererDiscovererEvent(const libvlc_event_t * event);
-	static void dialogDisplayLoginStatic(
-		void * data,
+	void handleDialogDisplayLogin(
 		libvlc_dialog_id * id,
 		const char * title,
 		const char * text,
 		const char * defaultUsername,
 		bool askStore);
-	static void dialogDisplayQuestionStatic(
-		void * data,
+	void handleDialogDisplayQuestion(
 		libvlc_dialog_id * id,
 		const char * title,
 		const char * text,
@@ -870,17 +864,16 @@ private:
 		const char * cancel,
 		const char * action1,
 		const char * action2);
-	static void dialogDisplayProgressStatic(
-		void * data,
+	void handleDialogDisplayProgress(
 		libvlc_dialog_id * id,
 		const char * title,
 		const char * text,
 		bool indeterminate,
 		float position,
 		const char * cancel);
-	static void dialogCancelStatic(void * data, libvlc_dialog_id * id);
-	static void dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, float position, const char * text);
-	static void dialogErrorStatic(void * data, const char * title, const char * text);
+	void handleDialogCancel(libvlc_dialog_id * id);
+	void handleDialogUpdateProgress(libvlc_dialog_id * id, float position, const char * text);
+	void handleDialogError(const char * title, const char * text);
 	static void libVlcLogStatic(void * data, int level, const libvlc_log_t * ctx, const char * fmt, va_list args);
 	static void watchTimeUpdateStatic(const libvlc_media_player_time_point_t * value, void * data);
 	static void watchTimePausedStatic(int64_t system_date_us, void * data);
