@@ -1295,24 +1295,13 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	const bool useEventRouter = eventRouter != nullptr;
-	libvlc_dialog_cbs dialogCallbacks {};
-	if (useEventRouter) {
-		dialogCallbacks = {
-			VlcEventRouter::dialogDisplayLoginStatic,
-			VlcEventRouter::dialogDisplayQuestionStatic,
-			VlcEventRouter::dialogDisplayProgressStatic,
-			VlcEventRouter::dialogCancelStatic,
-			VlcEventRouter::dialogUpdateProgressStatic
-		};
-	} else {
-		dialogCallbacks = {
-			ofxVlc4::dialogDisplayLoginStatic,
-			ofxVlc4::dialogDisplayQuestionStatic,
-			ofxVlc4::dialogDisplayProgressStatic,
-			ofxVlc4::dialogCancelStatic,
-			ofxVlc4::dialogUpdateProgressStatic
-		};
-	}
+	libvlc_dialog_cbs dialogCallbacks {
+		useEventRouter ? VlcEventRouter::dialogDisplayLoginStatic : ofxVlc4::dialogDisplayLoginStatic,
+		useEventRouter ? VlcEventRouter::dialogDisplayQuestionStatic : ofxVlc4::dialogDisplayQuestionStatic,
+		useEventRouter ? VlcEventRouter::dialogDisplayProgressStatic : ofxVlc4::dialogDisplayProgressStatic,
+		useEventRouter ? VlcEventRouter::dialogCancelStatic : ofxVlc4::dialogCancelStatic,
+		useEventRouter ? VlcEventRouter::dialogUpdateProgressStatic : ofxVlc4::dialogUpdateProgressStatic
+	};
 	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, eventCallbackData);
 	libvlc_dialog_set_error_callback(
 		m_impl->subsystemRuntime.coreSession->instance(),
