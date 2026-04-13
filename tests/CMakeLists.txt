@@ -568,3 +568,19 @@ add_executable(test_mux_join_timeout
 target_link_libraries(test_mux_join_timeout PRIVATE Threads::Threads)
 
 add_test(NAME mux_join_timeout COMMAND test_mux_join_timeout)
+
+# ---------------------------------------------------------------------------
+# test_module_state_seams
+# Thin integration coverage around shared module state objects extracted into
+# dedicated headers (init args, playback transport, media-library state).
+# ---------------------------------------------------------------------------
+
+add_executable(test_module_state_seams
+    test_module_state_seams.cpp
+)
+
+target_include_directories(test_module_state_seams PRIVATE
+    "${SRC_DIR}"
+)
+
+add_test(NAME module_state_seams COMMAND test_module_state_seams)

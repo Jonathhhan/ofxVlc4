@@ -874,18 +874,14 @@ void ofApp::playPause() {
 	ofxVlc4 * active = activePlayer();
 	if (!active) return;
 
-	if (active->isPlaying()) {
-		active->pause();
-		shuttleSpeed = 0;
-	} else {
-		active->play();
-		shuttleSpeed = 1;
-	}
+	const bool wasPlaying = active->isPlaying();
+	ofxVlc4Playback::execute(*active, ofxVlc4::PlayerCommand::PlayPause);
+	shuttleSpeed = wasPlaying ? 0 : 1;
 }
 
 void ofApp::stopPlayback() {
-	if (sourcePlayer) sourcePlayer->stop();
-	if (recordPlayer) recordPlayer->stop();
+	if (sourcePlayer) ofxVlc4Playback::execute(*sourcePlayer, ofxVlc4::PlayerCommand::Stop);
+	if (recordPlayer) ofxVlc4Playback::execute(*recordPlayer, ofxVlc4::PlayerCommand::Stop);
 	shuttleSpeed = 0;
 }
 

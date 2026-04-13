@@ -4,6 +4,7 @@
 #include "media/MediaLibrary.h"
 #include "ofxVlc4Media.h"
 #include "playback/PlaybackController.h"
+#include "playback/ofxVlc4PlaybackCommands.h"
 #include "support/ofxVlc4MediaHelpers.h"
 #include "video/ofxVlc4Video.h"
 #include "support/ofxVlc4Utils.h"
@@ -2462,103 +2463,7 @@ void ofxVlc4::navigate(NavigationMode mode) {
 }
 
 bool ofxVlc4::executePlayerCommand(PlayerCommand command) {
-	const auto seekByMilliseconds = [this](int deltaMs) {
-		const int currentTimeMs = std::max(0, getTime());
-		setTime(std::max(0, currentTimeMs + deltaMs));
-	};
-
-	switch (command) {
-	case PlayerCommand::PlayPause:
-		if (isPlaying()) {
-			pause();
-		} else {
-			play();
-		}
-		return true;
-	case PlayerCommand::Play:
-		play();
-		return true;
-	case PlayerCommand::Pause:
-		pause();
-		return true;
-	case PlayerCommand::Stop:
-		stop();
-		return true;
-	case PlayerCommand::NextItem:
-		nextMediaListItem();
-		return true;
-	case PlayerCommand::PreviousItem:
-		previousMediaListItem();
-		return true;
-	case PlayerCommand::SeekForwardSmall:
-		seekByMilliseconds(5000);
-		return true;
-	case PlayerCommand::SeekBackwardSmall:
-		seekByMilliseconds(-5000);
-		return true;
-	case PlayerCommand::SeekForwardLarge:
-		seekByMilliseconds(30000);
-		return true;
-	case PlayerCommand::SeekBackwardLarge:
-		seekByMilliseconds(-30000);
-		return true;
-	case PlayerCommand::VolumeUp:
-		setVolume(getVolume() + 5);
-		return true;
-	case PlayerCommand::VolumeDown:
-		setVolume(getVolume() - 5);
-		return true;
-	case PlayerCommand::ToggleMute:
-		toggleMute();
-		return true;
-	case PlayerCommand::NextFrame:
-		nextFrame();
-		return true;
-	case PlayerCommand::PreviousChapter:
-		previousChapter();
-		return true;
-	case PlayerCommand::NextChapter:
-		nextChapter();
-		return true;
-	case PlayerCommand::MenuActivate:
-		navigate(NavigationMode::Activate);
-		return true;
-	case PlayerCommand::MenuUp:
-		navigate(NavigationMode::Up);
-		return true;
-	case PlayerCommand::MenuDown:
-		navigate(NavigationMode::Down);
-		return true;
-	case PlayerCommand::MenuLeft:
-		navigate(NavigationMode::Left);
-		return true;
-	case PlayerCommand::MenuRight:
-		navigate(NavigationMode::Right);
-		return true;
-	case PlayerCommand::MenuPopup:
-		navigate(NavigationMode::Popup);
-		return true;
-	case PlayerCommand::TeletextRed:
-		sendTeletextKey(TeletextKey::Red);
-		return true;
-	case PlayerCommand::TeletextGreen:
-		sendTeletextKey(TeletextKey::Green);
-		return true;
-	case PlayerCommand::TeletextYellow:
-		sendTeletextKey(TeletextKey::Yellow);
-		return true;
-	case PlayerCommand::TeletextBlue:
-		sendTeletextKey(TeletextKey::Blue);
-		return true;
-	case PlayerCommand::TeletextIndex:
-		sendTeletextKey(TeletextKey::Index);
-		return true;
-	case PlayerCommand::ToggleTeletextTransparency:
-		setTeletextTransparencyEnabled(!isTeletextTransparencyEnabled());
-		return true;
-	}
-
-	return false;
+	return ofxVlc4Playback::execute(*this, command);
 }
 
 std::vector<ofxVlc4::MediaTrackInfo> ofxVlc4::MediaComponent::getTrackInfos(libvlc_track_type_t type) const {

@@ -1770,7 +1770,7 @@ void ofxVlc4::AudioComponent::audioDrain() {
 }
 
 void ofxVlc4::AudioComponent::writeSilenceForContinuousMode() {
-	const auto & vizSettings = owner.m_impl->playerConfigRuntime.audioVisualizerSettings;
+	const auto & vizSettings = owner.m_impl->initArgsRuntime.audioVisualizerSettings;
 	if (vizSettings.module == ofxVlc4AudioVisualizerModule::None) {
 		return;
 	}

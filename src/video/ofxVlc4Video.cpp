@@ -699,7 +699,7 @@ void ofxVlc4::VideoComponent::updateNativeVideoWindowVisibility() {
 		&& owner.sessionPlayer();
 	const bool hasVisualizerWithNativeWindow =
 		owner.m_impl->videoPresentationRuntime.videoOutputBackend == VideoOutputBackend::NativeWindow
-		&& owner.m_impl->playerConfigRuntime.audioVisualizerSettings.module != ofxVlc4AudioVisualizerModule::None;
+		&& owner.m_impl->initArgsRuntime.audioVisualizerSettings.module != ofxVlc4AudioVisualizerModule::None;
 	if (hasActiveNativeWindow || hasVisualizerWithNativeWindow) {
 		owner.m_impl->videoResourceRuntime.vlcWindow->setWindowTitle("ofxVlc4 Native Video");
 		if (!owner.m_impl->videoResourceRuntime.nativeWindowGeometryInitialized) {

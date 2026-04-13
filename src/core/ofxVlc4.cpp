@@ -1172,7 +1172,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 #endif
 
 	std::vector<std::string> initArgs;
-	initArgs.reserve(static_cast<size_t>(std::max(0, vlc_argc)) + m_impl->playerConfigRuntime.extraInitArgs.size() + 8);
+	initArgs.reserve(static_cast<size_t>(std::max(0, vlc_argc)) + m_impl->initArgsRuntime.extraInitArgs.size() + 8);
 
 #ifdef TARGET_WIN32
 	switch (m_impl->videoPresentationRuntime.preferredDecoderDevice) {
@@ -1208,7 +1208,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	initArgs.emplace_back(std::string("--freetype-color=") + ofToString(ofClamp(m_impl->playerConfigRuntime.subtitleTextColor, 0, 16777215)));
 	initArgs.emplace_back(std::string("--freetype-opacity=") + ofToString(ofClamp(m_impl->playerConfigRuntime.subtitleTextOpacity, 0, 255)));
 	initArgs.emplace_back(m_impl->playerConfigRuntime.subtitleBold ? "--freetype-bold" : "--no-freetype-bold");
-	appendAudioVisualizerInitArgs(initArgs, m_impl->playerConfigRuntime.audioVisualizerSettings);
+	appendAudioVisualizerInitArgs(initArgs, m_impl->initArgsRuntime.audioVisualizerSettings);
 
 	for (int i = 0; i < vlc_argc; ++i) {
 		if (vlc_argv != nullptr && vlc_argv[i] != nullptr) {
@@ -1216,7 +1216,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		}
 	}
 
-	for (const std::string & argument : m_impl->playerConfigRuntime.extraInitArgs) {
+	for (const std::string & argument : m_impl->initArgsRuntime.extraInitArgs) {
 		if (!argument.empty()) {
 			initArgs.push_back(argument);
 		}
@@ -1311,14 +1311,14 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 }
 
 std::vector<std::string> ofxVlc4::getExtraInitArgs() const {
-	return m_impl->playerConfigRuntime.extraInitArgs;
+	return m_impl->initArgsRuntime.extraInitArgs;
 }
 
 void ofxVlc4::setExtraInitArgs(const std::vector<std::string> & args) {
-	m_impl->playerConfigRuntime.extraInitArgs.clear();
+	m_impl->initArgsRuntime.extraInitArgs.clear();
 	for (const std::string & arg : args) {
 		if (!arg.empty()) {
-			m_impl->playerConfigRuntime.extraInitArgs.push_back(arg);
+			m_impl->initArgsRuntime.extraInitArgs.push_back(arg);
 		}
 	}
 	setStatus("Extra init args updated for the next init.");
@@ -1328,20 +1328,20 @@ void ofxVlc4::addExtraInitArg(const std::string & arg) {
 	if (arg.empty()) {
 		return;
 	}
-	m_impl->playerConfigRuntime.extraInitArgs.push_back(arg);
+	m_impl->initArgsRuntime.extraInitArgs.push_back(arg);
 	setStatus("Extra init args updated for the next init.");
 }
 
 void ofxVlc4::clearExtraInitArgs() {
-	if (m_impl->playerConfigRuntime.extraInitArgs.empty()) {
+	if (m_impl->initArgsRuntime.extraInitArgs.empty()) {
 		return;
 	}
-	m_impl->playerConfigRuntime.extraInitArgs.clear();
+	m_impl->initArgsRuntime.extraInitArgs.clear();
 	setStatus("Extra init args cleared for the next init.");
 }
 
 ofxVlc4AudioVisualizerSettings ofxVlc4::getAudioVisualizerSettings() const {
-	return m_impl->playerConfigRuntime.audioVisualizerSettings;
+	return m_impl->initArgsRuntime.audioVisualizerSettings;
 }
 
 void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & settings) {
@@ -1356,10 +1356,10 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 	normalized.projectMTextureSize = std::max(0, settings.projectMTextureSize);
 	normalized.projectMMeshX = std::max(0, settings.projectMMeshX);
 	normalized.projectMMeshY = std::max(0, settings.projectMMeshY);
-	if (normalized == m_impl->playerConfigRuntime.audioVisualizerSettings) {
+	if (normalized == m_impl->initArgsRuntime.audioVisualizerSettings) {
 		return;
 	}
-	m_impl->playerConfigRuntime.audioVisualizerSettings = normalized;
+	m_impl->initArgsRuntime.audioVisualizerSettings = normalized;
 	const bool mediaActivationPending =
 		m_impl->subsystemRuntime.playbackController &&
 		m_impl->subsystemRuntime.playbackController->isMediaActivationPending();

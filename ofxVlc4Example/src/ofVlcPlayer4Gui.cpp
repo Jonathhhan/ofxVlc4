@@ -776,30 +776,30 @@ void ofVlcPlayer4Gui::drawTransportSection(ofxVlc4 & player, bool hasPlaylist) {
 		if (selectedIndex >= 0 && selectedIndex != player.getCurrentIndex()) {
 			player.playIndex(selectedIndex);
 		} else {
-			player.play();
+			ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::Play);
 		}
 	}
 
 	ImGui::SameLine(0.0f, kButtonSpacing);
 	if (ImGui::Button("Pause", ImVec2(controlWidth, 0.0f)) && hasPlaylist) {
-		player.pause();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::Pause);
 	}
 
 	ImGui::SameLine(0.0f, kButtonSpacing);
 	if (ImGui::Button("Stop", ImVec2(controlWidth, 0.0f)) && hasPlaylist) {
-		player.stop();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::Stop);
 	}
 
 	ImGui::SameLine(0.0f, kButtonSpacing);
 	if (ImGui::Button("Prev", ImVec2(controlWidth, 0.0f)) && hasPlaylist) {
 		followPlaybackSelectionEnabled = true;
-		player.previousMediaListItem();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::PreviousItem);
 	}
 
 	ImGui::SameLine(0.0f, kButtonSpacing);
 	if (ImGui::Button("Next", ImVec2(controlWidth, 0.0f)) && hasPlaylist) {
 		followPlaybackSelectionEnabled = true;
-		player.nextMediaListItem();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::NextItem);
 	}
 	ImGui::EndDisabled();
 }
@@ -1443,41 +1443,40 @@ void ofVlcPlayer4Gui::handleImGuiShortcuts(
 	}
 
 	if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) {
-		if (player.isPlaying()) {
-			player.pause();
-		} else {
+		const bool wasPlaying = player.isPlaying();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::PlayPause);
+		if (!wasPlaying) {
 			followPlaybackSelectionEnabled = true;
-			player.play();
 		}
 	}
 
 	if (ImGui::IsKeyPressed(ImGuiKey_S, false)) {
-		player.stop();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::Stop);
 	}
 
 	if (ImGui::IsKeyPressed(ImGuiKey_M, false)) {
-		player.toggleMute();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::ToggleMute);
 		volume = player.getVolume();
 	}
 
 	if (ImGui::IsKeyPressed(ImGuiKey_Equal, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadAdd, false)) {
-		volume = ofClamp(volume + 5, 0, 100);
-		player.setVolume(volume);
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::VolumeUp);
+		volume = player.getVolume();
 	}
 
 	if (ImGui::IsKeyPressed(ImGuiKey_Minus, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadSubtract, false)) {
-		volume = ofClamp(volume - 5, 0, 100);
-		player.setVolume(volume);
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::VolumeDown);
+		volume = player.getVolume();
 	}
 
 	if (ImGui::IsKeyPressed(ImGuiKey_N, false) || ImGui::IsKeyPressed(ImGuiKey_RightArrow, false)) {
 		followPlaybackSelectionEnabled = true;
-		player.nextMediaListItem();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::NextItem);
 	}
 
 	if (ImGui::IsKeyPressed(ImGuiKey_P, false) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow, false)) {
 		followPlaybackSelectionEnabled = true;
-		player.previousMediaListItem();
+		ofxVlc4Playback::execute(player, ofxVlc4::PlayerCommand::PreviousItem);
 	}
 
 	if (projectMInitialized && ImGui::IsKeyPressed(ImGuiKey_R, false)) {
