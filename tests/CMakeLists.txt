@@ -570,6 +570,27 @@ target_link_libraries(test_mux_join_timeout PRIVATE Threads::Threads)
 add_test(NAME mux_join_timeout COMMAND test_mux_join_timeout)
 
 # ---------------------------------------------------------------------------
+# test_event_router
+# Verifies VlcEventRouter wiring stays router-owned: attach/detach callback
+# routing and shutdown-time dropping for late event/dialog callbacks.
+# Uses dedicated local stubs to compile the router implementation in isolation.
+# ---------------------------------------------------------------------------
+
+set(STUBS_ROUTER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/stubs_router")
+
+add_executable(test_event_router
+    test_event_router.cpp
+    "${SRC_DIR}/core/VlcEventRouter.cpp"
+)
+
+target_include_directories(test_event_router PRIVATE
+    "${STUBS_ROUTER_DIR}"
+    "${SRC_DIR}/core"
+)
+
+add_test(NAME event_router COMMAND test_event_router)
+
+# ---------------------------------------------------------------------------
 # test_module_state_seams
 # Thin integration coverage around shared module state objects extracted into
 # dedicated headers (init args, playback transport, media-library state).

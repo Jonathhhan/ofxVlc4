@@ -80,10 +80,10 @@ route through the owning `ofxVlc4` instance.
 ### Accessing State from VLC Callbacks
 
 All VLC callbacks are `static` functions receiving `void * data`.
-Event/dialog callback registration is routed through `VlcEventRouter`, which
-uses router userdata and forwards to `ofxVlc4` callback handlers through the
-`ControlBlock` ownership guard. Callback implementations must access state
-through `m_impl->` (e.g. `owner->m_impl->synchronizationRuntime.dialogMutex`).
+Event/dialog callback registration is fully owned by `VlcEventRouter`, which
+uses router userdata and forwards into internal `ofxVlc4` instance handlers.
+Callback implementations must access state through `m_impl->` (e.g.
+`owner->m_impl->synchronizationRuntime.dialogMutex`).
 Direct member access like `owner->dialogMutex` is incorrect because those
 fields live inside the PIMPL struct.
 

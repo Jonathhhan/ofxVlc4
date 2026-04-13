@@ -942,23 +942,15 @@ void ofxVlc4::MediaComponent::clearLastDialogErrorLocked() {
 }
 
 
-void ofxVlc4::dialogDisplayLoginStatic(
-	void * data,
+void ofxVlc4::handleDialogDisplayLogin(
 	libvlc_dialog_id * id,
 	const char * title,
 	const char * text,
 	const char * defaultUsername,
 	bool askStore) {
-	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
+	if (!id) {
 		return;
 	}
-	ofxVlc4 * owner = cb->owner;
-	CallbackScope scope = owner->enterCallbackScope();
-	if (!scope) {
-		return;
-	}
-	owner = scope.get();
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -968,11 +960,10 @@ void ofxVlc4::dialogDisplayLoginStatic(
 	dialog.defaultUsername = defaultUsername ? defaultUsername : "";
 	dialog.askStore = askStore;
 	dialog.cancellable = true;
-	owner->upsertDialog(dialog);
+	upsertDialog(dialog);
 }
 
-void ofxVlc4::dialogDisplayQuestionStatic(
-	void * data,
+void ofxVlc4::handleDialogDisplayQuestion(
 	libvlc_dialog_id * id,
 	const char * title,
 	const char * text,
@@ -980,16 +971,9 @@ void ofxVlc4::dialogDisplayQuestionStatic(
 	const char * cancel,
 	const char * action1,
 	const char * action2) {
-	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
+	if (!id) {
 		return;
 	}
-	ofxVlc4 * owner = cb->owner;
-	CallbackScope scope = owner->enterCallbackScope();
-	if (!scope) {
-		return;
-	}
-	owner = scope.get();
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -1001,27 +985,19 @@ void ofxVlc4::dialogDisplayQuestionStatic(
 	dialog.action1Label = action1 ? action1 : "";
 	dialog.action2Label = action2 ? action2 : "";
 	dialog.cancellable = !dialog.cancelLabel.empty();
-	owner->upsertDialog(dialog);
+	upsertDialog(dialog);
 }
 
-void ofxVlc4::dialogDisplayProgressStatic(
-	void * data,
+void ofxVlc4::handleDialogDisplayProgress(
 	libvlc_dialog_id * id,
 	const char * title,
 	const char * text,
 	bool indeterminate,
 	float position,
 	const char * cancel) {
-	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
+	if (!id) {
 		return;
 	}
-	ofxVlc4 * owner = cb->owner;
-	CallbackScope scope = owner->enterCallbackScope();
-	if (!scope) {
-		return;
-	}
-	owner = scope.get();
 
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
@@ -1032,37 +1008,23 @@ void ofxVlc4::dialogDisplayProgressStatic(
 	dialog.progressPosition = ofClamp(position, 0.0f, 1.0f);
 	dialog.cancelLabel = cancel ? cancel : "";
 	dialog.cancellable = !dialog.cancelLabel.empty();
-	owner->upsertDialog(dialog);
+	upsertDialog(dialog);
 }
 
-void ofxVlc4::dialogCancelStatic(void * data, libvlc_dialog_id * id) {
-	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
+void ofxVlc4::handleDialogCancel(libvlc_dialog_id * id) {
+	if (!id) {
 		return;
 	}
-	ofxVlc4 * owner = cb->owner;
-	CallbackScope scope = owner->enterCallbackScope();
-	if (!scope) {
-		return;
-	}
-	owner = scope.get();
 
 	const std::uintptr_t token = reinterpret_cast<std::uintptr_t>(id);
-	owner->removeDialog(token);
+	removeDialog(token);
 	libvlc_dialog_dismiss(id);
 }
 
-void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, float position, const char * text) {
-	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner || !id) {
+void ofxVlc4::handleDialogUpdateProgress(libvlc_dialog_id * id, float position, const char * text) {
+	if (!id) {
 		return;
 	}
-	ofxVlc4 * owner = cb->owner;
-	CallbackScope scope = owner->enterCallbackScope();
-	if (!scope) {
-		return;
-	}
-	owner = scope.get();
 	DialogInfo dialog;
 	dialog.token = reinterpret_cast<std::uintptr_t>(id);
 	dialog.type = DialogType::Progress;
@@ -1070,12 +1032,12 @@ void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, flo
 	dialog.text = text ? text : "";
 
 	{
-		std::lock_guard<std::mutex> lock(owner->m_impl->synchronizationRuntime.dialogMutex);
+		std::lock_guard<std::mutex> lock(m_impl->synchronizationRuntime.dialogMutex);
 		const auto it = std::find_if(
-			owner->m_impl->diagnosticsRuntime.activeDialogs.begin(),
-			owner->m_impl->diagnosticsRuntime.activeDialogs.end(),
+			m_impl->diagnosticsRuntime.activeDialogs.begin(),
+			m_impl->diagnosticsRuntime.activeDialogs.end(),
 			[&dialog](const DialogInfo & existing) { return existing.token == dialog.token; });
-		if (it != owner->m_impl->diagnosticsRuntime.activeDialogs.end()) {
+		if (it != m_impl->diagnosticsRuntime.activeDialogs.end()) {
 			dialog.title = it->title;
 			dialog.cancelLabel = it->cancelLabel;
 			dialog.cancellable = it->cancellable;
@@ -1085,28 +1047,18 @@ void ofxVlc4::dialogUpdateProgressStatic(void * data, libvlc_dialog_id * id, flo
 		}
 	}
 
-	owner->upsertDialog(dialog);
+	upsertDialog(dialog);
 }
 
-void ofxVlc4::dialogErrorStatic(void * data, const char * title, const char * text) {
-	auto * cb = static_cast<ControlBlock *>(data);
-	if (!cb || cb->expired.load(std::memory_order_acquire) || !cb->owner) {
-		return;
-	}
-	ofxVlc4 * owner = cb->owner;
-	CallbackScope scope = owner->enterCallbackScope();
-	if (!scope) {
-		return;
-	}
-	owner = scope.get();
+void ofxVlc4::handleDialogError(const char * title, const char * text) {
 	{
-		std::lock_guard<std::mutex> lock(owner->m_impl->synchronizationRuntime.dialogMutex);
-		owner->m_impl->diagnosticsRuntime.lastDialogError.available = true;
-		owner->m_impl->diagnosticsRuntime.lastDialogError.title = title ? title : "";
-		owner->m_impl->diagnosticsRuntime.lastDialogError.text = text ? text : "";
+		std::lock_guard<std::mutex> lock(m_impl->synchronizationRuntime.dialogMutex);
+		m_impl->diagnosticsRuntime.lastDialogError.available = true;
+		m_impl->diagnosticsRuntime.lastDialogError.title = title ? title : "";
+		m_impl->diagnosticsRuntime.lastDialogError.text = text ? text : "";
 	}
 
 	if (text && *text) {
-		owner->setError(text);
+		setError(text);
 	}
 }
