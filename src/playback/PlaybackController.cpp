@@ -427,6 +427,7 @@ void PlaybackController::play() {
 	}
 
 	if (state == libvlc_Paused) {
+		resetAudioBuffer();
 		libvlc_media_player_set_pause(player, 0);
 	} else {
 		applyPendingEqualizerOnPlay();
@@ -472,6 +473,7 @@ void PlaybackController::pause() {
 			return;
 		}
 		if (state == libvlc_Playing) {
+			resetAudioBuffer();
 			libvlc_media_player_set_pause(player, 1);
 			owner.logNotice("Playback paused.");
 		}
