@@ -1287,22 +1287,13 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
-	// MediaComponent is created in the ofxVlc4 constructor and owned for the object's lifetime.
-	assert(m_impl->subsystemRuntime.mediaComponent && "MediaComponent must exist before libVLC callback wiring.");
-	auto & mediaComponent = *m_impl->subsystemRuntime.mediaComponent;
-	void * eventCallbackData = mediaComponent.eventCallbackData();
+	assert(m_impl->subsystemRuntime.eventRouter && "EventRouter must exist before libVLC callback wiring.");
+	auto & eventRouter = *m_impl->subsystemRuntime.eventRouter;
 	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
-		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(
-			eventCallbackData,
-			mediaComponent.playerEventCallback());
+		eventRouter.attachPlayerEvents(*m_impl->subsystemRuntime.coreSession);
 	}
 
-	libvlc_dialog_cbs dialogCallbacks = mediaComponent.dialogCallbacks();
-	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, eventCallbackData);
-	libvlc_dialog_set_error_callback(
-		m_impl->subsystemRuntime.coreSession->instance(),
-		mediaComponent.dialogErrorCallback(),
-		eventCallbackData);
+	eventRouter.applyDialogCallbacks(m_impl->subsystemRuntime.coreSession->instance());
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
 		startRendererDiscovery(m_impl->rendererDiscoveryRuntime.discovererName);

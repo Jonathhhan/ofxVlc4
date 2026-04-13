@@ -7,15 +7,33 @@ typedef struct libvlc_media_list_t libvlc_media_list_t;
 typedef struct libvlc_renderer_discoverer_t libvlc_renderer_discoverer_t;
 
 class ofxVlc4;
+class VlcCoreSession;
 
 class VlcEventRouter {
 public:
+	using EventCallback = void (*)(const libvlc_event_t *, void *);
+	using DialogErrorCallback = void (*)(void *, const char *, const char *);
+
 	explicit VlcEventRouter(ofxVlc4 & owner);
 
 	ofxVlc4 & getOwner() const;
+	void * callbackData() const;
+	EventCallback playerEventCallback() const;
+	EventCallback mediaEventCallback() const;
+	EventCallback mediaDiscovererListEventCallback() const;
+	EventCallback rendererDiscovererEventCallback() const;
+	libvlc_dialog_cbs dialogCallbacks() const;
+	DialogErrorCallback dialogErrorCallback() const;
+	void attachPlayerEvents(VlcCoreSession & coreSession) const;
+	void detachPlayerEvents(VlcCoreSession & coreSession) const;
+	void attachMediaEvents(VlcCoreSession & coreSession) const;
+	void detachMediaEvents(VlcCoreSession & coreSession) const;
+	void attachMediaDiscovererListEvents(VlcCoreSession & coreSession) const;
+	void detachMediaDiscovererListEvents(VlcCoreSession & coreSession) const;
+	void attachRendererEvents(VlcCoreSession & coreSession) const;
+	void detachRendererEvents(VlcCoreSession & coreSession) const;
+	void applyDialogCallbacks(libvlc_instance_t * instance) const;
 
-	// Phase-1 refactor landing zone: callback registration and forwarding move here
-	// before playback/media/video logic is extracted.
 	static void vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * data);
 	static void vlcMediaEventStatic(const libvlc_event_t * event, void * data);
 	static void mediaDiscovererMediaListEventStatic(const libvlc_event_t * event, void * data);

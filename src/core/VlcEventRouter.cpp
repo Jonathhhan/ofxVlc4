@@ -1,4 +1,5 @@
 #include "VlcEventRouter.h"
+#include "VlcCoreSession.h"
 #include "ofxVlc4.h"
 #include "ofxVlc4Impl.h"
 
@@ -21,6 +22,85 @@ VlcEventRouter::VlcEventRouter(ofxVlc4 & ownerRef)
 
 ofxVlc4 & VlcEventRouter::getOwner() const {
 	return owner;
+}
+
+void * VlcEventRouter::callbackData() const {
+	return const_cast<VlcEventRouter *>(this);
+}
+
+VlcEventRouter::EventCallback VlcEventRouter::playerEventCallback() const {
+	return VlcEventRouter::vlcMediaPlayerEventStatic;
+}
+
+VlcEventRouter::EventCallback VlcEventRouter::mediaEventCallback() const {
+	return VlcEventRouter::vlcMediaEventStatic;
+}
+
+VlcEventRouter::EventCallback VlcEventRouter::mediaDiscovererListEventCallback() const {
+	return VlcEventRouter::mediaDiscovererMediaListEventStatic;
+}
+
+VlcEventRouter::EventCallback VlcEventRouter::rendererDiscovererEventCallback() const {
+	return VlcEventRouter::rendererDiscovererEventStatic;
+}
+
+libvlc_dialog_cbs VlcEventRouter::dialogCallbacks() const {
+	return {
+		VlcEventRouter::dialogDisplayLoginStatic,
+		VlcEventRouter::dialogDisplayQuestionStatic,
+		VlcEventRouter::dialogDisplayProgressStatic,
+		VlcEventRouter::dialogCancelStatic,
+		VlcEventRouter::dialogUpdateProgressStatic
+	};
+}
+
+VlcEventRouter::DialogErrorCallback VlcEventRouter::dialogErrorCallback() const {
+	return VlcEventRouter::dialogErrorStatic;
+}
+
+void VlcEventRouter::attachPlayerEvents(VlcCoreSession & coreSession) const {
+	coreSession.attachPlayerEvents(callbackData(), playerEventCallback());
+}
+
+void VlcEventRouter::detachPlayerEvents(VlcCoreSession & coreSession) const {
+	coreSession.detachPlayerEvents(callbackData(), playerEventCallback());
+}
+
+void VlcEventRouter::attachMediaEvents(VlcCoreSession & coreSession) const {
+	coreSession.attachMediaEvents(callbackData(), mediaEventCallback());
+}
+
+void VlcEventRouter::detachMediaEvents(VlcCoreSession & coreSession) const {
+	coreSession.detachMediaEvents(callbackData(), mediaEventCallback());
+}
+
+void VlcEventRouter::attachMediaDiscovererListEvents(VlcCoreSession & coreSession) const {
+	coreSession.attachMediaDiscovererListEvents(
+		callbackData(),
+		mediaDiscovererListEventCallback());
+}
+
+void VlcEventRouter::detachMediaDiscovererListEvents(VlcCoreSession & coreSession) const {
+	coreSession.detachMediaDiscovererListEvents(
+		callbackData(),
+		mediaDiscovererListEventCallback());
+}
+
+void VlcEventRouter::attachRendererEvents(VlcCoreSession & coreSession) const {
+	coreSession.attachRendererEvents(callbackData(), rendererDiscovererEventCallback());
+}
+
+void VlcEventRouter::detachRendererEvents(VlcCoreSession & coreSession) const {
+	coreSession.detachRendererEvents(callbackData(), rendererDiscovererEventCallback());
+}
+
+void VlcEventRouter::applyDialogCallbacks(libvlc_instance_t * instance) const {
+	if (!instance) {
+		return;
+	}
+	libvlc_dialog_cbs callbacks = dialogCallbacks();
+	libvlc_dialog_set_callbacks(instance, &callbacks, callbackData());
+	libvlc_dialog_set_error_callback(instance, dialogErrorCallback(), callbackData());
 }
 
 void VlcEventRouter::vlcMediaPlayerEventStatic(const libvlc_event_t * event, void * data) {

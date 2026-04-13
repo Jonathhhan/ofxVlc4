@@ -9,7 +9,6 @@
 #include "video/ofxVlc4Video.h"
 #include "support/ofxVlc4Utils.h"
 #include "core/VlcCoreSession.h"
-#include "core/VlcEventCallbackPolicy.h"
 #include "core/VlcEventRouter.h"
 
 #include <algorithm>
@@ -401,81 +400,6 @@ PlaybackController & ofxVlc4::MediaComponent::playback() const {
 	return *owner.m_impl->subsystemRuntime.playbackController;
 }
 
-void * ofxVlc4::MediaComponent::eventCallbackData() const {
-	auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
-	return VlcEventCallbackPolicy::selectCallbackData(eventRouter, owner.m_controlBlock.get());
-}
-
-bool ofxVlc4::MediaComponent::hasEventRouter() const {
-	return owner.m_impl->subsystemRuntime.eventRouter != nullptr;
-}
-
-ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::playerEventCallback() const {
-	const bool useEventRouter = hasEventRouter();
-	return VlcEventCallbackPolicy::selectCallback(
-		useEventRouter,
-		VlcEventRouter::vlcMediaPlayerEventStatic,
-		ofxVlc4::vlcMediaPlayerEventStatic);
-}
-
-ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::mediaEventCallback() const {
-	const bool useEventRouter = hasEventRouter();
-	return VlcEventCallbackPolicy::selectCallback(
-		useEventRouter,
-		VlcEventRouter::vlcMediaEventStatic,
-		ofxVlc4::vlcMediaEventStatic);
-}
-
-ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::mediaDiscovererListEventCallback() const {
-	const bool useEventRouter = hasEventRouter();
-	return VlcEventCallbackPolicy::selectCallback(
-		useEventRouter,
-		VlcEventRouter::mediaDiscovererMediaListEventStatic,
-		ofxVlc4::mediaDiscovererMediaListEventStatic);
-}
-
-ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::rendererDiscovererEventCallback() const {
-	const bool useEventRouter = hasEventRouter();
-	return VlcEventCallbackPolicy::selectCallback(
-		useEventRouter,
-		VlcEventRouter::rendererDiscovererEventStatic,
-		ofxVlc4::rendererDiscovererEventStatic);
-}
-
-libvlc_dialog_cbs ofxVlc4::MediaComponent::dialogCallbacks() const {
-	const bool useEventRouter = hasEventRouter();
-	return {
-		VlcEventCallbackPolicy::selectCallback(
-			useEventRouter,
-			VlcEventRouter::dialogDisplayLoginStatic,
-			ofxVlc4::dialogDisplayLoginStatic),
-		VlcEventCallbackPolicy::selectCallback(
-			useEventRouter,
-			VlcEventRouter::dialogDisplayQuestionStatic,
-			ofxVlc4::dialogDisplayQuestionStatic),
-		VlcEventCallbackPolicy::selectCallback(
-			useEventRouter,
-			VlcEventRouter::dialogDisplayProgressStatic,
-			ofxVlc4::dialogDisplayProgressStatic),
-		VlcEventCallbackPolicy::selectCallback(
-			useEventRouter,
-			VlcEventRouter::dialogCancelStatic,
-			ofxVlc4::dialogCancelStatic),
-		VlcEventCallbackPolicy::selectCallback(
-			useEventRouter,
-			VlcEventRouter::dialogUpdateProgressStatic,
-			ofxVlc4::dialogUpdateProgressStatic)
-	};
-}
-
-ofxVlc4::MediaComponent::LibVlcDialogErrorCallback ofxVlc4::MediaComponent::dialogErrorCallback() const {
-	const bool useEventRouter = hasEventRouter();
-	return VlcEventCallbackPolicy::selectCallback(
-		useEventRouter,
-		VlcEventRouter::dialogErrorStatic,
-		ofxVlc4::dialogErrorStatic);
-}
-
 void ofxVlc4::MediaComponent::applyCurrentPlayerSettings() {
 	applyMediaPlayerRole();
 	applyNativeRecording();
@@ -758,9 +682,8 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 
 	owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(libvlc_media_event_manager(owner.m_impl->subsystemRuntime.coreSession->media()));
 	if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.coreSession->mediaEvents()) {
-		owner.m_impl->subsystemRuntime.coreSession->attachMediaEvents(
-			eventCallbackData(),
-			mediaEventCallback());
+		assert(owner.m_impl->subsystemRuntime.eventRouter && "EventRouter must exist before attaching media events.");
+		owner.m_impl->subsystemRuntime.eventRouter->attachMediaEvents(*owner.m_impl->subsystemRuntime.coreSession);
 	}
 
 	if (instance) {
@@ -809,9 +732,8 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 
 	if (coreSession && coreSession->mediaEvents()) {
 		if (currentMedia) {
-			coreSession->detachMediaEvents(
-				eventCallbackData(),
-				mediaEventCallback());
+			assert(owner.m_impl->subsystemRuntime.eventRouter && "EventRouter must exist before detaching media events.");
+			owner.m_impl->subsystemRuntime.eventRouter->detachMediaEvents(*coreSession);
 		}
 		coreSession->setMediaEvents(nullptr);
 	}
@@ -1245,15 +1167,11 @@ void ofxVlc4::applyMediaPlayerRole() {
 
 	void ofxVlc4::detachEvents() {
 	auto & coreSession = m_impl->subsystemRuntime.coreSession;
-	// MediaComponent is created in the ofxVlc4 constructor and owned for the object's lifetime.
-	assert(m_impl->subsystemRuntime.mediaComponent && "MediaComponent must exist before detaching libVLC callbacks.");
-	auto & mediaComponent = *m_impl->subsystemRuntime.mediaComponent;
-	void * eventData = mediaComponent.eventCallbackData();
-	const auto playerEventCallback = mediaComponent.playerEventCallback();
-	const auto mediaEventCallback = mediaComponent.mediaEventCallback();
+	assert(m_impl->subsystemRuntime.eventRouter && "EventRouter must exist before detaching libVLC callbacks.");
+	auto & eventRouter = *m_impl->subsystemRuntime.eventRouter;
 
 	if (coreSession && coreSession->playerEvents()) {
-		coreSession->detachPlayerEvents(eventData, playerEventCallback);
+		eventRouter.detachPlayerEvents(*coreSession);
 		// Null the pointer unconditionally: if the router existed, callbacks
 		// are already unregistered above; if it didn't, nothing was registered
 		// so there is nothing to detach.  Either way the stale pointer must
@@ -1262,7 +1180,7 @@ void ofxVlc4::applyMediaPlayerRole() {
 	}
 
 	if (coreSession && coreSession->mediaEvents()) {
-		coreSession->detachMediaEvents(eventData, mediaEventCallback);
+		eventRouter.detachMediaEvents(*coreSession);
 		// Null the pointer so that clearCurrentMedia() does not attempt a
 		// redundant detach on the same event manager.
 		coreSession->setMediaEvents(nullptr);
