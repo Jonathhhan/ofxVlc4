@@ -1352,10 +1352,25 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 		return;
 	}
 	m_impl->playerConfigRuntime.audioVisualizerSettings = normalized;
-	// Visualizer options are init-time VLC configuration. Avoid forcing a
-	// media reload here so playback is not interrupted when users tweak
-	// visualizer settings during runtime.
-	setStatus("Audio visualizer settings updated for the next init.");
+	const bool mediaActivationPending =
+		m_impl->subsystemRuntime.playbackController &&
+		m_impl->subsystemRuntime.playbackController->isMediaActivationPending();
+	if (sessionPlayer() && !mediaActivationPending) {
+		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
+			return;
+		}
+	}
+	if (mediaActivationPending) {
+		setStatus("Audio visualizer settings queued while media selection is pending.");
+		return;
+	}
+	// Reinitialize the player so the visualizer module is applied
+	// immediately, independent of whether media is loaded or playing.
+	// This mirrors the ofxProjectM behaviour where the visualizer can
+	// be toggled on and off at any time.
+	init(0, nullptr);
+	updateNativeVideoWindowVisibility();
+	setStatus("Audio visualizer settings applied.");
 }
 
 ofxVlc4SubtitleTextRenderer ofxVlc4::getSubtitleTextRenderer() const {
@@ -2502,4 +2517,3 @@ int ofxVlc4::getChannelCount() const {
 int ofxVlc4::getSampleRate() const {
 	return m_impl->audioRuntime.sampleRate.load(std::memory_order_relaxed);
 }
-
