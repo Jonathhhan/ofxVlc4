@@ -4,6 +4,7 @@
 #include "support/ofxVlc4GlOps.h"
 #include "support/ofxVlc4MuxHelpers.h"
 #include "support/ofxVlc4RecordingHelpers.h"
+#include "support/ofxVlc4Utils.h"
 
 #include <algorithm>
 #include <chrono>
@@ -16,6 +17,7 @@
 namespace {
 
 using namespace ofxVlc4MuxHelpers;
+using ofxVlc4Utils::hasCurrentGlContext;
 
 }
 
@@ -1139,7 +1141,7 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		recordingFrameSerial = 0;
 		recordingReadFrameSerial = 0;
 		lastVideoCaptureTimeUs = ofGetElapsedTimeMicros();
-		if (glfwGetCurrentContext() != nullptr) {
+		if (hasCurrentGlContext()) {
 			// For callback-fed rawvid recording, a CPU-ready frame buffer is more
 			// important than hiding readback latency. Async PBO submission can lag
 			// the callback stream and leave VLC with only the primed frame.
@@ -1204,7 +1206,7 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 }
 
 std::string ofxVlc4Recorder::updateCaptureState() {
-	if (glfwGetCurrentContext() != nullptr && videoRecordingActive.load()) {
+	if (hasCurrentGlContext() && videoRecordingActive.load()) {
 		const uint64_t nowUs = ofGetElapsedTimeMicros();
 
 		std::lock_guard<std::mutex> lock(recordingMutex);
@@ -1246,7 +1248,7 @@ bool ofxVlc4Recorder::initializeVideoReadbackBuffersLocked(size_t frameBytes) {
 	return false;
 #else
 	destroyVideoReadbackBuffersLocked();
-	if (frameBytes == 0 || glfwGetCurrentContext() == nullptr) {
+	if (frameBytes == 0 || !hasCurrentGlContext()) {
 		return false;
 	}
 
@@ -1275,7 +1277,7 @@ void ofxVlc4Recorder::destroyVideoReadbackBuffersLocked() {
 	recordingPboEnabled = false;
 
 #ifndef TARGET_OPENGLES
-	if (glfwGetCurrentContext() != nullptr) {
+	if (hasCurrentGlContext()) {
 		ofxVlc4GlOps::destroyPixelPackBuffers(pixelPackBuffers, pixelPackFences);
 	}
 #endif
@@ -1438,7 +1440,7 @@ void ofxVlc4Recorder::captureVideoFrameLocked() {
 	}
 
 #ifndef TARGET_OPENGLES
-	if (recordingPboEnabled && glfwGetCurrentContext() != nullptr) {
+	if (recordingPboEnabled && hasCurrentGlContext()) {
 		const auto failToSynchronousPath = [&]() {
 			destroyVideoReadbackBuffersLocked();
 		};
@@ -1643,13 +1645,14 @@ void ofxVlc4Recorder::clearVideoRecording() {
 	lastVideoCaptureTimeUs = 0;
 	recordingPixels.clear();
 	destroyVideoReadbackBuffersLocked();
-	if (!(recordingResizeFbo.isAllocated() && glfwGetCurrentContext() == nullptr)) {
+	const bool hasGlContext = hasCurrentGlContext();
+	if (!(recordingResizeFbo.isAllocated() && !hasGlContext)) {
 		recordingResizeFbo.clear();
 	}
-	if (!(recordingSourceTexture.isAllocated() && glfwGetCurrentContext() == nullptr)) {
+	if (!(recordingSourceTexture.isAllocated() && !hasGlContext)) {
 		recordingSourceTexture.clear();
 	}
-	if (!(recordingTexture.isAllocated() && glfwGetCurrentContext() == nullptr)) {
+	if (!(recordingTexture.isAllocated() && !hasGlContext)) {
 		recordingTexture.clear();
 	}
 	recordingFrameReadyCondition.notify_all();

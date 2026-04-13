@@ -156,6 +156,9 @@ audioPlay callback →  WAV writer
                         ↓ output.mp4
 ```
 
+For a callback-level OpenGL synchronization map (playback fence handoff and
+recorder PBO readback), see `docs/GL_WORKFLOW_MAP.md`.
+
 The mux step runs on a dedicated worker thread.  Sout module names
 (`containerMux`, `audioCodec`) are validated as alphanumeric-only via
 `isValidSoutModuleName()` to prevent sout-string injection.

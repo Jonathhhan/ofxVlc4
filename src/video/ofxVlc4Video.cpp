@@ -1197,16 +1197,11 @@ void ofxVlc4::VideoComponent::bindVlcRenderTarget() {
 		return;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, owner.m_impl->videoResourceRuntime.vlcFramebufferId);
-	if (owner.m_impl->videoFrameRuntime.vlcFramebufferAttachmentDirty.load()) {
-		glFramebufferTexture2D(
-			GL_FRAMEBUFFER,
-			GL_COLOR_ATTACHMENT0,
-			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureTarget,
-			owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID,
-			0);
-		owner.m_impl->videoFrameRuntime.vlcFramebufferAttachmentDirty.store(false);
-	}
+	bindFbo(
+		owner.m_impl->videoResourceRuntime.vlcFramebufferId,
+		owner.m_impl->videoFrameRuntime.vlcFramebufferAttachmentDirty,
+		owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureTarget,
+		owner.m_impl->videoResourceRuntime.videoTexture.getTextureData().textureID);
 	const unsigned currentRenderWidth = owner.m_impl->videoGeometryRuntime.renderWidth.load();
 	const unsigned currentRenderHeight = owner.m_impl->videoGeometryRuntime.renderHeight.load();
 	if (currentRenderWidth > 0 &&
