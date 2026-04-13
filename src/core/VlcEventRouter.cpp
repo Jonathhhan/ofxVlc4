@@ -25,7 +25,7 @@ void dispatchToOwner(void * data, bool dropDuringShutdown, HandlerFn && handler)
 		return;
 	}
 
-	ofxVlc4::CallbackScope scope = ownerPtr->enterCallbackScope();
+	auto scope = ownerPtr->enterCallbackScope();
 	if (!scope) {
 		return;
 	}
