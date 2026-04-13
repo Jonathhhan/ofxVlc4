@@ -2,10 +2,14 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <initializer_list>
 #include <iostream>
 #include <string>
+#include <utility>
 
 namespace {
+
+using EventTypeName = std::pair<libvlc_event_type_t, const char *>;
 
 void logEventAttachFailure(VlcCoreSession & session, const std::string & eventName) {
 	VlcCoreLogEntry entry;
@@ -13,6 +17,37 @@ void logEventAttachFailure(VlcCoreSession & session, const std::string & eventNa
 	entry.module = "VlcCoreSession";
 	entry.message = "libvlc_event_attach failed for " + eventName + ".";
 	session.appendLog(entry);
+}
+
+void attachNamedEvents(
+	VlcCoreSession & session,
+	libvlc_event_manager_t * manager,
+	void * data,
+	VlcCoreSession::EventCallback callback,
+	const std::initializer_list<EventTypeName> & events) {
+	if (!manager || !callback) {
+		return;
+	}
+
+	for (const auto & event : events) {
+		if (libvlc_event_attach(manager, event.first, callback, data) != 0) {
+			logEventAttachFailure(session, event.second ? event.second : "unknown");
+		}
+	}
+}
+
+void detachNamedEvents(
+	libvlc_event_manager_t * manager,
+	void * data,
+	VlcCoreSession::EventCallback callback,
+	const std::initializer_list<EventTypeName> & events) {
+	if (!manager || !callback) {
+		return;
+	}
+
+	for (const auto & event : events) {
+		libvlc_event_detach(manager, event.first, callback, data);
+	}
 }
 
 static const libvlc_event_type_t kPlayerEventTypes[] = {
@@ -136,29 +171,19 @@ void VlcCoreSession::setMediaEvents(libvlc_event_manager_t * value) {
 }
 
 void VlcCoreSession::attachMediaEvents(void * data, EventCallback callback) {
-	if (!mediaEventManager || !callback) {
-		return;
-	}
-
-	if (libvlc_event_attach(mediaEventManager, libvlc_MediaParsedChanged, callback, data) != 0) {
-		logEventAttachFailure(*this, "MediaParsedChanged");
-	}
-	if (libvlc_event_attach(mediaEventManager, libvlc_MediaThumbnailGenerated, callback, data) != 0) {
-		logEventAttachFailure(*this, "MediaThumbnailGenerated");
-	}
-	if (libvlc_event_attach(mediaEventManager, libvlc_MediaAttachedThumbnailsFound, callback, data) != 0) {
-		logEventAttachFailure(*this, "MediaAttachedThumbnailsFound");
-	}
+	attachNamedEvents(*this, mediaEventManager, data, callback, {
+		{ libvlc_MediaParsedChanged, "MediaParsedChanged" },
+		{ libvlc_MediaThumbnailGenerated, "MediaThumbnailGenerated" },
+		{ libvlc_MediaAttachedThumbnailsFound, "MediaAttachedThumbnailsFound" },
+	});
 }
 
 void VlcCoreSession::detachMediaEvents(void * data, EventCallback callback) {
-	if (!mediaEventManager || !callback) {
-		return;
-	}
-
-	libvlc_event_detach(mediaEventManager, libvlc_MediaParsedChanged, callback, data);
-	libvlc_event_detach(mediaEventManager, libvlc_MediaThumbnailGenerated, callback, data);
-	libvlc_event_detach(mediaEventManager, libvlc_MediaAttachedThumbnailsFound, callback, data);
+	detachNamedEvents(mediaEventManager, data, callback, {
+		{ libvlc_MediaParsedChanged, "MediaParsedChanged" },
+		{ libvlc_MediaThumbnailGenerated, "MediaThumbnailGenerated" },
+		{ libvlc_MediaAttachedThumbnailsFound, "MediaAttachedThumbnailsFound" },
+	});
 	// Do not set mediaEventManager to nullptr here.
 }
 
@@ -187,29 +212,19 @@ void VlcCoreSession::setMediaDiscovererListEvents(libvlc_event_manager_t * value
 }
 
 void VlcCoreSession::attachMediaDiscovererListEvents(void * data, EventCallback callback) {
-	if (!mediaDiscovererMediaListEventManager || !callback) {
-		return;
-	}
-
-	if (libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemAdded, callback, data) != 0) {
-		logEventAttachFailure(*this, "MediaListItemAdded");
-	}
-	if (libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemDeleted, callback, data) != 0) {
-		logEventAttachFailure(*this, "MediaListItemDeleted");
-	}
-	if (libvlc_event_attach(mediaDiscovererMediaListEventManager, libvlc_MediaListEndReached, callback, data) != 0) {
-		logEventAttachFailure(*this, "MediaListEndReached");
-	}
+	attachNamedEvents(*this, mediaDiscovererMediaListEventManager, data, callback, {
+		{ libvlc_MediaListItemAdded, "MediaListItemAdded" },
+		{ libvlc_MediaListItemDeleted, "MediaListItemDeleted" },
+		{ libvlc_MediaListEndReached, "MediaListEndReached" },
+	});
 }
 
 void VlcCoreSession::detachMediaDiscovererListEvents(void * data, EventCallback callback) {
-	if (!mediaDiscovererMediaListEventManager || !callback) {
-		return;
-	}
-
-	libvlc_event_detach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemAdded, callback, data);
-	libvlc_event_detach(mediaDiscovererMediaListEventManager, libvlc_MediaListItemDeleted, callback, data);
-	libvlc_event_detach(mediaDiscovererMediaListEventManager, libvlc_MediaListEndReached, callback, data);
+	detachNamedEvents(mediaDiscovererMediaListEventManager, data, callback, {
+		{ libvlc_MediaListItemAdded, "MediaListItemAdded" },
+		{ libvlc_MediaListItemDeleted, "MediaListItemDeleted" },
+		{ libvlc_MediaListEndReached, "MediaListEndReached" },
+	});
 	// Do not set mediaDiscovererMediaListEventManager to nullptr here.
 }
 
@@ -230,25 +245,17 @@ void VlcCoreSession::setRendererDiscovererEvents(libvlc_event_manager_t * value)
 }
 
 void VlcCoreSession::attachRendererEvents(void * data, EventCallback callback) {
-	if (!rendererDiscovererEventManager || !callback) {
-		return;
-	}
-
-	if (libvlc_event_attach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemAdded, callback, data) != 0) {
-		logEventAttachFailure(*this, "RendererDiscovererItemAdded");
-	}
-	if (libvlc_event_attach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemDeleted, callback, data) != 0) {
-		logEventAttachFailure(*this, "RendererDiscovererItemDeleted");
-	}
+	attachNamedEvents(*this, rendererDiscovererEventManager, data, callback, {
+		{ libvlc_RendererDiscovererItemAdded, "RendererDiscovererItemAdded" },
+		{ libvlc_RendererDiscovererItemDeleted, "RendererDiscovererItemDeleted" },
+	});
 }
 
 void VlcCoreSession::detachRendererEvents(void * data, EventCallback callback) {
-	if (!rendererDiscovererEventManager || !callback) {
-		return;
-	}
-
-	libvlc_event_detach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemAdded, callback, data);
-	libvlc_event_detach(rendererDiscovererEventManager, libvlc_RendererDiscovererItemDeleted, callback, data);
+	detachNamedEvents(rendererDiscovererEventManager, data, callback, {
+		{ libvlc_RendererDiscovererItemAdded, "RendererDiscovererItemAdded" },
+		{ libvlc_RendererDiscovererItemDeleted, "RendererDiscovererItemDeleted" },
+	});
 	// Do not set rendererDiscovererEventManager to nullptr here.
 }
 
