@@ -9,6 +9,7 @@
 #include "support/ofxVlc4MuxHelpers.h"
 #include "support/ofxVlc4Utils.h"
 #include "VlcCoreSession.h"
+#include "VlcEventCallbackPolicy.h"
 #include "VlcEventRouter.h"
 
 #include <algorithm>
@@ -1287,7 +1288,9 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
 	auto * mediaComponent = m_impl->subsystemRuntime.mediaComponent.get();
-	auto * eventCallbackData = mediaComponent ? mediaComponent->eventCallbackData() : static_cast<void *>(m_controlBlock.get());
+	auto * eventCallbackData = mediaComponent
+		? mediaComponent->eventCallbackData()
+		: VlcEventCallbackPolicy::selectCallbackData(nullptr, m_controlBlock.get());
 	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
 		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(
 			eventCallbackData,
