@@ -35,6 +35,20 @@ struct MockLifecycleState {
 	mutable std::condition_variable callbackDrainCv;
 };
 
+// Mirrors the underflow-safe decrement logic in ofxVlc4::leaveCallbackScope().
+static void leaveCallbackScopeSafe(MockLifecycleState & s) {
+	uint32_t prev = s.callbackDepth.load(std::memory_order_acquire);
+	while (prev != 0 && !s.callbackDepth.compare_exchange_weak(
+		prev,
+		prev - 1,
+		std::memory_order_acq_rel,
+		std::memory_order_acquire)) {
+	}
+	if (prev == 1) {
+		s.callbackDrainCv.notify_all();
+	}
+}
+
 // Drain helper: wait until callbackDepth reaches 0 or timeout expires.
 static bool drainCallbacks(MockLifecycleState & s, std::chrono::milliseconds timeout) {
 	std::unique_lock<std::mutex> lock(s.callbackDrainMutex);
@@ -55,8 +69,7 @@ static void testDrainCompletesWhenDecremented() {
 
 	std::thread worker([&] {
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-		state.callbackDepth.fetch_sub(1, std::memory_order_release);
-		state.callbackDrainCv.notify_all();
+		leaveCallbackScopeSafe(state);
 	});
 
 	auto t0 = std::chrono::steady_clock::now();
@@ -96,6 +109,14 @@ static void testDrainReturnsImmediatelyWhenZero() {
 	CHECK(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() < 50);
 }
 
+static void testLeaveDoesNotUnderflowWhenAlreadyZero() {
+	std::printf("\n[leave callback scope at zero does not underflow]\n");
+
+	MockLifecycleState state;
+	leaveCallbackScopeSafe(state);
+	CHECK(state.callbackDepth.load(std::memory_order_acquire) == 0);
+}
+
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
@@ -104,6 +125,7 @@ int main() {
 	testDrainCompletesWhenDecremented();
 	testDrainTimesOut();
 	testDrainReturnsImmediatelyWhenZero();
+	testLeaveDoesNotUnderflowWhenAlreadyZero();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;

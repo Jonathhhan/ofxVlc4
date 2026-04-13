@@ -314,7 +314,16 @@ void ofxVlc4::leaveCallbackScope() const {
 	if (!m_impl) {
 		return;
 	}
-	const auto prev = m_impl->lifecycleRuntime.callbackDepth.fetch_sub(1, std::memory_order_acq_rel);
+	uint32_t prev = m_impl->lifecycleRuntime.callbackDepth.load(std::memory_order_acquire);
+	while (prev != 0 && !m_impl->lifecycleRuntime.callbackDepth.compare_exchange_weak(
+		prev,
+		prev - 1,
+		std::memory_order_acq_rel,
+		std::memory_order_acquire)) {
+	}
+	if (prev == 0) {
+		return;
+	}
 	// If the counter just reached zero, wake the drain waiter.
 	if (prev == 1) {
 		m_impl->lifecycleRuntime.callbackDrainCv.notify_one();
