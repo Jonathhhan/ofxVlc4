@@ -39,6 +39,7 @@ private:
 	bool vlcVisualizerStateInitialized = false;
 	ofxVlc4AudioVisualizerSettings pendingVlcVisualizerSettings;
 	char projectMPresetPath[1024] = "";
+	char projectMTexturePath[1024] = "";
 	std::vector<float> peakHoldLevels;
 	std::vector<float> peakHoldTimers;
 	double lastUpdateTime = 0.0;

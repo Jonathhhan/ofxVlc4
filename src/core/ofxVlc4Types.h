@@ -187,6 +187,8 @@ struct ofxVlc4AudioVisualizerSettings {
 	int height = 720;
 	int goomSpeed = 6;
 	std::string projectMPresetPath;
+	// Optional path for custom VLC/libprojectM builds that expose --projectm-texture-path.
+	std::string projectMTexturePath;
 	// libprojectM rendering quality settings (passed to VLC's --projectm-* init args).
 	// Set to 0 to omit the option and let VLC use its built-in default.
 	int projectMTextureSize = 0; // --projectm-texture-size (power-of-two pixels, e.g. 512, 1024)
@@ -200,6 +202,7 @@ struct ofxVlc4AudioVisualizerSettings {
 			&& height == other.height
 			&& goomSpeed == other.goomSpeed
 			&& projectMPresetPath == other.projectMPresetPath
+			&& projectMTexturePath == other.projectMTexturePath
 			&& projectMTextureSize == other.projectMTextureSize
 			&& projectMMeshX == other.projectMMeshX
 			&& projectMMeshY == other.projectMMeshY;

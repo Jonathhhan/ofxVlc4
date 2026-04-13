@@ -191,6 +191,7 @@ void appendAudioVisualizerInitArgs(
 		initArgs.emplace_back(std::string("--projectm-width=") + ofToString(width));
 		initArgs.emplace_back(std::string("--projectm-height=") + ofToString(height));
 		appendPrefixedInitArg(initArgs, "--projectm-preset-path=", settings.projectMPresetPath);
+		appendPrefixedInitArg(initArgs, "--projectm-texture-path=", settings.projectMTexturePath);
 		initArgs.emplace_back("--projectm-menu-font=Arial");
 		initArgs.emplace_back("--projectm-title-font=Arial");
 		if (settings.projectMTextureSize > 0) {
@@ -1345,6 +1346,7 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 	normalized.height = std::max(64, settings.height);
 	normalized.goomSpeed = ofClamp(settings.goomSpeed, 1, 10);
 	normalized.projectMPresetPath = settings.projectMPresetPath;
+	normalized.projectMTexturePath = settings.projectMTexturePath;
 	normalized.projectMTextureSize = std::max(0, settings.projectMTextureSize);
 	normalized.projectMMeshX = std::max(0, settings.projectMMeshX);
 	normalized.projectMMeshY = std::max(0, settings.projectMMeshY);
