@@ -1177,7 +1177,7 @@ public:
 	void clearExtraInitArgs();
 	/// @brief Get the current audio visualiser settings.
 	ofxVlc4AudioVisualizerSettings getAudioVisualizerSettings() const;
-	/// @brief Set the audio visualiser settings.
+	/// @brief Set the audio visualiser settings (applies immediately unless a media switch is pending).
 	void setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & settings);
 	/// @}
 	/// @name Recording Sessions

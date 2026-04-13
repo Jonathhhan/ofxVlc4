@@ -391,7 +391,7 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 		player.setAudioVisualizerSettings(pendingVlcVisualizerSettings);
 	}
 
-	ImGui::TextDisabled("Reinitializes the player. 'None' disables VLC visualizer modules.");
+	ImGui::TextDisabled("Reinitializes player unless media selection is pending. 'None' disables modules.");
 	ImGui::PopItemWidth();
 	ImGui::PopStyleVar();
 }

@@ -55,6 +55,7 @@ public:
 	bool isStopped() const;
 	bool isPlaybackTransitioning() const;
 	bool isPlaybackRestartPending() const;
+	bool isMediaActivationPending() const;
 	bool isSeekable() const;
 	bool canPause() const;
 	float getPosition() const;

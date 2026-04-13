@@ -1352,7 +1352,14 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 		return;
 	}
 	m_impl->playerConfigRuntime.audioVisualizerSettings = normalized;
+	const bool mediaActivationPending =
+		m_impl->subsystemRuntime.playbackController &&
+		m_impl->subsystemRuntime.playbackController->isMediaActivationPending();
 	if (sessionPlayer()) {
+		if (mediaActivationPending) {
+			setStatus("Audio visualizer settings queued while media selection is pending.");
+			return;
+		}
 		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
 			return;
 		}
@@ -2510,5 +2517,3 @@ int ofxVlc4::getChannelCount() const {
 int ofxVlc4::getSampleRate() const {
 	return m_impl->audioRuntime.sampleRate.load(std::memory_order_relaxed);
 }
-
-

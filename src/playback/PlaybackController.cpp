@@ -1076,6 +1076,12 @@ bool PlaybackController::isPlaybackRestartPending() const {
 	return isStoppedOrIdleState(state) || isTransientPlaybackState(state);
 }
 
+bool PlaybackController::isMediaActivationPending() const {
+	return playbackTransport.pendingActivateIndex.load() >= 0 ||
+		playbackTransport.pendingActivateReady.load() ||
+		playbackTransport.hasPendingDirectMedia.load();
+}
+
 bool PlaybackController::isSeekable() const {
 	libvlc_media_player_t * player = owner.sessionPlayer();
 	if (!player || !owner.sessionMedia() || isPlaybackLocallyStopped()) {
