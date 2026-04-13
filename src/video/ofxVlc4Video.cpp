@@ -1779,10 +1779,12 @@ void ofxVlc4::VideoComponent::setPreferredDecoderDevice(PreferredDecoderDevice d
 
 	owner.m_impl->videoPresentationRuntime.preferredDecoderDevice = device;
 	if (owner.sessionPlayer()) {
-		owner.logWarning(std::string("Preferred decoder hardware changes apply on the next player initialization: ") +
-			preferredDecoderDeviceLabel(device) + ".");
-		owner.setStatus("Preferred decoder hardware updated for the next init.");
+		if (media().reinitAndReapplyCurrentMedia("Preferred decoder hardware")) {
+			return;
+		}
 	}
+	owner.init(0, nullptr);
+	owner.setStatus("Preferred decoder hardware applied.");
 }
 
 void ofxVlc4::VideoComponent::resetVideoAdjustments() {
