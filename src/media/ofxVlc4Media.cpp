@@ -411,61 +411,67 @@ bool ofxVlc4::MediaComponent::hasEventRouter() const {
 }
 
 ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::playerEventCallback() const {
+	const bool useEventRouter = hasEventRouter();
 	return VlcEventCallbackPolicy::selectCallback(
-		hasEventRouter(),
+		useEventRouter,
 		VlcEventRouter::vlcMediaPlayerEventStatic,
 		ofxVlc4::vlcMediaPlayerEventStatic);
 }
 
 ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::mediaEventCallback() const {
+	const bool useEventRouter = hasEventRouter();
 	return VlcEventCallbackPolicy::selectCallback(
-		hasEventRouter(),
+		useEventRouter,
 		VlcEventRouter::vlcMediaEventStatic,
 		ofxVlc4::vlcMediaEventStatic);
 }
 
 ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::mediaDiscovererListEventCallback() const {
+	const bool useEventRouter = hasEventRouter();
 	return VlcEventCallbackPolicy::selectCallback(
-		hasEventRouter(),
+		useEventRouter,
 		VlcEventRouter::mediaDiscovererMediaListEventStatic,
 		ofxVlc4::mediaDiscovererMediaListEventStatic);
 }
 
 ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::rendererDiscovererEventCallback() const {
+	const bool useEventRouter = hasEventRouter();
 	return VlcEventCallbackPolicy::selectCallback(
-		hasEventRouter(),
+		useEventRouter,
 		VlcEventRouter::rendererDiscovererEventStatic,
 		ofxVlc4::rendererDiscovererEventStatic);
 }
 
 libvlc_dialog_cbs ofxVlc4::MediaComponent::dialogCallbacks() const {
+	const bool useEventRouter = hasEventRouter();
 	return {
 		VlcEventCallbackPolicy::selectCallback(
-			hasEventRouter(),
+			useEventRouter,
 			VlcEventRouter::dialogDisplayLoginStatic,
 			ofxVlc4::dialogDisplayLoginStatic),
 		VlcEventCallbackPolicy::selectCallback(
-			hasEventRouter(),
+			useEventRouter,
 			VlcEventRouter::dialogDisplayQuestionStatic,
 			ofxVlc4::dialogDisplayQuestionStatic),
 		VlcEventCallbackPolicy::selectCallback(
-			hasEventRouter(),
+			useEventRouter,
 			VlcEventRouter::dialogDisplayProgressStatic,
 			ofxVlc4::dialogDisplayProgressStatic),
 		VlcEventCallbackPolicy::selectCallback(
-			hasEventRouter(),
+			useEventRouter,
 			VlcEventRouter::dialogCancelStatic,
 			ofxVlc4::dialogCancelStatic),
 		VlcEventCallbackPolicy::selectCallback(
-			hasEventRouter(),
+			useEventRouter,
 			VlcEventRouter::dialogUpdateProgressStatic,
 			ofxVlc4::dialogUpdateProgressStatic)
 	};
 }
 
 ofxVlc4::MediaComponent::LibVlcDialogErrorCallback ofxVlc4::MediaComponent::dialogErrorCallback() const {
+	const bool useEventRouter = hasEventRouter();
 	return VlcEventCallbackPolicy::selectCallback(
-		hasEventRouter(),
+		useEventRouter,
 		VlcEventRouter::dialogErrorStatic,
 		ofxVlc4::dialogErrorStatic);
 }
