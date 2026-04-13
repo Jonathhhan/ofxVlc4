@@ -1238,12 +1238,10 @@ void ofxVlc4::applyMediaPlayerRole() {
 
 	void ofxVlc4::detachEvents() {
 	auto & coreSession = m_impl->subsystemRuntime.coreSession;
-	auto * mediaComponent = m_impl->subsystemRuntime.mediaComponent.get();
-	void * eventData = mediaComponent
-		? mediaComponent->eventCallbackData()
-		: VlcEventCallbackPolicy::selectCallbackData(nullptr, m_controlBlock.get());
-	const auto playerEventCallback = mediaComponent ? mediaComponent->playerEventCallback() : ofxVlc4::vlcMediaPlayerEventStatic;
-	const auto mediaEventCallback = mediaComponent ? mediaComponent->mediaEventCallback() : ofxVlc4::vlcMediaEventStatic;
+	auto & mediaComponent = *m_impl->subsystemRuntime.mediaComponent;
+	void * eventData = mediaComponent.eventCallbackData();
+	const auto playerEventCallback = mediaComponent.playerEventCallback();
+	const auto mediaEventCallback = mediaComponent.mediaEventCallback();
 
 	if (coreSession && coreSession->playerEvents()) {
 		coreSession->detachPlayerEvents(eventData, playerEventCallback);
