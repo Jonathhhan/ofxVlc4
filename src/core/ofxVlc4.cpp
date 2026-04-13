@@ -1286,26 +1286,25 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
-	auto * eventCallbackData = m_impl->subsystemRuntime.mediaComponent->eventCallbackData();
-	auto * eventRouter = m_impl->subsystemRuntime.eventRouter.get();
+	auto * mediaComponent = m_impl->subsystemRuntime.mediaComponent.get();
+	auto * eventCallbackData = mediaComponent ? mediaComponent->eventCallbackData() : static_cast<void *>(m_controlBlock.get());
 	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
 		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(
 			eventCallbackData,
-			eventRouter ? VlcEventRouter::vlcMediaPlayerEventStatic : ofxVlc4::vlcMediaPlayerEventStatic);
+			mediaComponent ? mediaComponent->playerEventCallback() : ofxVlc4::vlcMediaPlayerEventStatic);
 	}
 
-	const bool useEventRouter = eventRouter != nullptr;
-	libvlc_dialog_cbs dialogCallbacks {
-		useEventRouter ? VlcEventRouter::dialogDisplayLoginStatic : ofxVlc4::dialogDisplayLoginStatic,
-		useEventRouter ? VlcEventRouter::dialogDisplayQuestionStatic : ofxVlc4::dialogDisplayQuestionStatic,
-		useEventRouter ? VlcEventRouter::dialogDisplayProgressStatic : ofxVlc4::dialogDisplayProgressStatic,
-		useEventRouter ? VlcEventRouter::dialogCancelStatic : ofxVlc4::dialogCancelStatic,
-		useEventRouter ? VlcEventRouter::dialogUpdateProgressStatic : ofxVlc4::dialogUpdateProgressStatic
+	libvlc_dialog_cbs dialogCallbacks = mediaComponent ? mediaComponent->dialogCallbacks() : libvlc_dialog_cbs {
+		ofxVlc4::dialogDisplayLoginStatic,
+		ofxVlc4::dialogDisplayQuestionStatic,
+		ofxVlc4::dialogDisplayProgressStatic,
+		ofxVlc4::dialogCancelStatic,
+		ofxVlc4::dialogUpdateProgressStatic
 	};
 	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, eventCallbackData);
 	libvlc_dialog_set_error_callback(
 		m_impl->subsystemRuntime.coreSession->instance(),
-		useEventRouter ? VlcEventRouter::dialogErrorStatic : ofxVlc4::dialogErrorStatic,
+		mediaComponent ? mediaComponent->dialogErrorCallback() : ofxVlc4::dialogErrorStatic,
 		eventCallbackData);
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
