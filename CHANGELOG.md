@@ -2,7 +2,7 @@
 
 ## 1.0.4
 
-- **code review: recording mux thread safety** — `cancelPendingRecordingMux()` now always `join()`s the worker thread instead of `detach()`ing it when the mux operation is still in progress; the previous behavior could leave an orphaned thread accessing shared state after the owning `ofxVlc4` instance was destroyed
+- **code review: recording mux thread safety** — `finalizeRecordingMuxThread()` and `cancelPendingRecordingMux()` no longer `detach()` the worker on timeout; both now keep ownership-safe, deterministic shutdown by waiting for a safe `join()` (with timeout warnings logged before continuing to wait)
 
 - **code review: log file close error reporting** — `VlcCoreSession::closeLogFile()` now logs a warning through `ofLogWarning` when `fflush()` or `fclose()` fails, replacing the previous placeholder comments
 

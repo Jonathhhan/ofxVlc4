@@ -556,17 +556,40 @@ For a focused surface to test that behavior, use `ofxVlc4RecorderExample`.
 
 The addon ships a CMake-based unit-test suite in `tests/`. The tests compile without a real openFrameworks, GLFW, or VLC installation — stubs in `tests/stubs/` and `tests/stubs_gl/` supply the minimal type definitions required.
 
-Nine test binaries are built:
+Thirty-two test binaries are built:
 
-- `test_ringbuffer` — ring-buffer push/pop, wrap-around, and audio callback helpers (`src/support/ofxVlc4RingBuffer.cpp`)
-- `test_midi_analysis` — MIDI file/event parsing and timecode utilities (`src/midi/ofxVlc4MidiAnalysis.cpp`)
-- `test_utils` — pure string/math helpers from `src/support/ofxVlc4Utils.h`
-- `test_mux_helpers` — filesystem and string helpers from `src/support/ofxVlc4MuxHelpers.h`
-- `test_playlist` — in-memory playlist add/remove/move logic mirroring `MediaLibrary`'s locked operations; no OF/GLFW/VLC dependency
-- `test_gl` — `hasCurrentGlContext()` and `clearAllocatedFbo()` from `ofxVlc4Utils.h`, using controllable GL stubs in `tests/stubs_gl/`
-- `test_midi_bridge` — MIDI event/channel-message conversion, filtering, and describe helpers (`src/midi/ofxVlc4MidiBridge.cpp`)
-- `test_midi_playback` — MIDI playback session load/clear, play/pause/stop, seek, update dispatch, tempo, sync, and loop (`src/midi/ofxVlc4MidiPlayback.cpp`)
-- `test_types` — type conversion and default value tests for addon POD types (`src/core/ofxVlc4Types.h`)
+- `test_ringbuffer`
+- `test_audio_pipeline`
+- `test_midi_analysis`
+- `test_utils`
+- `test_mux_helpers`
+- `test_playlist`
+- `test_gl`
+- `test_gl_ops`
+- `test_midi_bridge`
+- `test_midi_playback`
+- `test_types`
+- `test_midi_report`
+- `test_audio_helpers`
+- `test_video_helpers`
+- `test_media_helpers`
+- `test_recording_helpers`
+- `test_media_library_helpers`
+- `test_playlist_helpers`
+- `test_video_pipeline`
+- `test_video_output_reinit`
+- `test_nle_timecode`
+- `test_nle_sequence`
+- `test_nle_edit_ops`
+- `test_nle_trim_ops`
+- `test_nle_edl_export`
+- `test_nle_undo`
+- `test_crash_handler`
+- `test_callback_drain`
+- `test_concurrent_shutdown`
+- `test_gl_context_loss`
+- `test_ringbuffer_overflow`
+- `test_mux_join_timeout`
 
 To build and run all tests:
 

@@ -1,6 +1,9 @@
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <future>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -65,23 +68,51 @@ static void testFutureAlreadySet() {
 	CHECK(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() < 50);
 }
 
-static void testThreadDetach() {
-	std::printf("\n[thread detach safety]\n");
+static void testTimeoutThenSafeJoin() {
+	std::printf("\n[timeout path still performs safe join]\n");
 
 	std::promise<void> promise;
 	auto future = promise.get_future();
 
-	{
-		std::thread worker([p = std::move(promise)]() mutable {
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			p.set_value();
-		});
-		worker.detach();
-	}
+	std::thread worker([p = std::move(promise)]() mutable {
+		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		p.set_value();
+	});
 
-	// The detached thread should still complete and set the future.
+	auto statusTimeout = future.wait_for(std::chrono::milliseconds(25));
+	CHECK(statusTimeout == std::future_status::timeout);
+
+	// Even after timeout, policy is to wait for a safe join.
+	worker.join();
+
+	auto status = future.wait_for(std::chrono::milliseconds(0));
+	CHECK(status == std::future_status::ready);
+}
+
+static void testCancelThenJoin() {
+	std::printf("\n[cancel signal path joins deterministically]\n");
+
+	std::mutex mutex;
+	std::condition_variable cv;
+	std::atomic<bool> cancelRequested { false };
+	std::promise<void> promise;
+	auto future = promise.get_future();
+
+	std::thread worker([&] {
+		std::unique_lock<std::mutex> lock(mutex);
+		cv.wait(lock, [&] { return cancelRequested.load(std::memory_order_acquire); });
+		promise.set_value();
+	});
+
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		cancelRequested.store(true, std::memory_order_release);
+	}
+	cv.notify_all();
+
 	auto status = future.wait_for(std::chrono::milliseconds(500));
 	CHECK(status == std::future_status::ready);
+	worker.join();
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +122,8 @@ static void testThreadDetach() {
 int main() {
 	testWaitForTimeout();
 	testFutureAlreadySet();
-	testThreadDetach();
+	testTimeoutThenSafeJoin();
+	testCancelThenJoin();
 
 	std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
 	return g_failed == 0 ? 0 : 1;
