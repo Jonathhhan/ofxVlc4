@@ -18,11 +18,11 @@ bool VlcEventRouter::shouldDropEventDuringShutdown(void * data, bool dropDuringS
 
 template <typename HandlerFn>
 void VlcEventRouter::dispatchToOwner(void * data, bool dropDuringShutdown, HandlerFn && handler) {
-	ofxVlc4 * ownerPtr = VlcEventRouter::resolveOwnerFromRouterData(data);
+	ofxVlc4 * ownerPtr = resolveOwnerFromRouterData(data);
 	if (!ownerPtr) {
 		return;
 	}
-	if (VlcEventRouter::shouldDropEventDuringShutdown(data, dropDuringShutdown)) {
+	if (shouldDropEventDuringShutdown(data, dropDuringShutdown)) {
 		return;
 	}
 
