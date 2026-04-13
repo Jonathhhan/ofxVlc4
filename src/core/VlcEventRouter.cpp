@@ -9,11 +9,8 @@ ofxVlc4 * VlcEventRouter::resolveOwnerFromRouterData(void * data) {
 }
 
 bool VlcEventRouter::shouldDropEventDuringShutdown(void * data, bool dropDuringShutdown) {
-	if (!dropDuringShutdown) {
-		return false;
-	}
 	auto * router = static_cast<VlcEventRouter *>(data);
-	return router && router->isOwnerShuttingDown();
+	return dropDuringShutdown && router && router->isOwnerShuttingDown();
 }
 
 template <typename HandlerFn>
