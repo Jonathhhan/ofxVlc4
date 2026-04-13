@@ -448,9 +448,13 @@ bool ofxVlc4::MediaComponent::reapplyCurrentMediaForFilterChainChange(const std:
 		return false;
 	}
 
-	if (resumeTimeMs > 0 && libvlc_media_player_is_seekable(player)) {
-		if (libvlc_media_player_set_time(player, resumeTimeMs, true) != 0) {
-			owner.logWarning("libvlc_media_player_set_time failed while reapplying filter chain.");
+	// Add a start-time option so VLC begins playback at the saved position
+	// even before the player is seekable.
+	if (resumeTimeMs > 0) {
+		libvlc_media_t * m = owner.sessionMedia();
+		if (m) {
+			const std::string opt = ":start-time=" + ofToString(resumeTimeMs / 1000.0, 3);
+			libvlc_media_add_option(m, opt.c_str());
 		}
 	}
 
@@ -460,6 +464,12 @@ bool ofxVlc4::MediaComponent::reapplyCurrentMediaForFilterChainChange(const std:
 		video().clearPendingVideoAdjustApplyOnPlay();
 		if (libvlc_media_player_play(player) != 0) {
 			owner.logWarning("libvlc_media_player_play failed while reapplying filter chain.");
+		}
+		// Seek after play in case VLC is already seekable.
+		if (resumeTimeMs > 0 && libvlc_media_player_is_seekable(player)) {
+			if (libvlc_media_player_set_time(player, resumeTimeMs, true) != 0) {
+				owner.logWarning("libvlc_media_player_set_time failed while reapplying filter chain.");
+			}
 		}
 		if (wasPaused) {
 			libvlc_media_player_set_pause(player, 1);
@@ -550,13 +560,18 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 		return false;
 	}
 
-	// Restore playback position and state.
-	libvlc_media_player_t * newPlayer = owner.sessionPlayer();
-	if (resumeTimeMs > 0 && newPlayer && libvlc_media_player_is_seekable(newPlayer)) {
-		if (libvlc_media_player_set_time(newPlayer, resumeTimeMs, true) != 0) {
-			owner.logWarning("libvlc_media_player_set_time failed while reapplying " + label + ".");
+	// Add a start-time option so VLC begins playback at the saved position
+	// even before the player is seekable.
+	if (resumeTimeMs > 0) {
+		libvlc_media_t * m = owner.sessionMedia();
+		if (m) {
+			const std::string opt = ":start-time=" + ofToString(resumeTimeMs / 1000.0, 3);
+			libvlc_media_add_option(m, opt.c_str());
 		}
 	}
+
+	// Restore playback state.
+	libvlc_media_player_t * newPlayer = owner.sessionPlayer();
 
 	if (wasPlaying || wasPaused) {
 		audio().applyEqualizerSettings();
@@ -564,6 +579,12 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 		video().clearPendingVideoAdjustApplyOnPlay();
 		if (newPlayer && libvlc_media_player_play(newPlayer) != 0) {
 			owner.logWarning("libvlc_media_player_play failed while reapplying " + label + ".");
+		}
+		// Seek after play in case VLC is already seekable.
+		if (resumeTimeMs > 0 && newPlayer && libvlc_media_player_is_seekable(newPlayer)) {
+			if (libvlc_media_player_set_time(newPlayer, resumeTimeMs, true) != 0) {
+				owner.logWarning("libvlc_media_player_set_time failed while reapplying " + label + ".");
+			}
 		}
 		if (wasPaused && newPlayer) {
 			libvlc_media_player_set_pause(newPlayer, 1);
