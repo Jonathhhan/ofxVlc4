@@ -5,6 +5,7 @@
 #include "NleSequence.h"
 
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 
 using namespace nle;
@@ -195,6 +196,79 @@ static void testRippleShift() {
 	track.rippleShift(Timecode(40, FrameRate::Fps24), -10);
 	CHECK_EQ(track.segments()[1].timelineStart.totalFrames(), static_cast<int64_t>(30));
 	CHECK_EQ(track.segments()[2].timelineStart.totalFrames(), static_cast<int64_t>(60));
+
+	// Large negative shift clamps to zero.
+	track.rippleShift(Timecode(30, FrameRate::Fps24), -1000);
+	CHECK_EQ(track.segments()[1].timelineStart.totalFrames(), static_cast<int64_t>(0));
+	CHECK_EQ(track.segments()[2].timelineStart.totalFrames(), static_cast<int64_t>(0));
+}
+
+// ---------------------------------------------------------------------------
+// Track replaceSegment
+// ---------------------------------------------------------------------------
+
+static void testReplaceSegment() {
+	beginSuite("Track replaceSegment");
+
+	Track track(TrackType::Video, "V1");
+	track.addSegment(makeSeg("A", 0, 30, 0));    // [0, 30)
+	track.addSegment(makeSeg("B", 0, 30, 40));   // [40, 70)
+	track.addSegment(makeSeg("C", 0, 30, 80));   // [80, 110)
+
+	// Out-of-range index.
+	CHECK(!track.replaceSegment(9, makeSeg("X", 0, 10, 0)));
+
+	// Zero duration rejected.
+	CHECK(!track.replaceSegment(1, makeSeg("B0", 0, 0, 40)));
+
+	// Overlap with previous segment rejected.
+	CHECK(!track.replaceSegment(1, makeSeg("B1", 0, 20, 20)));
+
+	// Overlap with next segment rejected.
+	CHECK(!track.replaceSegment(1, makeSeg("B2", 0, 30, 70)));
+
+	// Valid replacement succeeds.
+	CHECK(track.replaceSegment(1, makeSeg("B3", 10, 20, 50))); // [50, 70)
+	CHECK_EQ(track.segments()[1].masterClipId, std::string("B3"));
+	CHECK_EQ(track.segments()[1].sourceIn.totalFrames(), static_cast<int64_t>(10));
+	CHECK_EQ(track.segments()[1].timelineStart.totalFrames(), static_cast<int64_t>(50));
+	CHECK_EQ(track.segments()[1].duration.totalFrames(), static_cast<int64_t>(20));
+}
+
+// ---------------------------------------------------------------------------
+// Track setSegments
+// ---------------------------------------------------------------------------
+
+static void testSetSegments() {
+	beginSuite("Track setSegments");
+
+	Track track(TrackType::Video, "V1");
+
+	// Unsorted input should be sorted and accepted.
+	std::vector<Segment> unsorted;
+	unsorted.push_back(makeSeg("C", 0, 20, 80));
+	unsorted.push_back(makeSeg("A", 0, 30, 0));
+	unsorted.push_back(makeSeg("B", 0, 20, 40));
+	CHECK(track.setSegments(unsorted));
+	CHECK_EQ(track.segments().size(), static_cast<size_t>(3));
+	CHECK_EQ(track.segments()[0].masterClipId, std::string("A"));
+	CHECK_EQ(track.segments()[1].masterClipId, std::string("B"));
+	CHECK_EQ(track.segments()[2].masterClipId, std::string("C"));
+
+	// Overlap rejected and existing segments preserved.
+	std::vector<Segment> overlapping;
+	overlapping.push_back(makeSeg("X", 0, 30, 0));
+	overlapping.push_back(makeSeg("Y", 0, 20, 20)); // overlaps [0, 30)
+	CHECK(!track.setSegments(overlapping));
+	CHECK_EQ(track.segments().size(), static_cast<size_t>(3));
+	CHECK_EQ(track.segments()[0].masterClipId, std::string("A"));
+
+	// Zero duration rejected and existing segments preserved.
+	std::vector<Segment> zeroDuration;
+	zeroDuration.push_back(makeSeg("Z", 0, 0, 200));
+	CHECK(!track.setSegments(zeroDuration));
+	CHECK_EQ(track.segments().size(), static_cast<size_t>(3));
+	CHECK_EQ(track.segments()[2].masterClipId, std::string("C"));
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +297,9 @@ static void testSequenceCreation() {
 	CHECK_EQ(seq.videoTrack(1).name(), std::string("V2"));
 	CHECK_EQ(seq.audioTrack(0).name(), std::string("A1"));
 	CHECK_EQ(seq.audioTrack(1).name(), std::string("A2"));
+
+	seq.setName("Renamed");
+	CHECK_EQ(seq.name(), std::string("Renamed"));
 }
 
 // ---------------------------------------------------------------------------
@@ -269,6 +346,39 @@ static void testTrackRemoval() {
 	// Out of range.
 	CHECK(!seq.removeVideoTrack(5));
 	CHECK(!seq.removeAudioTrack(0));
+}
+
+// ---------------------------------------------------------------------------
+// Sequence track access bounds checks
+// ---------------------------------------------------------------------------
+
+static void testTrackAccessOutOfRangeThrows() {
+	beginSuite("Sequence track access out-of-range");
+
+	Sequence seq("Test", FrameRate::Fps24);
+	seq.addVideoTrack("V1");
+	seq.addAudioTrack("A1");
+
+	bool threw = false;
+	try { (void)seq.videoTrack(5); }
+	catch (const std::out_of_range &) { threw = true; }
+	CHECK(threw);
+
+	threw = false;
+	try { (void)seq.audioTrack(7); }
+	catch (const std::out_of_range &) { threw = true; }
+	CHECK(threw);
+
+	const Sequence & cseq = seq;
+	threw = false;
+	try { (void)cseq.videoTrack(9); }
+	catch (const std::out_of_range &) { threw = true; }
+	CHECK(threw);
+
+	threw = false;
+	try { (void)cseq.audioTrack(11); }
+	catch (const std::out_of_range &) { threw = true; }
+	CHECK(threw);
 }
 
 // ---------------------------------------------------------------------------
@@ -343,9 +453,12 @@ int main() {
 	testSegmentIndexAt();
 	testSegmentRemoval();
 	testRippleShift();
+	testReplaceSegment();
+	testSetSegments();
 	testSequenceCreation();
 	testSequenceDuration();
 	testTrackRemoval();
+	testTrackAccessOutOfRangeThrows();
 	testPlayhead();
 	testSegmentAtTimecode();
 	testEndTimecode();
