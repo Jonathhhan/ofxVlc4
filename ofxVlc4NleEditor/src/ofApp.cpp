@@ -1,17 +1,29 @@
 #include "ofApp.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 
 namespace {
 constexpr int kFrameRate = 60;
+constexpr int kAudioSampleRate = 44100;
+constexpr int kAudioOutChannels = 2;
+constexpr int kAudioBufferSize = 512;
 constexpr float kDefaultAspect = 16.0f / 9.0f;
 constexpr int kDefaultSeqDurationMs = 300000; // 5 minutes
 
 std::string fileNameFromPath(const std::string & path) {
 	return ofFilePath::getFileName(path);
+}
+
+std::string dragPathToString(const std::string & path) {
+	return path;
+}
+
+std::string dragPathToString(const std::filesystem::path & path) {
+	return path.string();
 }
 
 // Map shuttle speed (-3..+3) to VLC playback rate.
@@ -160,6 +172,15 @@ void ofApp::audioOut(ofSoundBuffer & buffer) {
 // ---------------------------------------------------------------------------
 
 void ofApp::initPlayers() {
+	ofSoundStreamSettings settings;
+	settings.setOutListener(this);
+	settings.sampleRate = kAudioSampleRate;
+	settings.numOutputChannels = kAudioOutChannels;
+	settings.numInputChannels = 0;
+	settings.bufferSize = kAudioBufferSize;
+	soundStream.setup(settings);
+	soundStream.start();
+
 	sourcePlayer = std::make_unique<ofxVlc4>();
 	sourcePlayer->setAudioCaptureEnabled(true);
 	sourcePlayer->init(0, nullptr);
@@ -443,7 +464,7 @@ void ofApp::keyReleased(int key) {
 
 void ofApp::dragEvent(ofDragInfo dragInfo) {
 	for (const auto & file : dragInfo.files) {
-		std::string id = addMasterClip(file.string());
+		std::string id = addMasterClip(dragPathToString(file));
 		loadSourceClip(id);
 	}
 }
@@ -1152,6 +1173,9 @@ nle::ThreePointResult ofApp::resolveCurrentMarks() {
 void ofApp::shutdownPlayers() {
 	if (shuttingDown) return;
 	shuttingDown = true;
+
+	soundStream.stop();
+	soundStream.close();
 
 	// Cancel any active export before closing players.
 	if (exportRecordingActive && sourcePlayer) {
