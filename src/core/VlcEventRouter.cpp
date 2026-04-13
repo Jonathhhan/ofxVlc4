@@ -44,7 +44,7 @@ ofxVlc4 & VlcEventRouter::getOwner() const {
 }
 
 bool VlcEventRouter::isOwnerShuttingDown() const {
-	return owner.m_impl && owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire);
+	return owner.m_impl->lifecycleRuntime.shuttingDown.load(std::memory_order_acquire);
 }
 
 void * VlcEventRouter::callbackData() const {
