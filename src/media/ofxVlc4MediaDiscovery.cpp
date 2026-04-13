@@ -181,7 +181,10 @@ std::vector<ofxVlc4::DiscoveredMediaItemInfo> ofxVlc4::MediaComponent::getDiscov
 
 void ofxVlc4::MediaComponent::stopMediaDiscoveryInternal() {
 	if (owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererListEvents()) {
-		owner.m_impl->subsystemRuntime.coreSession->detachMediaDiscovererListEvents(owner.m_controlBlock.get(), ofxVlc4::mediaDiscovererMediaListEventStatic);
+		auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
+		owner.m_impl->subsystemRuntime.coreSession->detachMediaDiscovererListEvents(
+			eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(owner.m_controlBlock.get()),
+			eventRouter ? VlcEventRouter::mediaDiscovererMediaListEventStatic : ofxVlc4::mediaDiscovererMediaListEventStatic);
 		owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererListEvents(nullptr);
 	}
 
@@ -280,7 +283,10 @@ bool ofxVlc4::MediaComponent::startMediaDiscovery(const std::string & discoverer
 
 	owner.m_impl->subsystemRuntime.coreSession->setMediaDiscovererListEvents(libvlc_media_list_event_manager(owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererList()));
 	if (owner.m_impl->subsystemRuntime.coreSession->mediaDiscovererListEvents()) {
-		owner.m_impl->subsystemRuntime.coreSession->attachMediaDiscovererListEvents(owner.m_controlBlock.get(), ofxVlc4::mediaDiscovererMediaListEventStatic);
+		auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
+		owner.m_impl->subsystemRuntime.coreSession->attachMediaDiscovererListEvents(
+			eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(owner.m_controlBlock.get()),
+			eventRouter ? VlcEventRouter::mediaDiscovererMediaListEventStatic : ofxVlc4::mediaDiscovererMediaListEventStatic);
 	}
 
 	if (libvlc_media_discoverer_start(owner.m_impl->subsystemRuntime.coreSession->mediaDiscoverer()) != 0) {
@@ -419,7 +425,10 @@ void ofxVlc4::MediaComponent::clearRendererItems() {
 
 void ofxVlc4::MediaComponent::stopRendererDiscoveryInternal() {
 	if (owner.m_impl->subsystemRuntime.coreSession->rendererDiscovererEvents()) {
-		owner.m_impl->subsystemRuntime.coreSession->detachRendererEvents(owner.m_controlBlock.get(), ofxVlc4::rendererDiscovererEventStatic);
+		auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
+		owner.m_impl->subsystemRuntime.coreSession->detachRendererEvents(
+			eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(owner.m_controlBlock.get()),
+			eventRouter ? VlcEventRouter::rendererDiscovererEventStatic : ofxVlc4::rendererDiscovererEventStatic);
 		owner.m_impl->subsystemRuntime.coreSession->setRendererDiscovererEvents(nullptr);
 	}
 
@@ -776,7 +785,10 @@ bool ofxVlc4::MediaComponent::startRendererDiscovery(const std::string & discove
 
 	owner.m_impl->subsystemRuntime.coreSession->setRendererDiscovererEvents(libvlc_renderer_discoverer_event_manager(owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer()));
 	if (owner.m_impl->subsystemRuntime.coreSession->rendererDiscovererEvents()) {
-		owner.m_impl->subsystemRuntime.coreSession->attachRendererEvents(owner.m_controlBlock.get(), ofxVlc4::rendererDiscovererEventStatic);
+		auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
+		owner.m_impl->subsystemRuntime.coreSession->attachRendererEvents(
+			eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(owner.m_controlBlock.get()),
+			eventRouter ? VlcEventRouter::rendererDiscovererEventStatic : ofxVlc4::rendererDiscovererEventStatic);
 	}
 
 	if (libvlc_renderer_discoverer_start(owner.m_impl->subsystemRuntime.coreSession->rendererDiscoverer()) != 0) {

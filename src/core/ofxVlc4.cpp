@@ -1287,18 +1287,27 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
 	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
-		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(m_controlBlock.get(), ofxVlc4::vlcMediaPlayerEventStatic);
+		auto * eventRouter = m_impl->subsystemRuntime.eventRouter.get();
+		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(
+			eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(m_controlBlock.get()),
+			eventRouter ? VlcEventRouter::vlcMediaPlayerEventStatic : ofxVlc4::vlcMediaPlayerEventStatic);
 	}
 
 	const libvlc_dialog_cbs dialogCallbacks = {
-		ofxVlc4::dialogDisplayLoginStatic,
-		ofxVlc4::dialogDisplayQuestionStatic,
-		ofxVlc4::dialogDisplayProgressStatic,
-		ofxVlc4::dialogCancelStatic,
-		ofxVlc4::dialogUpdateProgressStatic
+		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogDisplayLoginStatic : ofxVlc4::dialogDisplayLoginStatic,
+		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogDisplayQuestionStatic : ofxVlc4::dialogDisplayQuestionStatic,
+		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogDisplayProgressStatic : ofxVlc4::dialogDisplayProgressStatic,
+		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogCancelStatic : ofxVlc4::dialogCancelStatic,
+		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogUpdateProgressStatic : ofxVlc4::dialogUpdateProgressStatic
 	};
-	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, m_controlBlock.get());
-	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), ofxVlc4::dialogErrorStatic, m_controlBlock.get());
+	auto * dialogData = m_impl->subsystemRuntime.eventRouter
+		? static_cast<void *>(m_impl->subsystemRuntime.eventRouter.get())
+		: static_cast<void *>(m_controlBlock.get());
+	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, dialogData);
+	libvlc_dialog_set_error_callback(
+		m_impl->subsystemRuntime.coreSession->instance(),
+		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogErrorStatic : ofxVlc4::dialogErrorStatic,
+		dialogData);
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
 		startRendererDiscovery(m_impl->rendererDiscoveryRuntime.discovererName);

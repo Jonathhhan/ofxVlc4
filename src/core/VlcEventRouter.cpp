@@ -23,7 +23,7 @@ void VlcEventRouter::vlcMediaPlayerEventStatic(const libvlc_event_t * event, voi
 		return;
 	}
 
-	router->owner.vlcMediaPlayerEvent(event);
+	ofxVlc4::vlcMediaPlayerEventStatic(event, router->owner.m_controlBlock.get());
 }
 
 void VlcEventRouter::vlcMediaEventStatic(const libvlc_event_t * event, void * data) {
@@ -40,7 +40,7 @@ void VlcEventRouter::vlcMediaEventStatic(const libvlc_event_t * event, void * da
 		return;
 	}
 
-	router->owner.vlcMediaEvent(event);
+	ofxVlc4::vlcMediaEventStatic(event, router->owner.m_controlBlock.get());
 }
 
 void VlcEventRouter::mediaDiscovererMediaListEventStatic(const libvlc_event_t * event, void * data) {
@@ -53,7 +53,7 @@ void VlcEventRouter::mediaDiscovererMediaListEventStatic(const libvlc_event_t * 
 		return;
 	}
 
-	router->owner.mediaDiscovererMediaListEvent(event);
+	ofxVlc4::mediaDiscovererMediaListEventStatic(event, router->owner.m_controlBlock.get());
 }
 
 void VlcEventRouter::rendererDiscovererEventStatic(const libvlc_event_t * event, void * data) {
@@ -66,7 +66,7 @@ void VlcEventRouter::rendererDiscovererEventStatic(const libvlc_event_t * event,
 		return;
 	}
 
-	router->owner.rendererDiscovererEvent(event);
+	ofxVlc4::rendererDiscovererEventStatic(event, router->owner.m_controlBlock.get());
 }
 
 void VlcEventRouter::dialogDisplayLoginStatic(
