@@ -1,7 +1,9 @@
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <future>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -90,19 +92,24 @@ static void testTimeoutThenSafeJoin() {
 static void testCancelThenJoin() {
 	std::printf("\n[cancel signal path joins deterministically]\n");
 
+	std::mutex mutex;
+	std::condition_variable cv;
 	std::atomic<bool> cancelRequested { false };
 	std::promise<void> promise;
 	auto future = promise.get_future();
 
 	std::thread worker([&] {
-		while (!cancelRequested.load(std::memory_order_acquire)) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-		}
+		std::unique_lock<std::mutex> lock(mutex);
+		cv.wait(lock, [&] { return cancelRequested.load(std::memory_order_acquire); });
 		promise.set_value();
 	});
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(30));
-	cancelRequested.store(true, std::memory_order_release);
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		cancelRequested.store(true, std::memory_order_release);
+	}
+	cv.notify_all();
+
 	auto status = future.wait_for(std::chrono::milliseconds(500));
 	CHECK(status == std::future_status::ready);
 	worker.join();
