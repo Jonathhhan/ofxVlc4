@@ -1355,14 +1355,14 @@ void ofxVlc4::setAudioVisualizerSettings(const ofxVlc4AudioVisualizerSettings & 
 	const bool mediaActivationPending =
 		m_impl->subsystemRuntime.playbackController &&
 		m_impl->subsystemRuntime.playbackController->isMediaActivationPending();
-	if (sessionPlayer() && !mediaActivationPending) {
+	if (sessionPlayer()) {
+		if (mediaActivationPending) {
+			setStatus("Audio visualizer settings queued while media selection is pending.");
+			return;
+		}
 		if (reinitAndReapplyCurrentMedia("Audio visualizer")) {
 			return;
 		}
-	}
-	if (mediaActivationPending) {
-		setStatus("Audio visualizer settings queued while media selection is pending.");
-		return;
 	}
 	// Reinitialize the player so the visualizer module is applied
 	// immediately, independent of whether media is loaded or playing.
