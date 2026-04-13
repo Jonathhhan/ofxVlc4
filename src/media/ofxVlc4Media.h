@@ -206,10 +206,16 @@ public:
 	void movePlaylistItems(const std::vector<int> & fromIndices, int toIndex);
 
 private:
+	using LibVlcEventCallback = void (*)(const libvlc_event_t *, void *);
+
 	MediaLibrary & mediaLibrary() const;
 	ofxVlc4::AudioComponent & audio() const;
 	ofxVlc4::VideoComponent & video() const;
 	PlaybackController & playback() const;
+	void * eventCallbackData() const;
+	LibVlcEventCallback mediaEventCallback() const;
+	LibVlcEventCallback mediaDiscovererListEventCallback() const;
+	LibVlcEventCallback rendererDiscovererEventCallback() const;
 	ofxVlc4::MediaDiscoveryStateInfo buildMediaDiscoveryStateInfoLocked() const;
 	void clearMediaDiscoveryStateLocked();
 	void setMediaDiscoveryDescriptorLocked(

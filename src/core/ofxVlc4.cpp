@@ -1293,20 +1293,32 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			eventRouter ? VlcEventRouter::vlcMediaPlayerEventStatic : ofxVlc4::vlcMediaPlayerEventStatic);
 	}
 
-	const libvlc_dialog_cbs dialogCallbacks = {
-		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogDisplayLoginStatic : ofxVlc4::dialogDisplayLoginStatic,
-		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogDisplayQuestionStatic : ofxVlc4::dialogDisplayQuestionStatic,
-		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogDisplayProgressStatic : ofxVlc4::dialogDisplayProgressStatic,
-		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogCancelStatic : ofxVlc4::dialogCancelStatic,
-		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogUpdateProgressStatic : ofxVlc4::dialogUpdateProgressStatic
-	};
-	auto * dialogData = m_impl->subsystemRuntime.eventRouter
+	const bool useEventRouter = static_cast<bool>(m_impl->subsystemRuntime.eventRouter);
+	libvlc_dialog_cbs dialogCallbacks {};
+	if (useEventRouter) {
+		dialogCallbacks = {
+			VlcEventRouter::dialogDisplayLoginStatic,
+			VlcEventRouter::dialogDisplayQuestionStatic,
+			VlcEventRouter::dialogDisplayProgressStatic,
+			VlcEventRouter::dialogCancelStatic,
+			VlcEventRouter::dialogUpdateProgressStatic
+		};
+	} else {
+		dialogCallbacks = {
+			ofxVlc4::dialogDisplayLoginStatic,
+			ofxVlc4::dialogDisplayQuestionStatic,
+			ofxVlc4::dialogDisplayProgressStatic,
+			ofxVlc4::dialogCancelStatic,
+			ofxVlc4::dialogUpdateProgressStatic
+		};
+	}
+	auto * dialogData = useEventRouter
 		? static_cast<void *>(m_impl->subsystemRuntime.eventRouter.get())
 		: static_cast<void *>(m_controlBlock.get());
 	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, dialogData);
 	libvlc_dialog_set_error_callback(
 		m_impl->subsystemRuntime.coreSession->instance(),
-		m_impl->subsystemRuntime.eventRouter ? VlcEventRouter::dialogErrorStatic : ofxVlc4::dialogErrorStatic,
+		useEventRouter ? VlcEventRouter::dialogErrorStatic : ofxVlc4::dialogErrorStatic,
 		dialogData);
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {

@@ -399,6 +399,29 @@ PlaybackController & ofxVlc4::MediaComponent::playback() const {
 	return *owner.m_impl->subsystemRuntime.playbackController;
 }
 
+void * ofxVlc4::MediaComponent::eventCallbackData() const {
+	auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
+	return eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(owner.m_controlBlock.get());
+}
+
+ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::mediaEventCallback() const {
+	return owner.m_impl->subsystemRuntime.eventRouter
+		? VlcEventRouter::vlcMediaEventStatic
+		: ofxVlc4::vlcMediaEventStatic;
+}
+
+ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::mediaDiscovererListEventCallback() const {
+	return owner.m_impl->subsystemRuntime.eventRouter
+		? VlcEventRouter::mediaDiscovererMediaListEventStatic
+		: ofxVlc4::mediaDiscovererMediaListEventStatic;
+}
+
+ofxVlc4::MediaComponent::LibVlcEventCallback ofxVlc4::MediaComponent::rendererDiscovererEventCallback() const {
+	return owner.m_impl->subsystemRuntime.eventRouter
+		? VlcEventRouter::rendererDiscovererEventStatic
+		: ofxVlc4::rendererDiscovererEventStatic;
+}
+
 void ofxVlc4::MediaComponent::applyCurrentPlayerSettings() {
 	applyMediaPlayerRole();
 	applyNativeRecording();
@@ -681,10 +704,9 @@ bool ofxVlc4::MediaComponent::loadMediaSource(
 
 	owner.m_impl->subsystemRuntime.coreSession->setMediaEvents(libvlc_media_event_manager(owner.m_impl->subsystemRuntime.coreSession->media()));
 	if (owner.m_impl->subsystemRuntime.coreSession && owner.m_impl->subsystemRuntime.coreSession->mediaEvents()) {
-		auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
 		owner.m_impl->subsystemRuntime.coreSession->attachMediaEvents(
-			eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(owner.m_controlBlock.get()),
-			eventRouter ? VlcEventRouter::vlcMediaEventStatic : ofxVlc4::vlcMediaEventStatic);
+			eventCallbackData(),
+			mediaEventCallback());
 	}
 
 	if (instance) {
@@ -732,11 +754,10 @@ void ofxVlc4::MediaComponent::clearCurrentMedia(bool clearVideoResources) {
 	}
 
 	if (coreSession && coreSession->mediaEvents()) {
-		auto * eventRouter = owner.m_impl->subsystemRuntime.eventRouter.get();
 		if (currentMedia) {
 			coreSession->detachMediaEvents(
-				eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(owner.m_controlBlock.get()),
-				eventRouter ? VlcEventRouter::vlcMediaEventStatic : ofxVlc4::vlcMediaEventStatic);
+				eventCallbackData(),
+				mediaEventCallback());
 		}
 		coreSession->setMediaEvents(nullptr);
 	}
@@ -1170,12 +1191,15 @@ void ofxVlc4::applyMediaPlayerRole() {
 
 void ofxVlc4::detachEvents() {
 	auto & coreSession = m_impl->subsystemRuntime.coreSession;
+	auto * eventRouter = m_impl->subsystemRuntime.eventRouter.get();
+	void * eventData = eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(m_controlBlock.get());
 
 	if (coreSession && coreSession->playerEvents()) {
-		auto * eventRouter = m_impl->subsystemRuntime.eventRouter.get();
 		coreSession->detachPlayerEvents(
-			eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(m_controlBlock.get()),
-			eventRouter ? VlcEventRouter::vlcMediaPlayerEventStatic : ofxVlc4::vlcMediaPlayerEventStatic);
+			eventData,
+			eventRouter
+				? VlcEventRouter::vlcMediaPlayerEventStatic
+				: ofxVlc4::vlcMediaPlayerEventStatic);
 		// Null the pointer unconditionally: if the router existed, callbacks
 		// are already unregistered above; if it didn't, nothing was registered
 		// so there is nothing to detach.  Either way the stale pointer must
@@ -1184,9 +1208,8 @@ void ofxVlc4::detachEvents() {
 	}
 
 	if (coreSession && coreSession->mediaEvents()) {
-		auto * eventRouter = m_impl->subsystemRuntime.eventRouter.get();
 		coreSession->detachMediaEvents(
-			eventRouter ? static_cast<void *>(eventRouter) : static_cast<void *>(m_controlBlock.get()),
+			eventData,
 			eventRouter ? VlcEventRouter::vlcMediaEventStatic : ofxVlc4::vlcMediaEventStatic);
 		// Null the pointer so that clearCurrentMedia() does not attempt a
 		// redundant detach on the same event manager.
