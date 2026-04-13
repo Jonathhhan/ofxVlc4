@@ -13,6 +13,7 @@
 #include "core/VlcEventRouter.h"
 
 #include <algorithm>
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <cstdarg>
@@ -1238,6 +1239,8 @@ void ofxVlc4::applyMediaPlayerRole() {
 
 	void ofxVlc4::detachEvents() {
 	auto & coreSession = m_impl->subsystemRuntime.coreSession;
+	// MediaComponent is created in the ofxVlc4 constructor and owned for the object's lifetime.
+	assert(m_impl->subsystemRuntime.mediaComponent && "MediaComponent must exist before detaching libVLC callbacks.");
 	auto & mediaComponent = *m_impl->subsystemRuntime.mediaComponent;
 	void * eventData = mediaComponent.eventCallbackData();
 	const auto playerEventCallback = mediaComponent.playerEventCallback();

@@ -12,6 +12,7 @@
 #include "VlcEventRouter.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <chrono>
 #include <cmath>
@@ -1286,6 +1287,8 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
+	// MediaComponent is created in the ofxVlc4 constructor and owned for the object's lifetime.
+	assert(m_impl->subsystemRuntime.mediaComponent && "MediaComponent must exist before libVLC callback wiring.");
 	auto & mediaComponent = *m_impl->subsystemRuntime.mediaComponent;
 	void * eventCallbackData = mediaComponent.eventCallbackData();
 	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
