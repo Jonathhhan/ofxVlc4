@@ -321,9 +321,6 @@ void ofxVlc4::leaveCallbackScope() const {
 		std::memory_order_acq_rel,
 		std::memory_order_acquire)) {
 	}
-	if (prev == 0) {
-		return;
-	}
 	// If the counter just reached zero, wake the drain waiter.
 	if (prev == 1) {
 		m_impl->lifecycleRuntime.callbackDrainCv.notify_one();
