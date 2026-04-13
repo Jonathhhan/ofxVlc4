@@ -570,22 +570,6 @@ target_link_libraries(test_mux_join_timeout PRIVATE Threads::Threads)
 add_test(NAME mux_join_timeout COMMAND test_mux_join_timeout)
 
 # ---------------------------------------------------------------------------
-# test_callback_policy
-# Tests shared callback policy selection helpers used by player/media/dialog
-# callback wiring.
-# ---------------------------------------------------------------------------
-
-add_executable(test_callback_policy
-    test_callback_policy.cpp
-)
-
-target_include_directories(test_callback_policy PRIVATE
-    "${SRC_DIR}"
-)
-
-add_test(NAME callback_policy COMMAND test_callback_policy)
-
-# ---------------------------------------------------------------------------
 # test_module_state_seams
 # Thin integration coverage around shared module state objects extracted into
 # dedicated headers (init args, playback transport, media-library state).
