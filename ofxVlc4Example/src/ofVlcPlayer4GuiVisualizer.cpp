@@ -110,9 +110,13 @@ std::string defaultProjectMPresetPath() {
 }
 
 std::string defaultProjectMTexturePath() {
-	const std::string texturesPath = ofToDataPath("presets/textures", true);
+	const std::string texturesPath = ofToDataPath("textures", true);
 	if (ofDirectory::doesDirectoryExist(texturesPath, true)) {
 		return ofFilePath::getAbsolutePath(texturesPath, true);
+	}
+	const std::string mirroredTexturesPath = ofToDataPath("presets/textures", true);
+	if (ofDirectory::doesDirectoryExist(mirroredTexturesPath, true)) {
+		return ofFilePath::getAbsolutePath(mirroredTexturesPath, true);
 	}
 	return "";
 }
