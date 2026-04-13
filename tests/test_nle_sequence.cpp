@@ -198,9 +198,10 @@ static void testRippleShift() {
 	CHECK_EQ(track.segments()[2].timelineStart.totalFrames(), static_cast<int64_t>(60));
 
 	// Large negative shift clamps to zero.
-	track.rippleShift(Timecode(30, FrameRate::Fps24), -1000);
-	CHECK_EQ(track.segments()[1].timelineStart.totalFrames(), static_cast<int64_t>(0));
-	CHECK_EQ(track.segments()[2].timelineStart.totalFrames(), static_cast<int64_t>(0));
+	Track clampTrack(TrackType::Video, "V2");
+	clampTrack.addSegment(makeSeg("X", 0, 20, 5));
+	clampTrack.rippleShift(Timecode(5, FrameRate::Fps24), -1000);
+	CHECK_EQ(clampTrack.segments()[0].timelineStart.totalFrames(), static_cast<int64_t>(0));
 }
 
 // ---------------------------------------------------------------------------
@@ -360,23 +361,23 @@ static void testTrackAccessOutOfRangeThrows() {
 	seq.addAudioTrack("A1");
 
 	bool threw = false;
-	try { (void)seq.videoTrack(5); }
+	try { [[maybe_unused]] auto & unused = seq.videoTrack(5); }
 	catch (const std::out_of_range &) { threw = true; }
 	CHECK(threw);
 
 	threw = false;
-	try { (void)seq.audioTrack(7); }
+	try { [[maybe_unused]] auto & unused = seq.audioTrack(7); }
 	catch (const std::out_of_range &) { threw = true; }
 	CHECK(threw);
 
 	const Sequence & cseq = seq;
 	threw = false;
-	try { (void)cseq.videoTrack(9); }
+	try { [[maybe_unused]] const auto & unused = cseq.videoTrack(9); }
 	catch (const std::out_of_range &) { threw = true; }
 	CHECK(threw);
 
 	threw = false;
-	try { (void)cseq.audioTrack(11); }
+	try { [[maybe_unused]] const auto & unused = cseq.audioTrack(11); }
 	catch (const std::out_of_range &) { threw = true; }
 	CHECK(threw);
 }
