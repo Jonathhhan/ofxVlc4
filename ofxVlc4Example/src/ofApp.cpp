@@ -514,11 +514,29 @@ void ofApp::initializePlayer(
 	const int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);
 
 	ofxVlc4AudioVisualizerSettings visualizerSettings = player.getAudioVisualizerSettings();
-	if (visualizerSettings.module == ofxVlc4AudioVisualizerModule::ProjectM &&
-		visualizerSettings.projectMPresetPath.empty()) {
-		const std::string defaultPresetPath = ofToDataPath("presets", true);
-		if (ofDirectory::doesDirectoryExist(defaultPresetPath, true)) {
-			visualizerSettings.projectMPresetPath = defaultPresetPath;
+	if (visualizerSettings.module == ofxVlc4AudioVisualizerModule::ProjectM) {
+		bool settingsChanged = false;
+		if (visualizerSettings.projectMPresetPath.empty()) {
+			const std::string defaultPresetPath = ofToDataPath("presets", true);
+			if (ofDirectory::doesDirectoryExist(defaultPresetPath, true)) {
+				visualizerSettings.projectMPresetPath = defaultPresetPath;
+				settingsChanged = true;
+			}
+		}
+		if (visualizerSettings.projectMTexturePath.empty()) {
+			const std::string defaultTexturePath = ofToDataPath("textures", true);
+			if (ofDirectory::doesDirectoryExist(defaultTexturePath, true)) {
+				visualizerSettings.projectMTexturePath = defaultTexturePath;
+				settingsChanged = true;
+			} else {
+				const std::string mirroredTexturePath = ofToDataPath("presets/textures", true);
+				if (ofDirectory::doesDirectoryExist(mirroredTexturePath, true)) {
+					visualizerSettings.projectMTexturePath = mirroredTexturePath;
+					settingsChanged = true;
+				}
+			}
+		}
+		if (settingsChanged) {
 			player.setAudioVisualizerSettings(visualizerSettings);
 		}
 	}
