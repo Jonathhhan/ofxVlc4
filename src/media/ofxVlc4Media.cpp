@@ -40,6 +40,17 @@ namespace {
 
 constexpr const char * kMediaLogChannel = "ofxVlc4";
 
+/// Add a :start-time option to the given media so that VLC begins playback
+/// at the specified millisecond offset.  This is used when reinitializing the
+/// player so the position is restored even before the player reports as
+/// seekable.
+inline void addStartTimeOption(libvlc_media_t * media, int64_t timeMs) {
+	if (!media || timeMs <= 0) return;
+	char buf[64];
+	std::snprintf(buf, sizeof(buf), ":start-time=%.3f", timeMs / 1000.0);
+	libvlc_media_add_option(media, buf);
+}
+
 
 const std::set<std::string> & defaultMediaExtensions() {
 	static const std::set<std::string> extensions = {
@@ -450,13 +461,7 @@ bool ofxVlc4::MediaComponent::reapplyCurrentMediaForFilterChainChange(const std:
 
 	// Add a start-time option so VLC begins playback at the saved position
 	// even before the player is seekable.
-	if (resumeTimeMs > 0) {
-		libvlc_media_t * m = owner.sessionMedia();
-		if (m) {
-			const std::string opt = ":start-time=" + ofToString(resumeTimeMs / 1000.0, 3);
-			libvlc_media_add_option(m, opt.c_str());
-		}
-	}
+	addStartTimeOption(owner.sessionMedia(), resumeTimeMs);
 
 	if (wasPlaying || wasPaused) {
 		audio().applyEqualizerSettings();
@@ -562,13 +567,7 @@ bool ofxVlc4::MediaComponent::reinitAndReapplyCurrentMedia(const std::string & l
 
 	// Add a start-time option so VLC begins playback at the saved position
 	// even before the player is seekable.
-	if (resumeTimeMs > 0) {
-		libvlc_media_t * m = owner.sessionMedia();
-		if (m) {
-			const std::string opt = ":start-time=" + ofToString(resumeTimeMs / 1000.0, 3);
-			libvlc_media_add_option(m, opt.c_str());
-		}
-	}
+	addStartTimeOption(owner.sessionMedia(), resumeTimeMs);
 
 	// Restore playback state.
 	libvlc_media_player_t * newPlayer = owner.sessionPlayer();
