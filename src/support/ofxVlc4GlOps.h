@@ -11,6 +11,7 @@
 
 #include "ofMain.h"
 
+#include <atomic>
 #include <cstddef>
 #include <vector>
 
@@ -100,6 +101,14 @@ inline void bindFbo(GLuint fboId, bool & attachmentDirty, GLenum texTarget, GLui
 	if (attachmentDirty) {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texTarget, texId, 0);
 		attachmentDirty = false;
+	}
+}
+
+// Atomic variant used by callback/main-thread shared dirty flags.
+inline void bindFbo(GLuint fboId, std::atomic<bool> & attachmentDirty, GLenum texTarget, GLuint texId) {
+	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+	if (attachmentDirty.exchange(false)) {
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texTarget, texId, 0);
 	}
 }
 

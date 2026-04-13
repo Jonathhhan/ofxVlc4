@@ -5,6 +5,7 @@
 
 #include "ofxVlc4GlOps.h"
 
+#include <atomic>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
@@ -239,6 +240,33 @@ static void testBindFbo() {
 		bool dirty = true;
 		ofxVlc4GlOps::bindFbo(5, dirty, GL_TEXTURE_2D, 10);
 		CHECK(!dirty);
+		CHECK_EQ(logSize(), 2u);
+		CHECK_EQ(logAt(0).name, std::string("glBindFramebuffer"));
+		CHECK_EQ(logAt(1).name, std::string("glFramebufferTexture2D"));
+		CHECK_EQ(logAt(1).args[3], 10u); // texture id
+	}
+}
+
+static void testBindFboAtomicDirtyFlag() {
+	beginSuite("bindFbo (atomic dirty flag)");
+
+	// Not dirty → only binds FBO, no reattach.
+	{
+		resetAll();
+		std::atomic<bool> dirty { false };
+		ofxVlc4GlOps::bindFbo(5, dirty, GL_TEXTURE_2D, 10);
+		CHECK(!dirty.load());
+		CHECK_EQ(logSize(), 1u);
+		CHECK_EQ(logAt(0).name, std::string("glBindFramebuffer"));
+		CHECK_EQ(logAt(0).args[1], 5u);
+	}
+
+	// Dirty → binds FBO and reattaches texture, clears dirty.
+	{
+		resetAll();
+		std::atomic<bool> dirty { true };
+		ofxVlc4GlOps::bindFbo(5, dirty, GL_TEXTURE_2D, 10);
+		CHECK(!dirty.load());
 		CHECK_EQ(logSize(), 2u);
 		CHECK_EQ(logAt(0).name, std::string("glBindFramebuffer"));
 		CHECK_EQ(logAt(1).name, std::string("glFramebufferTexture2D"));
@@ -638,6 +666,7 @@ int main() {
 	testGpuWaitFenceSync();
 	testSetupFboWithTexture();
 	testBindFbo();
+	testBindFboAtomicDirtyFlag();
 	testUnbindFbo();
 	testDeleteFbo();
 	testSetTextureLinearFiltering();
