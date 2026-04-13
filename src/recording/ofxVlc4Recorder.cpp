@@ -1646,13 +1646,13 @@ void ofxVlc4Recorder::clearVideoRecording() {
 	recordingPixels.clear();
 	destroyVideoReadbackBuffersLocked();
 	const bool hasGlContext = hasCurrentGlContext();
-	if (!(recordingResizeFbo.isAllocated() && !hasGlContext)) {
+	if (!recordingResizeFbo.isAllocated() || hasGlContext) {
 		recordingResizeFbo.clear();
 	}
-	if (!(recordingSourceTexture.isAllocated() && !hasGlContext)) {
+	if (!recordingSourceTexture.isAllocated() || hasGlContext) {
 		recordingSourceTexture.clear();
 	}
-	if (!(recordingTexture.isAllocated() && !hasGlContext)) {
+	if (!recordingTexture.isAllocated() || hasGlContext) {
 		recordingTexture.clear();
 	}
 	recordingFrameReadyCondition.notify_all();

@@ -107,7 +107,7 @@ inline void bindFbo(GLuint fboId, bool & attachmentDirty, GLenum texTarget, GLui
 // Atomic variant used by callback/main-thread shared dirty flags.
 inline void bindFbo(GLuint fboId, std::atomic<bool> & attachmentDirty, GLenum texTarget, GLuint texId) {
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-	if (attachmentDirty.exchange(false)) {
+	if (attachmentDirty.exchange(false, std::memory_order_acq_rel)) {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texTarget, texId, 0);
 	}
 }
