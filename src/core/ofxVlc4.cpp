@@ -1293,7 +1293,7 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 			eventRouter ? VlcEventRouter::vlcMediaPlayerEventStatic : ofxVlc4::vlcMediaPlayerEventStatic);
 	}
 
-	const bool useEventRouter = static_cast<bool>(m_impl->subsystemRuntime.eventRouter);
+	const bool useEventRouter = m_impl->subsystemRuntime.eventRouter != nullptr;
 	libvlc_dialog_cbs dialogCallbacks {};
 	if (useEventRouter) {
 		dialogCallbacks = {
