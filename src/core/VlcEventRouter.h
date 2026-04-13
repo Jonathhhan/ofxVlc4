@@ -69,5 +69,10 @@ public:
 	static void dialogErrorStatic(void * data, const char * title, const char * text);
 
 private:
+	static ofxVlc4 * resolveOwnerFromRouterData(void * data);
+	static bool shouldDropEventDuringShutdown(void * data, bool dropDuringShutdown);
+	template <typename HandlerFn>
+	static void dispatchToOwner(void * data, bool dropDuringShutdown, HandlerFn && handler);
+
 	ofxVlc4 & owner;
 };
