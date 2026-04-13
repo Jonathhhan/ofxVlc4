@@ -6,6 +6,9 @@ class MediaLibrary;
 
 class ofxVlc4::MediaComponent {
 public:
+	using LibVlcEventCallback = void (*)(const libvlc_event_t *, void *);
+	using LibVlcDialogErrorCallback = decltype(&ofxVlc4::dialogErrorStatic);
+
 	explicit MediaComponent(ofxVlc4 & owner);
 
 	void applyCurrentPlayerSettings();
@@ -204,6 +207,14 @@ public:
 	void removeFromPlaylist(int index);
 	void movePlaylistItem(int fromIndex, int toIndex);
 	void movePlaylistItems(const std::vector<int> & fromIndices, int toIndex);
+	bool hasEventRouter() const;
+	void * eventCallbackData() const;
+	LibVlcEventCallback playerEventCallback() const;
+	LibVlcEventCallback mediaEventCallback() const;
+	LibVlcEventCallback mediaDiscovererListEventCallback() const;
+	LibVlcEventCallback rendererDiscovererEventCallback() const;
+	libvlc_dialog_cbs dialogCallbacks() const;
+	LibVlcDialogErrorCallback dialogErrorCallback() const;
 
 private:
 	MediaLibrary & mediaLibrary() const;

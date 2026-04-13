@@ -9,6 +9,7 @@
 #include "support/ofxVlc4MuxHelpers.h"
 #include "support/ofxVlc4Utils.h"
 #include "VlcCoreSession.h"
+#include "VlcEventCallbackPolicy.h"
 #include "VlcEventRouter.h"
 
 #include <algorithm>
@@ -1286,19 +1287,28 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 	}
 
 	m_impl->subsystemRuntime.coreSession->setPlayerEvents(libvlc_media_player_event_manager(m_impl->subsystemRuntime.coreSession->player()));
+	auto * mediaComponent = m_impl->subsystemRuntime.mediaComponent.get();
+	auto * eventCallbackData = mediaComponent
+		? mediaComponent->eventCallbackData()
+		: VlcEventCallbackPolicy::selectCallbackData(nullptr, m_controlBlock.get());
 	if (m_impl->subsystemRuntime.coreSession->playerEvents()) {
-		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(m_controlBlock.get(), ofxVlc4::vlcMediaPlayerEventStatic);
+		m_impl->subsystemRuntime.coreSession->attachPlayerEvents(
+			eventCallbackData,
+			mediaComponent ? mediaComponent->playerEventCallback() : ofxVlc4::vlcMediaPlayerEventStatic);
 	}
 
-	const libvlc_dialog_cbs dialogCallbacks = {
+	libvlc_dialog_cbs dialogCallbacks = mediaComponent ? mediaComponent->dialogCallbacks() : libvlc_dialog_cbs {
 		ofxVlc4::dialogDisplayLoginStatic,
 		ofxVlc4::dialogDisplayQuestionStatic,
 		ofxVlc4::dialogDisplayProgressStatic,
 		ofxVlc4::dialogCancelStatic,
 		ofxVlc4::dialogUpdateProgressStatic
 	};
-	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, m_controlBlock.get());
-	libvlc_dialog_set_error_callback(m_impl->subsystemRuntime.coreSession->instance(), ofxVlc4::dialogErrorStatic, m_controlBlock.get());
+	libvlc_dialog_set_callbacks(m_impl->subsystemRuntime.coreSession->instance(), &dialogCallbacks, eventCallbackData);
+	libvlc_dialog_set_error_callback(
+		m_impl->subsystemRuntime.coreSession->instance(),
+		mediaComponent ? mediaComponent->dialogErrorCallback() : ofxVlc4::dialogErrorStatic,
+		eventCallbackData);
 
 	if (!m_impl->rendererDiscoveryRuntime.discovererName.empty()) {
 		startRendererDiscovery(m_impl->rendererDiscoveryRuntime.discovererName);
