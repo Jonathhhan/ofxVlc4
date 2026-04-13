@@ -3,6 +3,8 @@
 // Heavy includes only needed by internal implementation:
 #include "ofxVlc4.h"
 #include "GLFW/glfw3.h"
+#include "core/ofxVlc4DiagnosticsState.h"
+#include "core/ofxVlc4InitArgsState.h"
 #include "midi/ofxVlc4MidiPlayback.h"
 #include "recording/ofxVlc4Recorder.h"
 #include "media/MediaLibraryState.h"
@@ -56,13 +58,6 @@ struct ofxVlc4::Impl {
 		std::string selectedRendererId;
 		RendererStateInfo stateInfo;
 		std::vector<RendererItemEntry> discoveredRenderers;
-	};
-
-	struct DiagnosticsRuntimeState {
-		std::string lastStatusMessage;
-		std::string lastErrorMessage;
-		std::vector<DialogInfo> activeDialogs;
-		DialogErrorInfo lastDialogError;
 	};
 
 	struct NativeRecordingRuntimeState {
@@ -182,8 +177,6 @@ struct ofxVlc4::Impl {
 		MediaPlayerRole mediaPlayerRole = MediaPlayerRole::None;
 		bool keyInputEnabled = true;
 		bool mouseInputEnabled = true;
-		std::vector<std::string> extraInitArgs;
-		ofxVlc4AudioVisualizerSettings audioVisualizerSettings;
 	};
 
 	struct AudioRuntimeState {
@@ -404,7 +397,8 @@ struct ofxVlc4::Impl {
 	MediaRuntimeState mediaRuntime;
 	MediaDiscoveryRuntimeState mediaDiscoveryRuntime;
 	RendererDiscoveryRuntimeState rendererDiscoveryRuntime;
-	DiagnosticsRuntimeState diagnosticsRuntime;
+	ofxVlc4DiagnosticsState diagnosticsRuntime;
+	ofxVlc4InitArgsState initArgsRuntime;
 	NativeRecordingRuntimeState nativeRecordingRuntime;
 	WatchTimeRuntimeState watchTimeRuntime;
 	StateCacheRuntimeState stateCacheRuntime;
