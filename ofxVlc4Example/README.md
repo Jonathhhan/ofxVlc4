@@ -10,6 +10,8 @@ It is meant as a real integration example, not just a minimal playback demo. The
 
 For visualization, this example treats `ofxProjectM` as the primary integrated path. VLC's built-in visualization plugins can still exist in the bundled runtime, but they should currently be treated as experimental libVLC extras rather than as the main example workflow.
 
+**Note**: The `--projectm-texture-path` option is only available in custom VLC/libprojectM builds. Standard VLC 4 releases do not include this option. If you see an error like `Unknown option '--projectm-texture-path'`, this is expected with standard VLC builds and the example will work correctly without it.
+
 ## What it shows
 
 - `libVLC` playback through the OF texture backend
