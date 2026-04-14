@@ -24,6 +24,8 @@ meta:
 
 common:
 	ADDON_INCLUDES += libs/libvlc/include
+	# Exclude documentation files from compilation
+	ADDON_SOURCES_EXCLUDE = src/%/README.md
 	# Propagate the expected ofxImGui GLFW callback/multi-context configuration.
 	ADDON_CFLAGS += -DOFXIMGUI_GLFW_EVENTS_REPLACE_OF_CALLBACKS=1
 	ADDON_CFLAGS += -DOFXIMGUI_GLFW_FIX_MULTICONTEXT_PRIMARY_VP=0
