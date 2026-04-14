@@ -1,0 +1,66 @@
+name: Windows D3D11 Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+jobs:
+  windows-d3d11-tests:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Configure CMake
+        run: |
+          cmake -S tests -B build/tests -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Build
+        run: |
+          cmake --build build/tests --config ${{ matrix.build_type }} --parallel
+
+      - name: Run tests
+        run: |
+          ctest --test-dir build/tests --build-config ${{ matrix.build_type }} --output-on-failure
+
+      - name: Run D3D11-specific tests
+        run: |
+          cd build/tests/${{ matrix.build_type }}
+          ./test_video_helpers.exe
+          ./test_video_output_reinit.exe
+          ./test_video_pipeline.exe
+        continue-on-error: true
+
+      - name: Check D3D11 availability
+        shell: powershell
+        run: |
+          Write-Host "Checking D3D11 availability..."
+          $d3d11Available = (Get-Command dxdiag -ErrorAction SilentlyContinue) -ne $null
+          if ($d3d11Available) {
+            Write-Host "D3D11 diagnostics available"
+            dxdiag /t d3d11_diagnostics.txt
+          } else {
+            Write-Host "D3D11 diagnostics not available"
+          }
+        continue-on-error: true
+
+      - name: Upload D3D11 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d3d11-diagnostics-${{ matrix.build_type }}
+          path: d3d11_diagnostics.txt
+          if-no-files-found: ignore
