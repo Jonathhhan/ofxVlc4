@@ -1716,6 +1716,12 @@ long long ofxVlc4Recorder::textureRead(void * data, unsigned char * dst, size_t 
 				std::max<uint64_t>(1000, recorder->videoFrameIntervalUs));
 			recorder->recordingFrameReadyCondition.wait_for(lock, waitBudget, nextFrameReady);
 		}
+		// If recording stopped and we're at the start of a new frame request, signal EOF
+		// to prevent VLC from endlessly re-reading the same last frame (which causes
+		// the last ~10 seconds of video to freeze).
+		if (!recorder->videoRecordingActive.load()) {
+			return 0;
+		}
 		if (recorder->recordingFrameSerial > recorder->recordingReadFrameSerial) {
 			recorder->recordingReadFrameSerial = recorder->recordingFrameSerial;
 		}
