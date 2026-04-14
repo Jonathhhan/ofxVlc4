@@ -1720,7 +1720,7 @@ int ofxVlc4Recorder::textureOpen(void * data, void ** datap, uint64_t * sizep) {
 
 long long ofxVlc4Recorder::textureRead(void * data, unsigned char * dst, size_t size) {
 	auto * recorder = static_cast<ofxVlc4Recorder *>(data);
-	if (!recorder || !dst || size == 0 || !recorder->videoRecordingActive.load()) {
+	if (!recorder || !dst || size == 0) {
 		return 0;
 	}
 
