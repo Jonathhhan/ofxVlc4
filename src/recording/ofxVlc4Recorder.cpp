@@ -1223,7 +1223,14 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		streamSpec += ",width=" + ofToString(encodedWidth);
 		streamSpec += ",height=" + ofToString(encodedHeight);
 	}
-	streamSpec += "}:standard{access=file,dst='" + normalizeSoutPath(videoPath) + "'}";
+	std::string muxOption;
+	{
+		const std::string extension = ofToLower(ofFilePath::getFileExt(videoPath));
+		if (extension == "ts") {
+			muxOption = ",mux=ts";
+		}
+	}
+	streamSpec += "}:standard{access=file" + muxOption + ",dst='" + normalizeSoutPath(videoPath) + "'}";
 
 	libvlc_media_add_option(recordingMedia, "demux=rawvid");
 	libvlc_media_add_option(recordingMedia, width.c_str());
