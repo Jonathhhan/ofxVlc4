@@ -1239,3 +1239,110 @@ void ofApp::drawCustomSubtitleOverlay() const {
 
 	ofPopStyle();
 }
+
+std::vector<SimpleSrtSubtitleCue> & ofApp::getCustomSubtitleCues() {
+	return customSubtitleCues;
+}
+
+int ofApp::getSelectedSubtitleCueIndex() const {
+	return selectedSubtitleCueIndex;
+}
+
+void ofApp::setSelectedSubtitleCueIndex(int index) {
+	if (index < -1 || index >= static_cast<int>(customSubtitleCues.size())) {
+		selectedSubtitleCueIndex = -1;
+		return;
+	}
+	selectedSubtitleCueIndex = index;
+}
+
+void ofApp::updateSubtitleCue(int index, int startMs, int endMs, const std::string & text) {
+	if (index < 0 || index >= static_cast<int>(customSubtitleCues.size())) {
+		return;
+	}
+	if (startMs < 0 || endMs < startMs) {
+		return;
+	}
+
+	customSubtitleCues[static_cast<size_t>(index)].startMs = startMs;
+	customSubtitleCues[static_cast<size_t>(index)].endMs = endMs;
+	customSubtitleCues[static_cast<size_t>(index)].text = text;
+	customSubtitleModified = true;
+}
+
+void ofApp::addSubtitleCue(int startMs, int endMs, const std::string & text) {
+	if (startMs < 0 || endMs < startMs) {
+		return;
+	}
+
+	SimpleSrtSubtitleCue newCue;
+	newCue.startMs = startMs;
+	newCue.endMs = endMs;
+	newCue.text = text;
+
+	auto insertPos = std::upper_bound(
+		customSubtitleCues.begin(),
+		customSubtitleCues.end(),
+		startMs,
+		[](int timeMs, const SimpleSrtSubtitleCue & cue) {
+			return timeMs < cue.startMs;
+		});
+
+	customSubtitleCues.insert(insertPos, newCue);
+	customSubtitleModified = true;
+}
+
+void ofApp::deleteSubtitleCue(int index) {
+	if (index < 0 || index >= static_cast<int>(customSubtitleCues.size())) {
+		return;
+	}
+
+	customSubtitleCues.erase(customSubtitleCues.begin() + index);
+	if (selectedSubtitleCueIndex >= static_cast<int>(customSubtitleCues.size())) {
+		selectedSubtitleCueIndex = static_cast<int>(customSubtitleCues.size()) - 1;
+	}
+	customSubtitleModified = true;
+}
+
+bool ofApp::saveCustomSubtitleFile(const std::string & path) {
+	if (customSubtitleCues.empty()) {
+		return false;
+	}
+
+	std::ofstream outFile(path, std::ios::out | std::ios::trunc);
+	if (!outFile.is_open()) {
+		return false;
+	}
+
+	auto formatTimecode = [](int timeMs) -> std::string {
+		int hours = timeMs / 3600000;
+		int minutes = (timeMs % 3600000) / 60000;
+		int seconds = (timeMs % 60000) / 1000;
+		int millis = timeMs % 1000;
+
+		std::ostringstream stream;
+		stream << std::setfill('0') << std::setw(2) << hours << ":"
+		       << std::setfill('0') << std::setw(2) << minutes << ":"
+		       << std::setfill('0') << std::setw(2) << seconds << ","
+		       << std::setfill('0') << std::setw(3) << millis;
+		return stream.str();
+	};
+
+	for (size_t i = 0; i < customSubtitleCues.size(); ++i) {
+		const auto & cue = customSubtitleCues[i];
+		outFile << (i + 1) << "\n";
+		outFile << formatTimecode(cue.startMs) << " --> " << formatTimecode(cue.endMs) << "\n";
+		outFile << cue.text << "\n";
+		outFile << "\n";
+	}
+
+	outFile.close();
+
+	if (outFile.good()) {
+		customSubtitlePath = path;
+		customSubtitleModified = false;
+		return true;
+	}
+
+	return false;
+}

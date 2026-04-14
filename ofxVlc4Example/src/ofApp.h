@@ -41,6 +41,13 @@ public:
 	std::vector<std::string> customSubtitleFontLabels() const;
 	int customSubtitleFontSelection() const;
 	void setCustomSubtitleFontSelection(int index);
+	std::vector<SimpleSrtSubtitleCue> & getCustomSubtitleCues();
+	int getSelectedSubtitleCueIndex() const;
+	void setSelectedSubtitleCueIndex(int index);
+	void updateSubtitleCue(int index, int startMs, int endMs, const std::string & text);
+	void addSubtitleCue(int startMs, int endMs, const std::string & text);
+	void deleteSubtitleCue(int index);
+	bool saveCustomSubtitleFile(const std::string & path);
 	void loadPlayerProjectMTexture();
 	void initializePlayer(const std::vector<std::string> * playlistOverride = nullptr, int restoreIndex = -1, RestorePlaybackState restorePlaybackState = RestorePlaybackState::Stopped, int restoreTimeMs = 0, int restoreVolume = 50, ofxVlc4::PlaybackMode restoreMode = ofxVlc4::PlaybackMode::Default);
 	void drawPlayerToFbo(ofxVlc4 & sourcePlayer, ofFbo & targetFbo, float width, float height, bool preserveAspect);
@@ -83,6 +90,8 @@ public:
 	ofTrueTypeFont customSubtitleFont;
 	int customSubtitleFontIndex = -1;
 	bool customSubtitleFontLoaded = false;
+	int selectedSubtitleCueIndex = -1;
+	bool customSubtitleModified = false;
 
 	int bufferSize = 128;
 	int outChannels = 2;

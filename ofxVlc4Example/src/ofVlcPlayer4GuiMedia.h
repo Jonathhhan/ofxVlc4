@@ -25,6 +25,14 @@ public:
 		std::function<std::vector<std::string>()> fontLabelsCallback,
 		std::function<int()> selectedFontIndexCallback,
 		std::function<void(int)> setFontIndexCallback);
+	void setCustomSubtitleEditorCallbacks(
+		std::function<std::vector<SimpleSrtSubtitleCue> &()> getCuesCallback,
+		std::function<int()> getSelectedIndexCallback,
+		std::function<void(int)> setSelectedIndexCallback,
+		std::function<void(int, int, int, const std::string &)> updateCueCallback,
+		std::function<void(int, int, const std::string &)> addCueCallback,
+		std::function<void(int)> deleteCueCallback,
+		std::function<bool(const std::string &)> saveCuesCallback);
 	bool hasDetachedDiagnosticsWindow() const;
 
 private:
