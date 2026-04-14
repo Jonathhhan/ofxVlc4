@@ -986,6 +986,19 @@ bool PlaybackController::isPausableLatched() const {
 	return playbackTransport.pausableLatched.load(std::memory_order_relaxed);
 }
 
+bool PlaybackController::hasMedia() const {
+	libvlc_media_player_t * player = owner.sessionPlayer();
+	if (!player) {
+		return false;
+	}
+	libvlc_media_t * loadedMedia = libvlc_media_player_get_media(player);
+	const bool hasLoadedMedia = (loadedMedia != nullptr);
+	if (loadedMedia) {
+		libvlc_media_release(loadedMedia);
+	}
+	return hasLoadedMedia;
+}
+
 void PlaybackController::prepareForClose() {
 	const ofxVlc4::PlaybackStateInfo playbackState = media().getPlaybackStateInfo();
 	const bool hasActivePlaybackState =
