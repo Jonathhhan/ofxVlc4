@@ -210,6 +210,11 @@ git clone --branch develop https://github.com/jvcleave/ofxImGui.git
 
 ## Examples
 
+- **`ofxVlc4QuickStart`** ⭐ **NEW - Start here!**
+  - minimal single-file example in ~90 lines of code
+  - perfect for learning basics and quick prototyping
+  - drag-and-drop playback with simple controls
+  - see [ofxVlc4QuickStart/README.md](ofxVlc4QuickStart/README.md)
 - `ofxVlc4Example`
   - full GUI, previews, projectM integration, diagnostics, subtitle loading/track control, and an optional OF-drawn `.srt` overlay with selectable TTF fonts
   - includes a dedicated `DVD / Disc` control section for title/chapter/program navigation and menu buttons, while teletext lives under `Tracks & Subtitles`
@@ -230,6 +235,7 @@ For audio-visualization workflows, the addon treats `ofxProjectM` as the primary
 
 For the examples, also see:
 
+- [ofxVlc4QuickStart/README.md](ofxVlc4QuickStart/README.md) ⭐ **Start here for basics**
 - [ofxVlc4Example/README.md](ofxVlc4Example/README.md)
 - [ofxVlc4360Example/README.md](ofxVlc4360Example/README.md)
 - [ofxVlc4MidiExample/README.md](ofxVlc4MidiExample/README.md)
@@ -254,6 +260,10 @@ For the examples, also see:
   - see `Backend capability notes` below
 
 **API Documentation**: For comprehensive API organization, usage patterns, and subsystem guides, see [docs/API_GUIDE.md](docs/API_GUIDE.md). To generate full API reference documentation with Doxygen, run `doxygen` in the repository root (output: `docs/api/html/index.html`).
+
+**Migration Guide**: Transitioning from `ofVideoPlayer`? See [docs/MIGRATION_FROM_OFVIDEOPLAYER.md](docs/MIGRATION_FROM_OFVIDEOPLAYER.md) for a complete migration guide with API mapping and code examples.
+
+**Contributing**: Interested in contributing? See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, code standards, and testing guidelines.
 
 ## Minimal API
 
