@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<playlist xmlns="http://xspf.org/ns/0/" version="1">
+  <trackList>
+    <track>
+      <location>/path/to/file.mkv</location>
+    </track>
+    <track>
+      <location>https://example.org/stream.ts</location>
+    </track>
+  </trackList>
+</playlist>

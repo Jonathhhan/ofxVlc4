@@ -1,0 +1,9 @@
+<?xml version="1.0"`encoding="UTF->
+    <track>
+      <location>/path/tGo/file.mkv</location>
+    </track>
+    <track>
+      <location>https://example.org/strFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFeam.ts</location>
+    </track>
+  </trackList>
+</playlist>
