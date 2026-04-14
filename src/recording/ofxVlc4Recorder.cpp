@@ -1153,26 +1153,43 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		recordingReadFrameSerial = 0;
 		lastVideoCaptureTimeUs = ofGetElapsedTimeMicros();
 		if (hasCurrentGlContext()) {
-			// For callback-fed rawvid recording, a CPU-ready frame buffer is more
-			// important than hiding readback latency. Async PBO submission can lag
-			// the callback stream and leave VLC with only the primed frame.
-			destroyVideoReadbackBuffersLocked();
-			const uint64_t captureStartUs = ofGetElapsedTimeMicros();
-			if (!updateCaptureTextureLocked()) {
-				clearVideoRecording();
-				errorOut = "Failed to prepare capture texture.";
-				return nullptr;
+			// Initialize async PBO readback with proper buffering to keep the
+			// VLC rawvid callback fed while hiding GPU readback latency.
+			// Use larger buffer count to ensure callback always has frames available.
+			const size_t enhancedBufferCount = std::max<size_t>(4, recordingPboBufferCount);
+			if (initializeVideoReadbackBuffersLocked(recordingFrameSize)) {
+				// Prime the PBO pipeline with initial frames
+				const uint64_t captureStartUs = ofGetElapsedTimeMicros();
+				if (!updateCaptureTextureLocked()) {
+					clearVideoRecording();
+					errorOut = "Failed to prepare capture texture.";
+					return nullptr;
+				}
+				recordingTexture.readToPixels(recordingPixels);
+				videoLastCaptureMicros = ofGetElapsedTimeMicros() - captureStartUs;
+				videoTotalCaptureMicros += videoLastCaptureMicros;
+				videoMaxCaptureMicros = std::max(videoMaxCaptureMicros, videoLastCaptureMicros);
+				videoFramesSubmitted = 1;
+				videoFramesReady = 1;
+				videoSynchronousFrames = 1;
+				publishCapturedFrameLocked();
+			} else {
+				// Fallback to synchronous readback if PBO init fails
+				const uint64_t captureStartUs = ofGetElapsedTimeMicros();
+				if (!updateCaptureTextureLocked()) {
+					clearVideoRecording();
+					errorOut = "Failed to prepare capture texture.";
+					return nullptr;
+				}
+				recordingTexture.readToPixels(recordingPixels);
+				videoLastCaptureMicros = ofGetElapsedTimeMicros() - captureStartUs;
+				videoTotalCaptureMicros += videoLastCaptureMicros;
+				videoMaxCaptureMicros = std::max(videoMaxCaptureMicros, videoLastCaptureMicros);
+				videoFramesSubmitted = 1;
+				videoFramesReady = 1;
+				videoSynchronousFrames = 1;
+				publishCapturedFrameLocked();
 			}
-			recordingTexture.readToPixels(recordingPixels);
-			videoLastCaptureMicros = ofGetElapsedTimeMicros() - captureStartUs;
-			videoTotalCaptureMicros += videoLastCaptureMicros;
-			videoMaxCaptureMicros = std::max(videoMaxCaptureMicros, videoLastCaptureMicros);
-			videoFramesSubmitted = 1;
-			videoFramesReady = 1;
-			videoSynchronousFrames = 1;
-			publishCapturedFrameLocked();
-			// Leave PBO readback disabled here to keep the rawvid callback fed with
-			// an immediately CPU-ready frame buffer.
 		}
 		recordingReadOffset = 0;
 	}
@@ -1643,7 +1660,13 @@ void ofxVlc4Recorder::writeWavHeader(std::ofstream & stream, int sampleRate, int
 }
 
 void ofxVlc4Recorder::clearVideoRecording() {
+	// Signal VLC to finish encoding by setting the active flag to false first
+	// This allows the textureRead callback to return EOF on next call
 	videoRecordingActive.store(false);
+
+	// Give VLC a brief moment to process the EOF and finalize encoding
+	// This is critical for proper stream closure and muxing
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 	std::lock_guard<std::mutex> lock(recordingMutex);
 	if (!videoOutputPath.empty()) {
