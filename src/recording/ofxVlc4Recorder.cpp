@@ -547,6 +547,12 @@ bool ofxVlc4::armPendingRecordingMux(const std::string & outputPath, const ofxVl
 		return false;
 	}
 
+	{
+		std::lock_guard<std::mutex> lock(m_impl->recordingMuxRuntime.fileReadyMutex);
+		m_impl->recordingMuxRuntime.videoFileFinalized.store(false, std::memory_order_release);
+		m_impl->recordingMuxRuntime.audioFileFinalized.store(false, std::memory_order_release);
+	}
+
 	const std::string previousVideoPath = m_impl->recordingObjectRuntime.recorder.getLastFinishedVideoPath();
 	const std::string previousAudioPath = m_impl->recordingObjectRuntime.recorder.getLastFinishedAudioPath();
 	std::string expectedVideoPath;

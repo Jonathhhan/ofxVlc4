@@ -1902,8 +1902,6 @@ void ofxVlc4::updatePendingRecordingMux() {
 		task->outputPath = outputPath;
 	}
 	setStatus("Muxing recording...");
-	m_impl->recordingMuxRuntime.videoFileFinalized.store(false, std::memory_order_release);
-	m_impl->recordingMuxRuntime.audioFileFinalized.store(false, std::memory_order_release);
 	m_impl->recordingMuxRuntime.workerFinished = std::promise<void>();
 	m_impl->recordingMuxRuntime.workerFuture = m_impl->recordingMuxRuntime.workerFinished.get_future();
 	auto workerPromise = std::make_shared<std::promise<void>>(std::move(m_impl->recordingMuxRuntime.workerFinished));
