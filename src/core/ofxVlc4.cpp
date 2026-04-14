@@ -180,21 +180,21 @@ void appendAudioVisualizerInitArgs(
 	switch (settings.module) {
 	case ofxVlc4AudioVisualizerModule::Visual:
 		initArgs.emplace_back(std::string("--effect-list=") + audioVisualizerEffectOptionName(settings.visualEffect));
-		initArgs.emplace_back(std::string("--effect-width=") + ofToString(width));
-		initArgs.emplace_back(std::string("--effect-height=") + ofToString(height));
+		initArgs.emplace_back(std::string("--effect-width=") + std::to_string(width));
+		initArgs.emplace_back(std::string("--effect-height=") + std::to_string(height));
 		break;
 	case ofxVlc4AudioVisualizerModule::Goom:
-		initArgs.emplace_back(std::string("--goom-width=") + ofToString(width));
-		initArgs.emplace_back(std::string("--goom-height=") + ofToString(height));
-		initArgs.emplace_back(std::string("--goom-speed=") + ofToString(ofClamp(settings.goomSpeed, 1, 10)));
+		initArgs.emplace_back(std::string("--goom-width=") + std::to_string(width));
+		initArgs.emplace_back(std::string("--goom-height=") + std::to_string(height));
+		initArgs.emplace_back(std::string("--goom-speed=") + std::to_string(ofClamp(settings.goomSpeed, 1, 10)));
 		break;
 	case ofxVlc4AudioVisualizerModule::Glspectrum:
-		initArgs.emplace_back(std::string("--glspectrum-width=") + ofToString(width));
-		initArgs.emplace_back(std::string("--glspectrum-height=") + ofToString(height));
+		initArgs.emplace_back(std::string("--glspectrum-width=") + std::to_string(width));
+		initArgs.emplace_back(std::string("--glspectrum-height=") + std::to_string(height));
 		break;
 	case ofxVlc4AudioVisualizerModule::ProjectM:
-		initArgs.emplace_back(std::string("--projectm-width=") + ofToString(width));
-		initArgs.emplace_back(std::string("--projectm-height=") + ofToString(height));
+		initArgs.emplace_back(std::string("--projectm-width=") + std::to_string(width));
+		initArgs.emplace_back(std::string("--projectm-height=") + std::to_string(height));
 		appendPrefixedInitArg(initArgs, "--projectm-preset-path=", settings.projectMPresetPath);
 		if (!settings.projectMTexturePath.empty()) {
 			const char * enableTexturePath = std::getenv("OFXVLC4_ENABLE_PROJECTM_TEXTURE_PATH");
@@ -210,13 +210,13 @@ void appendAudioVisualizerInitArgs(
 		initArgs.emplace_back("--projectm-menu-font=Arial");
 		initArgs.emplace_back("--projectm-title-font=Arial");
 		if (settings.projectMTextureSize > 0) {
-			initArgs.emplace_back(std::string("--projectm-texture-size=") + ofToString(settings.projectMTextureSize));
+			initArgs.emplace_back(std::string("--projectm-texture-size=") + std::to_string(settings.projectMTextureSize));
 		}
 		if (settings.projectMMeshX > 0) {
-			initArgs.emplace_back(std::string("--projectm-meshx=") + ofToString(settings.projectMMeshX));
+			initArgs.emplace_back(std::string("--projectm-meshx=") + std::to_string(settings.projectMMeshX));
 		}
 		if (settings.projectMMeshY > 0) {
-			initArgs.emplace_back(std::string("--projectm-meshy=") + ofToString(settings.projectMMeshY));
+			initArgs.emplace_back(std::string("--projectm-meshy=") + std::to_string(settings.projectMMeshY));
 		}
 		break;
 	case ofxVlc4AudioVisualizerModule::None:
@@ -1220,8 +1220,8 @@ void ofxVlc4::init(int vlc_argc, char const * vlc_argv[]) {
 		initArgs.emplace_back(std::string("--text-renderer=") + textRendererName);
 	}
 	appendPrefixedInitArg(initArgs, "--freetype-font=", m_impl->playerConfigRuntime.subtitleFontFamily);
-	initArgs.emplace_back(std::string("--freetype-color=") + ofToString(ofClamp(m_impl->playerConfigRuntime.subtitleTextColor, 0, 16777215)));
-	initArgs.emplace_back(std::string("--freetype-opacity=") + ofToString(ofClamp(m_impl->playerConfigRuntime.subtitleTextOpacity, 0, 255)));
+	initArgs.emplace_back(std::string("--freetype-color=") + std::to_string(ofClamp(m_impl->playerConfigRuntime.subtitleTextColor, 0, 16777215)));
+	initArgs.emplace_back(std::string("--freetype-opacity=") + std::to_string(ofClamp(m_impl->playerConfigRuntime.subtitleTextOpacity, 0, 255)));
 	initArgs.emplace_back(m_impl->playerConfigRuntime.subtitleBold ? "--freetype-bold" : "--no-freetype-bold");
 	appendAudioVisualizerInitArgs(initArgs, m_impl->initArgsRuntime.audioVisualizerSettings);
 
