@@ -49,11 +49,13 @@ private:
 		float dualActionButtonWidth,
 		float buttonSpacing,
 		bool detachedOnly = false);
+	void drawCustomSubtitleOverlayControls(float inputLabelPadding, float buttonSpacing, float compactControlWidth);
 	void resetMetadataEditor();
 	void syncMetadataEditor(ofxVlc4 & player, const std::string & currentMediaId, bool hasCurrentMedia);
 	void syncLibVlcLogFilePath(ofxVlc4 & player);
 
 	std::string mediaSlavePath;
+	std::string customSubtitlePathInput;
 	int mediaSlaveTypeIndex = 0;
 	int mediaDiscovererCategoryIndex = 1;
 	int selectedDiscoveredMediaIndex = 0;
