@@ -1304,6 +1304,11 @@ public:
 	void pause();
 	/// @brief Stop playback and reset position to the beginning.
 	void stop();
+	/// @brief Toggle between play and pause states.
+	void togglePlayPause();
+	/// @brief Check if media is currently attached to the player.
+	/// @return True if media is attached.
+	bool isMediaAttached() const;
 
 	/// @}
 	/// @name Playlist
@@ -1735,7 +1740,7 @@ public:
 	float getWidth() const;
 	/// @brief Check whether playback is currently active.
 	/// @return True if the player is in the playing state.
-	bool isPlaying();
+	bool isPlaying() const;
 	/// @brief Check whether the player is stopped.
 	bool isStopped() const;
 	/// @brief Check whether the player is transitioning between states.

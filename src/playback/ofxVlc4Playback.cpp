@@ -64,6 +64,18 @@ void ofxVlc4::stop() {
 	m_impl->subsystemRuntime.playbackController->stop();
 }
 
+void ofxVlc4::togglePlayPause() {
+	if (isPlaying()) {
+		pause();
+	} else {
+		play();
+	}
+}
+
+bool ofxVlc4::isMediaAttached() const {
+	return m_impl->subsystemRuntime.playbackController->hasMedia();
+}
+
 int ofxVlc4::getNextShuffleIndex() const {
 	return m_impl->subsystemRuntime.playbackController->getNextShuffleIndex();
 }
@@ -132,7 +144,7 @@ void ofxVlc4::setPosition(float pct) {
 	m_impl->subsystemRuntime.playbackController->setPosition(pct);
 }
 
-bool ofxVlc4::isPlaying() {
+bool ofxVlc4::isPlaying() const {
 	return m_impl->subsystemRuntime.playbackController->isPlaying();
 }
 

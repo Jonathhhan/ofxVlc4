@@ -109,6 +109,37 @@ struct ofxVlc4RecordingPreset {
 	ofxVlc4VideoReadbackPolicy readbackPolicy = ofxVlc4VideoReadbackPolicy::DropLateFrames;
 	uint64_t muxTimeoutMs = 15000;
 	double audioRingBufferSeconds = 4.0;
+
+	// Static factory methods for common presets
+	static ofxVlc4RecordingPreset makeH264_720p_30fps() {
+		ofxVlc4RecordingPreset preset;
+		preset.videoCodecPreset = ofxVlc4RecordingVideoCodecPreset::H264;
+		preset.targetWidth = 1280;
+		preset.targetHeight = 720;
+		preset.videoFrameRate = 30;
+		preset.videoBitrateKbps = 2000;
+		return preset;
+	}
+
+	static ofxVlc4RecordingPreset makeH264_1080p_30fps() {
+		ofxVlc4RecordingPreset preset;
+		preset.videoCodecPreset = ofxVlc4RecordingVideoCodecPreset::H264;
+		preset.targetWidth = 1920;
+		preset.targetHeight = 1080;
+		preset.videoFrameRate = 30;
+		preset.videoBitrateKbps = 5000;
+		return preset;
+	}
+
+	static ofxVlc4RecordingPreset makeH265_4K_30fps() {
+		ofxVlc4RecordingPreset preset;
+		preset.videoCodecPreset = ofxVlc4RecordingVideoCodecPreset::H265;
+		preset.targetWidth = 3840;
+		preset.targetHeight = 2160;
+		preset.videoFrameRate = 30;
+		preset.videoBitrateKbps = 20000;
+		return preset;
+	}
 };
 
 struct ofxVlc4RecordingSessionConfig {
