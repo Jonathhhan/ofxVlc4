@@ -1,0 +1,54 @@
+---
+# clang-tidy configuration for ofxVlc4
+# This project targets C++17 and integrates with openFrameworks and libVLC C APIs
+
+Checks: >
+  bugprone-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-function-cognitive-complexity,
+  -readability-magic-numbers,
+  -readability-uppercase-literal-suffix,
+  -modernize-avoid-c-arrays,
+  -modernize-use-nodiscard,
+  -bugprone-exception-escape,
+  -readability-else-after-return
+
+WarningsAsErrors: ''
+
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberCase
+    value: camelBack
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: 'm_'
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: 'm_'
+  - key: readability-identifier-naming.ConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstantPrefix
+    value: 'k'
+  - key: readability-braces-around-statements.ShortStatementLines
+    value: 2
+  - key: performance-move-const-arg.CheckTriviallyCopyableMove
+    value: false
+
+HeaderFilterRegex: 'src/.*\.(h|hpp)$'
+
+# Exclude external dependencies and generated code
+FormatStyle: none

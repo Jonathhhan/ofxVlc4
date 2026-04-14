@@ -552,6 +552,8 @@ Current recorder-side optimizations include:
 
 For a focused surface to test that behavior, use `ofxVlc4RecorderExample`.
 
+**Performance Guide**: For detailed performance characteristics, optimization strategies, and configuration recommendations for different recording scenarios (720p, 1080p, 4K, real-time streaming, archival, etc.), see [docs/RECORDING_PERFORMANCE.md](docs/RECORDING_PERFORMANCE.md).
+
 ## Tests
 
 The addon ships a CMake-based unit-test suite in `tests/`. The tests compile without a real openFrameworks, GLFW, or VLC installation — stubs in `tests/stubs/` and `tests/stubs_gl/` supply the minimal type definitions required.

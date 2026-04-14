@@ -14,11 +14,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install clang-tidy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy
+
       - name: Configure
         run: cmake -S tests -B build/tests
 
       - name: Build
         run: cmake --build build/tests --parallel
+
+      - name: Run clang-tidy
+        run: |
+          # Run clang-tidy on source files (warnings only, non-blocking)
+          find src -name "*.cpp" -type f | head -20 | xargs -I {} clang-tidy {} -p build/tests -- -std=c++17 || true
+        continue-on-error: true
 
       - name: Run tests
         run: ctest --test-dir build/tests --output-on-failure
