@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- **API facade classes** — added simplified wrapper classes in `src/facade/` for easier adoption and common use cases; `ofxVlc4SimplePlayer` provides ~15 essential playback methods (load, play, pause, seek, volume) with automatic initialization and straightforward state queries; `ofxVlc4SimpleRecorder` offers quality presets (Low, Medium, High, Ultra) for quick recording setup; both facades expose `getPlayer()` to access the full ~400-method API when advanced control is needed; see `src/facade/README.md` for usage examples
+
+- **integration tests** — added real-VLC integration test suite in `tests/integration/` to validate end-to-end workflows with an actual libVLC runtime; `test_integration_playback` covers player lifecycle, seeking accuracy, and media info extraction; `test_integration_recording` validates recording workflows and output format correctness; tests require libVLC installation and test media files; run with: `cd tests/integration && cmake . && make && ctest`
+
+- **performance benchmarks** — added comprehensive benchmark suite in `tests/benchmarks/` with JSON output for tracking performance over time; `benchmark_playback` measures startup latency and seek response time; `benchmark_recording` tracks encoding throughput and mux overhead; `benchmark_memory` profiles baseline memory usage, per-instance overhead, and leak detection across multiple load/unload cycles; run with: `cd tests/benchmarks && cmake . && make && ./benchmark_playback` (or `benchmark_recording`, `benchmark_memory`)
+
 ## 1.0.4
 
 - **phase 3 callback boundary cleanup** — removed callback-facing static event/dialog declarations from `src/core/ofxVlc4.h`; `VlcEventRouter` now owns callback dispatch and forwards to internal instance handlers while dropping late event/dialog callbacks during shutdown; added focused router regression coverage in `tests/test_event_router_lifecycle.cpp` for attach/detach wiring and shutdown drop behavior

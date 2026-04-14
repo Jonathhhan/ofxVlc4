@@ -70,9 +70,9 @@ void configureWindowsLibVlcEnvironment() {
 constexpr const char * kLogChannel = "ofxVlc4";
 std::atomic<int> gLogLevel { static_cast<int>(OF_LOG_NOTICE) };
 constexpr int kOfxVlc4AddonVersionMajor = 1;
-constexpr int kOfxVlc4AddonVersionMinor = 0;
-constexpr int kOfxVlc4AddonVersionPatch = 4;
-constexpr const char * kOfxVlc4AddonVersionString = "1.0.4";
+constexpr int kOfxVlc4AddonVersionMinor = 1;
+constexpr int kOfxVlc4AddonVersionPatch = 0;
+constexpr const char * kOfxVlc4AddonVersionString = "1.1.0";
 // 2s timeout accommodates slower hardware and complex VLC cleanup (e.g. network streams).
 constexpr int kCallbackDrainTimeoutMs = 2000;
 
