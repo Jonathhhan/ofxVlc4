@@ -159,7 +159,12 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		}
 
 		const libvlc_state_t state = libvlc_media_player_get_state(muxPlayer);
-		if (state == libvlc_Stopped) {
+#if !defined(LIBVLC_VERSION_MAJOR) || LIBVLC_VERSION_MAJOR < 4
+		const bool reachedEnd = state == libvlc_Stopped || state == libvlc_Ended;
+#else
+		const bool reachedEnd = state == libvlc_Stopped;
+#endif
+		if (reachedEnd) {
 			success = waitForRecordingFile(outputPath, options.outputReadyTimeoutMs, cancelRequested);
 			break;
 		}
