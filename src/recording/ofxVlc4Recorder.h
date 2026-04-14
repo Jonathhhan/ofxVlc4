@@ -94,7 +94,7 @@ private:
 	int channelCount = 0;
 	uint64_t dataBytes = 0;
 	bool wavSizeLimitWarned = false;
-	double audioRingBufferSeconds = 4.0;
+	double audioRingBufferSeconds = 6.0;
 	std::string outputPath;
 	std::string lastFinishedAudioPath;
 	std::string videoOutputPath;

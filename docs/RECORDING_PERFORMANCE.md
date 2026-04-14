@@ -6,12 +6,12 @@ This document provides performance characteristics, optimization strategies, and
 
 The ofxVlc4 recorder captures video textures or windows and audio streams, encodes them through libVLC, and optionally muxes them into common container formats. The recording pipeline uses:
 
-- **Synchronous GL readback** to keep VLC rawvid callbacks supplied with CPU-ready frames (async PBO path is temporarily disabled after starvation issues)
-- **Lock-free audio ring buffer** for audio capture
+- **Asynchronous PBO readback** for GPU texture capture with minimal CPU blocking (enabled by default with 4+ buffer pipeline)
+- **Lock-free audio ring buffer** for audio capture (default 6 seconds for better stability)
 - **Post-stop muxing** for combining video and audio streams
+- **Explicit stream finalization** to ensure VLC completes encoding before muxing
 
-Readback policy and buffer-count controls remain in the API but are no-ops while the async PBO path is disabled.
-Latency numbers below reflect the prior async path; expect higher CPU-bound times while synchronous readback is enforced.
+The async PBO path is now re-enabled with enhanced buffering to keep VLC rawvid callbacks fed while hiding GPU readback latency.
 
 Performance characteristics depend on resolution, frame rate, codec choice, GPU capabilities, and system resources.
 
@@ -38,7 +38,7 @@ preset.fps = 30;
 preset.videoBitrateKbps = 4000;  // 4 Mbps for good quality
 preset.videoCodec = "h264";
 preset.containerMux = "mp4";
-preset.audioRingBufferSeconds = 4.0f;
+preset.audioRingBufferSeconds = 6.0f;
 ```
 
 **Use cases**: Real-time streaming, game capture, video tutorials
@@ -64,7 +64,7 @@ preset.fps = 30;
 preset.videoBitrateKbps = 8000;  // 8 Mbps for high quality
 preset.videoCodec = "h264";
 preset.containerMux = "mp4";
-preset.audioRingBufferSeconds = 4.0f;
+preset.audioRingBufferSeconds = 6.0f;
 ```
 
 **Use cases**: High-quality recording, presentations, professional content
@@ -134,14 +134,15 @@ preset.audioRingBufferSeconds = 6.0f;  // Larger buffer for heavier load
 
 ## GPU Readback Performance
 
-The recorder previously used **asynchronous PBO readback** when a GL context was available. That path is currently disabled to guarantee CPU-ready frames for VLC rawvid callbacks, so the details below are kept as a reference for future re-enablement.
+The recorder uses **asynchronous PBO readback** when a GL context is available, with an enhanced buffer pipeline (minimum 4 buffers) to ensure VLC rawvid callbacks always have frames available while hiding GPU latency.
 
 ### PBO Configuration
 
-**Default behavior (when enabled)**:
-- Multi-buffered (typically 2-3 PBOs)
+**Default behavior**:
+- Multi-buffered (4+ PBOs by default)
 - Async mapping with `GL_MAP_READ_BIT`
 - Fence sync for completion detection
+- Explicit stream finalization on stop
 
 **Readback policies** (currently inactive):
 1. **Drop late frames**: Skip frames that aren't ready (minimize latency)
