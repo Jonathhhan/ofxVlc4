@@ -1171,7 +1171,6 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 			videoFramesReady = 1;
 			videoSynchronousFrames = 1;
 			publishCapturedFrameLocked();
-			initializeVideoReadbackBuffersLocked(recordingFrameSize);
 		}
 		recordingReadOffset = 0;
 	}
