@@ -86,6 +86,7 @@ public:
 	bool isCorked() const;
 	unsigned getCachedVideoOutputCount() const;
 	bool isPausableLatched() const;
+	bool hasMedia() const;
 
 private:
 	struct PlaylistSnapshot {
