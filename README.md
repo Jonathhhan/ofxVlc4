@@ -265,6 +265,11 @@ For the examples, also see:
 
 **Contributing**: Interested in contributing? See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, code standards, and testing guidelines.
 
+**Simplified APIs**: For simpler use cases, check out the facade classes in `src/facade/`:
+- `ofxVlc4SimplePlayer` - Essential playback methods (~15 methods vs ~400)
+- `ofxVlc4SimpleRecorder` - Easy recording with quality presets
+- See `src/facade/README.md` for examples
+
 ## Minimal API
 
 For the stable texture-based workflow, the recommended order is:
@@ -606,7 +611,7 @@ Thirty-two test binaries are built:
 - `test_ringbuffer_overflow`
 - `test_mux_join_timeout`
 
-To build and run all tests:
+To build and run all unit tests:
 
 ```bash
 mkdir -p /tmp/test-build
@@ -615,3 +620,7 @@ cmake /path/to/ofxVlc4/tests
 make
 ctest
 ```
+
+**Integration Tests**: Optional tests with real VLC runtime. See `tests/integration/README.md`.
+
+**Performance Benchmarks**: Measure playback, recording, and memory performance. See `tests/benchmarks/README.md`.
