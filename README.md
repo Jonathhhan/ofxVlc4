@@ -27,7 +27,7 @@ This addon is released under the [MIT License](LICENSE).
 
 ## Release
 
-- addon release version: `1.0.4`
+- addon release version: `1.1.0`
 - changelog: `CHANGELOG.md`
 
 ## Highlights
