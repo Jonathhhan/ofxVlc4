@@ -148,7 +148,7 @@ Mutexes are per-concern (not a single global lock) and live in
 ## Recording Pipeline
 
 ```
-ofTexture/Window  →  ofxVlc4Recorder (PBO readback + encode)
+ofTexture/Window  →  ofxVlc4Recorder (GL readback; async PBO path currently disabled) → encode
                         ↓ video.ts
 audioPlay callback →  WAV writer
                         ↓ audio.wav
@@ -156,8 +156,10 @@ audioPlay callback →  WAV writer
                         ↓ output.mp4
 ```
 
-For a callback-level OpenGL synchronization map (playback fence handoff and
-recorder PBO readback), see `docs/GL_WORKFLOW_MAP.md`.
+For a callback-level OpenGL synchronization map (playback fence handoff and the
+legacy recorder PBO readback path), see `docs/GL_WORKFLOW_MAP.md`. The async PBO
+flow is currently disabled to keep rawvid callbacks supplied with CPU-ready
+frames.
 
 The mux step runs on a dedicated worker thread.  Sout module names
 (`containerMux`, `audioCodec`) are validated as alphanumeric-only via

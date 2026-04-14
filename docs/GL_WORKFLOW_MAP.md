@@ -24,6 +24,10 @@ This note gives a quick end-to-end map of the current OpenGL frame paths for con
 
 ## 2) Recording async readback path (PBO submit → wait → map → consume)
 
+> Note: The recorder currently forces synchronous GL readback to keep VLC rawvid
+> callbacks fed with CPU-ready frames. The async PBO flow below is retained as a
+> reference for when the path can be safely re-enabled.
+
 ### Submit stage
 1. Recorder allocates pixel-pack buffers (`allocatePixelPackBuffers()`).
 2. On capture, submit readback for write index:
