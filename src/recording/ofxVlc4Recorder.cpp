@@ -101,7 +101,9 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		"--quiet",
 		"--verbose=-1",
 		"--no-video-title-show",
-		"--ignore-config"
+		"--ignore-config",
+		"--sout-keep",
+		"--sout-all"
 	};
 	libvlc_instance_t * muxInstance = libvlc_new(static_cast<int>(sizeof(args) / sizeof(args[0])), args);
 	if (!muxInstance) {
@@ -132,7 +134,7 @@ bool ofxVlc4::muxRecordingFilesInternal(
 		transcodeSpec += ",ab=" + ofToString(options.audioBitrateKbps);
 	}
 	const std::string streamSpec =
-		"sout=#transcode{" + transcodeSpec + "}:standard{access=file,mux=" + normalizedMux + ",dst='" +
+		"sout=#gather:transcode{" + transcodeSpec + "}:standard{access=file,mux=" + normalizedMux + ",dst='" +
 		normalizeSoutPath(outputPath) + "'}";
 	libvlc_media_add_option(media, streamSpec.c_str());
 
