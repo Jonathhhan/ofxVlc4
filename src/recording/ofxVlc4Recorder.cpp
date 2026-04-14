@@ -1197,7 +1197,7 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 	libvlc_media_t * recordingMedia = libvlc_media_new_callbacks(
 		ofxVlc4Recorder::textureOpen,
 		ofxVlc4Recorder::textureRead,
-		nullptr,
+		ofxVlc4Recorder::textureSeek,
 		ofxVlc4Recorder::textureClose,
 		this);
 	if (!recordingMedia) {
@@ -1739,13 +1739,17 @@ long long ofxVlc4Recorder::textureRead(void * data, unsigned char * dst, size_t 
 				std::max<uint64_t>(1000, recorder->videoFrameIntervalUs));
 			recorder->recordingFrameReadyCondition.wait_for(lock, waitBudget, nextFrameReady);
 		}
-		// If recording stopped and we're at the start of a new frame request, signal EOF
-		// to prevent VLC from endlessly re-reading the same last frame (which causes
-		// the last ~10 seconds of video to freeze).
-		if (!recorder->videoRecordingActive.load()) {
+
+		// Check if we have a new frame to read
+		const bool hasNewFrame = recorder->recordingFrameSerial > recorder->recordingReadFrameSerial;
+
+		// If recording stopped and there are no new frames, signal EOF
+		// This prevents VLC from endlessly re-reading the same last frame
+		if (!recorder->videoRecordingActive.load() && !hasNewFrame) {
 			return 0;
 		}
-		if (recorder->recordingFrameSerial > recorder->recordingReadFrameSerial) {
+
+		if (hasNewFrame) {
 			recorder->recordingReadFrameSerial = recorder->recordingFrameSerial;
 		}
 	}
