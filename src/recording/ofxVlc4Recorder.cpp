@@ -1670,7 +1670,7 @@ void ofxVlc4Recorder::clearVideoRecording() {
 	// This prevents the "last 10 seconds freeze" issue where VLC's encoder
 	// buffer still has frames to process but we've already cleared the frame data
 	const uint64_t stopTimeMicros = ofGetElapsedTimeMicros();
-	const uint64_t maxWaitMicros = 5000000; // 5 seconds max wait
+	const uint64_t maxWaitMicros = 10000000; // 10 seconds max wait (covers longer encoder drain)
 	const uint64_t readIdleThresholdMicros = 200000; // 200ms idle = VLC finished reading
 
 	while (ofGetElapsedTimeMicros() - stopTimeMicros < maxWaitMicros) {
