@@ -38,7 +38,7 @@ void ofApp::draw() {
         std::string info;
         if (player.isPlaying()) {
             info = "Playing: ";
-        } else if (player.isPaused()) {
+        } else if (!player.isStopped()) {
             info = "Paused: ";
         } else {
             info = "Stopped: ";
@@ -48,9 +48,9 @@ void ofApp::draw() {
         if (watchTime.available) {
             int currentSec = static_cast<int>(watchTime.timeUs / 1000000);
             int totalSec = static_cast<int>(watchTime.lengthUs / 1000000);
-            info += ofToString(currentSec / 60) + ":" + ofToString(currentSec % 60, 2, '0');
+            info += std::to_string(currentSec / 60) + ":" + (currentSec % 60 < 10 ? "0" : "") + std::to_string(currentSec % 60);
             info += " / ";
-            info += ofToString(totalSec / 60) + ":" + ofToString(totalSec % 60, 2, '0');
+            info += std::to_string(totalSec / 60) + ":" + (totalSec % 60 < 10 ? "0" : "") + std::to_string(totalSec % 60);
         }
 
         ofDrawBitmapStringHighlight(info, 10, 20);
