@@ -1,6 +1,7 @@
 #include "VlcCoreSession.h"
 
 #include <algorithm>
+#include <array>
 #include <cerrno>
 #include <initializer_list>
 #include <iostream>
@@ -29,9 +30,9 @@ void attachNamedEvents(
 		return;
 	}
 
-	for (const auto & event : events) {
-		if (libvlc_event_attach(manager, event.first, callback, data) != 0) {
-			logEventAttachFailure(session, event.second ? event.second : "unknown");
+	for (const auto & [eventType, eventName] : events) {
+		if (libvlc_event_attach(manager, eventType, callback, data) != 0) {
+			logEventAttachFailure(session, eventName ? eventName : "unknown");
 		}
 	}
 }
@@ -45,12 +46,12 @@ void detachNamedEvents(
 		return;
 	}
 
-	for (const auto & event : events) {
-		libvlc_event_detach(manager, event.first, callback, data);
+	for (const auto & [eventType, eventName] : events) {
+		libvlc_event_detach(manager, eventType, callback, data);
 	}
 }
 
-static const libvlc_event_type_t kPlayerEventTypes[] = {
+constexpr std::array<libvlc_event_type_t, 29> kPlayerEventTypes = {
 	libvlc_MediaPlayerLengthChanged,
 	libvlc_MediaPlayerStopped,
 	libvlc_MediaPlayerStopping,

@@ -27,17 +27,17 @@ public:
 		return *this;
 	}
 
-	libvlc_instance_t * get() const { return handle; }
-	explicit operator bool() const { return handle != nullptr; }
+	[[nodiscard]] libvlc_instance_t * get() const noexcept { return handle; }
+	explicit operator bool() const noexcept { return handle != nullptr; }
 
 	/// Release the owned handle and take ownership of `raw`.
 	void reset(libvlc_instance_t * raw = nullptr) {
-		if (handle) { libvlc_release(handle); }
+		if (handle != nullptr) { libvlc_release(handle); }
 		handle = raw;
 	}
 
 	/// Release ownership without calling the destructor.
-	libvlc_instance_t * release() { auto * tmp = handle; handle = nullptr; return tmp; }
+	[[nodiscard]] libvlc_instance_t * release() noexcept { auto * tmp = handle; handle = nullptr; return tmp; }
 
 private:
 	libvlc_instance_t * handle = nullptr;
@@ -59,15 +59,15 @@ public:
 		return *this;
 	}
 
-	libvlc_media_player_t * get() const { return handle; }
-	explicit operator bool() const { return handle != nullptr; }
+	[[nodiscard]] libvlc_media_player_t * get() const noexcept { return handle; }
+	explicit operator bool() const noexcept { return handle != nullptr; }
 
 	void reset(libvlc_media_player_t * raw = nullptr) {
-		if (handle) { libvlc_media_player_release(handle); }
+		if (handle != nullptr) { libvlc_media_player_release(handle); }
 		handle = raw;
 	}
 
-	libvlc_media_player_t * release() { auto * tmp = handle; handle = nullptr; return tmp; }
+	[[nodiscard]] libvlc_media_player_t * release() noexcept { auto * tmp = handle; handle = nullptr; return tmp; }
 
 private:
 	libvlc_media_player_t * handle = nullptr;
@@ -89,15 +89,15 @@ public:
 		return *this;
 	}
 
-	libvlc_media_t * get() const { return handle; }
-	explicit operator bool() const { return handle != nullptr; }
+	[[nodiscard]] libvlc_media_t * get() const noexcept { return handle; }
+	explicit operator bool() const noexcept { return handle != nullptr; }
 
 	void reset(libvlc_media_t * raw = nullptr) {
-		if (handle) { libvlc_media_release(handle); }
+		if (handle != nullptr) { libvlc_media_release(handle); }
 		handle = raw;
 	}
 
-	libvlc_media_t * release() { auto * tmp = handle; handle = nullptr; return tmp; }
+	[[nodiscard]] libvlc_media_t * release() noexcept { auto * tmp = handle; handle = nullptr; return tmp; }
 
 private:
 	libvlc_media_t * handle = nullptr;

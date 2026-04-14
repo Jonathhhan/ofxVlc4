@@ -278,12 +278,12 @@ public:
 
 	// -- Comparison --
 
-	bool operator==(const Timecode & rhs) const { return m_frames == rhs.m_frames; }
-	bool operator!=(const Timecode & rhs) const { return m_frames != rhs.m_frames; }
-	bool operator< (const Timecode & rhs) const { return m_frames <  rhs.m_frames; }
-	bool operator<=(const Timecode & rhs) const { return m_frames <= rhs.m_frames; }
-	bool operator> (const Timecode & rhs) const { return m_frames >  rhs.m_frames; }
-	bool operator>=(const Timecode & rhs) const { return m_frames >= rhs.m_frames; }
+	bool operator==(const Timecode & rhs) const noexcept { return m_frames == rhs.m_frames; }
+	bool operator!=(const Timecode & rhs) const noexcept { return m_frames != rhs.m_frames; }
+	bool operator< (const Timecode & rhs) const noexcept { return m_frames <  rhs.m_frames; }
+	bool operator<=(const Timecode & rhs) const noexcept { return m_frames <= rhs.m_frames; }
+	bool operator> (const Timecode & rhs) const noexcept { return m_frames >  rhs.m_frames; }
+	bool operator>=(const Timecode & rhs) const noexcept { return m_frames >= rhs.m_frames; }
 
 	/// Advance by one frame.
 	Timecode & operator++() { ++m_frames; return *this; }

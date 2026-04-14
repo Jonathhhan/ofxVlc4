@@ -24,16 +24,16 @@ public:
 	inline Sequence(const std::string & name = "Untitled Sequence",
 					FrameRate rate = FrameRate::Fps24);
 
-	inline const std::string & name() const;
+	inline const std::string & name() const noexcept;
 	inline void setName(const std::string & name);
-	inline FrameRate rate() const;
+	inline FrameRate rate() const noexcept;
 
 	// -- Track management --
 
 	inline Track & addVideoTrack(const std::string & name = "");
 	inline Track & addAudioTrack(const std::string & name = "");
-	inline size_t videoTrackCount() const;
-	inline size_t audioTrackCount() const;
+	inline size_t videoTrackCount() const noexcept;
+	inline size_t audioTrackCount() const noexcept;
 	inline Track & videoTrack(size_t index);
 	inline Track & audioTrack(size_t index);
 	inline const Track & videoTrack(size_t index) const;
@@ -52,7 +52,7 @@ public:
 
 	// -- Playhead --
 
-	inline Timecode playhead() const;
+	inline Timecode playhead() const noexcept;
 	inline void setPlayhead(const Timecode & tc);
 
 private:
@@ -72,9 +72,9 @@ inline Sequence::Sequence(const std::string & name, FrameRate rate)
 	, m_rate(rate)
 	, m_playhead(0, rate) {}
 
-inline const std::string & Sequence::name() const { return m_name; }
+inline const std::string & Sequence::name() const noexcept { return m_name; }
 inline void Sequence::setName(const std::string & name) { m_name = name; }
-inline FrameRate Sequence::rate() const { return m_rate; }
+inline FrameRate Sequence::rate() const noexcept { return m_rate; }
 
 inline Track & Sequence::addVideoTrack(const std::string & name) {
 	std::string trackName = name.empty()
@@ -92,8 +92,8 @@ inline Track & Sequence::addAudioTrack(const std::string & name) {
 	return m_audioTracks.back();
 }
 
-inline size_t Sequence::videoTrackCount() const { return m_videoTracks.size(); }
-inline size_t Sequence::audioTrackCount() const { return m_audioTracks.size(); }
+inline size_t Sequence::videoTrackCount() const noexcept { return m_videoTracks.size(); }
+inline size_t Sequence::audioTrackCount() const noexcept { return m_audioTracks.size(); }
 
 inline Track & Sequence::videoTrack(size_t index) {
 	if (index >= m_videoTracks.size())
@@ -155,7 +155,7 @@ inline int Sequence::segmentAtTimecode(size_t trackIndex, bool isVideo,
 	}
 }
 
-inline Timecode Sequence::playhead() const { return m_playhead; }
+inline Timecode Sequence::playhead() const noexcept { return m_playhead; }
 inline void Sequence::setPlayhead(const Timecode & tc) { m_playhead = tc; }
 
 } // namespace nle
