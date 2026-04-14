@@ -192,7 +192,7 @@ std::set<std::string> normalizeExtensions(std::initializer_list<std::string> ext
 }
 
 std::string bookmarkStableId(const std::string & path, int timeMs) {
-	return ofToString(std::hash<std::string> {}(path + "|" + ofToString(timeMs))) + "_" + ofToString(timeMs);
+	return ofToString(std::hash<std::string>()(path + "|" + ofToString(timeMs))) + "_" + ofToString(timeMs);
 }
 
 std::string defaultBookmarkLabel(int timeMs) {
@@ -373,7 +373,7 @@ std::string savePictureToTempFile(
 		std::chrono::steady_clock::now().time_since_epoch().count());
 	const std::string tempFileName =
 		prefix + "_" +
-		ofToString(std::hash<std::string>{}(fileStem)) + "_" +
+		ofToString(std::hash<std::string>()(fileStem)) + "_" +
 		ofToString(uniqueId) +
 		artworkFileExtension(libvlc_picture_type(picture));
 	const std::filesystem::path tempPath = std::filesystem::temp_directory_path() / tempFileName;
