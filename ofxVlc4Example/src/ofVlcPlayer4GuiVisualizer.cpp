@@ -134,9 +134,6 @@ void applyModuleSpecificVisualizerDefaults(ofxVlc4AudioVisualizerSettings & sett
 		if (settings.projectMPresetPath.empty()) {
 			settings.projectMPresetPath = defaultProjectMPresetPath();
 		}
-		if (settings.projectMTexturePath.empty()) {
-			settings.projectMTexturePath = defaultProjectMTexturePath();
-		}
 		break;
 	case ofxVlc4AudioVisualizerModule::Visual:
 	case ofxVlc4AudioVisualizerModule::Glspectrum:
@@ -390,18 +387,23 @@ void ofVlcPlayer4GuiVisualizer::drawVlcModuleControls(
 			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 			pendingVlcVisualizerSettings.projectMPresetPath = ofTrim(std::string(projectMPresetPath));
 
-			if (pendingVlcVisualizerSettings.projectMTexturePath.empty()) {
-				pendingVlcVisualizerSettings.projectMTexturePath = defaultProjectMTexturePath();
-				strncpy_s(
-					projectMTexturePath,
-					sizeof(projectMTexturePath),
-					pendingVlcVisualizerSettings.projectMTexturePath.c_str(),
-					_TRUNCATE);
-			}
 			ImGui::InputText("Texture Path", projectMTexturePath, IM_ARRAYSIZE(projectMTexturePath));
 			inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 			pendingVlcVisualizerSettings.projectMTexturePath = ofTrim(std::string(projectMTexturePath));
-			ImGui::TextDisabled("Requires VLC builds exposing --projectm-texture-path.");
+			ImGui::TextDisabled("Leave empty on standard VLC builds; requires custom VLC/libprojectM exposing --projectm-texture-path.");
+			if (ImGui::Button("Use default texture path")) {
+				const std::string defaultTexturePath = defaultProjectMTexturePath();
+				if (!defaultTexturePath.empty()) {
+					pendingVlcVisualizerSettings.projectMTexturePath = defaultTexturePath;
+					strncpy_s(
+						projectMTexturePath,
+						sizeof(projectMTexturePath),
+						defaultTexturePath.c_str(),
+						_TRUNCATE);
+				}
+			}
+			ImGui::SameLine();
+			ImGui::TextDisabled("Optional helper for custom builds.");
 
 			int textureSize = pendingVlcVisualizerSettings.projectMTextureSize;
 			ImGui::InputInt("Texture Size", &textureSize);
