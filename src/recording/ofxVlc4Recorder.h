@@ -121,6 +121,7 @@ private:
 	uint64_t recordingFrameSerial = 0;
 	uint64_t recordingReadFrameSerial = 0;
 	uint64_t lastVideoCaptureTimeUs = 0;
+	std::atomic<uint64_t> lastVlcReadTimeMicros { 0 };
 	std::condition_variable recordingFrameReadyCondition;
 	std::vector<GLuint> recordingPixelPackBuffers;
 	std::vector<GLsync> recordingPixelPackFences;

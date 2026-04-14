@@ -1664,9 +1664,25 @@ void ofxVlc4Recorder::clearVideoRecording() {
 	// This allows the textureRead callback to return EOF on next call
 	videoRecordingActive.store(false);
 
-	// Give VLC a brief moment to process the EOF and finalize encoding
-	// This is critical for proper stream closure and muxing
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	// Wait for VLC to actually stop reading frames before we clear the state
+	// This prevents the "last 10 seconds freeze" issue where VLC's encoder
+	// buffer still has frames to process but we've already cleared the frame data
+	const uint64_t stopTimeMicros = ofGetElapsedTimeMicros();
+	const uint64_t maxWaitMicros = 5000000; // 5 seconds max wait
+	const uint64_t readIdleThresholdMicros = 200000; // 200ms idle = VLC finished reading
+
+	while (ofGetElapsedTimeMicros() - stopTimeMicros < maxWaitMicros) {
+		const uint64_t lastReadTime = lastVlcReadTimeMicros.load(std::memory_order_acquire);
+		const uint64_t timeSinceLastRead = ofGetElapsedTimeMicros() - lastReadTime;
+
+		// If VLC hasn't read for 200ms, it's done processing
+		if (timeSinceLastRead > readIdleThresholdMicros) {
+			break;
+		}
+
+		// Sleep briefly to avoid busy waiting
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
 
 	std::lock_guard<std::mutex> lock(recordingMutex);
 	if (!videoOutputPath.empty()) {
@@ -1723,6 +1739,9 @@ long long ofxVlc4Recorder::textureRead(void * data, unsigned char * dst, size_t 
 	if (!recorder || !dst || size == 0) {
 		return 0;
 	}
+
+	// Update last read time to track when VLC is still reading frames
+	recorder->lastVlcReadTimeMicros.store(ofGetElapsedTimeMicros(), std::memory_order_release);
 
 	std::unique_lock<std::mutex> lock(recorder->recordingMutex);
 	if (recorder->recordingFrameSize == 0 || !recorder->recordingPixels.isAllocated() || !recorder->recordingPixels.getData()) {
