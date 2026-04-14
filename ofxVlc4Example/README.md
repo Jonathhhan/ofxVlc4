@@ -10,7 +10,7 @@ It is meant as a real integration example, not just a minimal playback demo. The
 
 For visualization, this example treats `ofxProjectM` as the primary integrated path. VLC's built-in visualization plugins can still exist in the bundled runtime, but they should currently be treated as experimental libVLC extras rather than as the main example workflow.
 
-**Note**: The `--projectm-texture-path` option is only available in custom VLC/libprojectM builds. Standard VLC 4 releases do not include this option. If you see an error like `Unknown option '--projectm-texture-path'`, this is expected with standard VLC builds and the example will work correctly without it.
+**Note**: The `--projectm-texture-path` option is only available in custom VLC/libprojectM builds. Standard VLC 4 releases do not include this option, so the example leaves the texture-path override blank by default. If you manually set a texture path while using a standard VLC build, libvlc_new will fail with `Unknown option '--projectm-texture-path'`; leave it empty unless you are on a custom VLC/libprojectM build.
 
 ## What it shows
 
@@ -108,7 +108,7 @@ Manual layout if you prefer:
 
 - presets from `presets-cream-of-the-crop` go in the `presets` folder
 - textures from `presets-milkdrop-texture-pack` go in the `textures` folder
-- for custom VLC builds that expose `--projectm-texture-path`, the GUI also supports an explicit texture directory override
+- for custom VLC builds that expose `--projectm-texture-path`, the Visualizer panel includes a manual texture-directory override (it stays blank by default to avoid libvlc_new failures on standard builds)
 
 Inside `Advanced` the example now also exposes:
 
