@@ -1151,6 +1151,8 @@ void ofVlcPlayer4GuiMedia::drawContent(
 			drawTrackDetailsBlock("Subtitle Details", subtitleTracks, "Subtitle");
 		}
 
+		drawCustomSubtitleOverlayControls(inputLabelPadding, buttonSpacing, compactControlWidth);
+
 		ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
 	}
 
@@ -1758,6 +1760,83 @@ void ofVlcPlayer4GuiMedia::drawMetadataSubMenu(
 	}
 
 	ofVlcPlayer4GuiControls::endSectionSubMenu(MenuContentPolicy::Leaf);
+}
+
+void ofVlcPlayer4GuiMedia::drawCustomSubtitleOverlayControls(
+	float inputLabelPadding,
+	float buttonSpacing,
+	float compactControlWidth) {
+	if (!loadCustomSubtitleCallback && !clearCustomSubtitleCallback && !customSubtitleStatusCallback) {
+		return;
+	}
+
+	ImGui::Separator();
+	ImGui::TextDisabled("Custom Subtitle Overlay");
+
+	if (customSubtitleStatusCallback) {
+		const std::string status = customSubtitleStatusCallback();
+		if (!status.empty()) {
+			ImGui::TextDisabled("%s", status.c_str());
+		}
+	}
+
+	ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - inputLabelPadding);
+	const bool submitPath = ImGui::InputText(
+		"Path##CustomSubtitle",
+		&customSubtitlePathInput,
+		ImGuiInputTextFlags_EnterReturnsTrue);
+	ImGui::PopItemWidth();
+
+	const float buttonWidth =
+		(ImGui::GetContentRegionAvail().x - (buttonSpacing * 2.0f)) / 3.0f;
+
+	bool loadRequested = submitPath && !customSubtitlePathInput.empty();
+
+	ImGui::BeginDisabled(customSubtitlePathInput.empty() || !loadCustomSubtitleCallback);
+	if (ImGui::Button("Load Path", ImVec2(buttonWidth, 0.0f))) {
+		loadRequested = true;
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine(0.0f, buttonSpacing);
+	if (ImGui::Button("Browse...", ImVec2(buttonWidth, 0.0f))) {
+		ofFileDialogResult result = ofSystemLoadDialog("Select custom SRT file");
+		if (result.bSuccess) {
+			customSubtitlePathInput = result.getPath();
+			loadRequested = true;
+		}
+	}
+	ImGui::SameLine(0.0f, buttonSpacing);
+	ImGui::BeginDisabled(!clearCustomSubtitleCallback);
+	if (ImGui::Button("Disable", ImVec2(buttonWidth, 0.0f))) {
+		if (clearCustomSubtitleCallback) {
+			clearCustomSubtitleCallback();
+		}
+	}
+	ImGui::EndDisabled();
+
+	if (loadRequested && loadCustomSubtitleCallback) {
+		loadCustomSubtitleCallback(customSubtitlePathInput);
+	}
+
+	if (customSubtitleFontLabelsCallback &&
+		customSubtitleSelectedFontIndexCallback &&
+		customSubtitleSetFontIndexCallback) {
+		const std::vector<std::string> fontLabels = customSubtitleFontLabelsCallback();
+		if (!fontLabels.empty()) {
+			std::vector<const char *> labelPointers;
+			labelPointers.reserve(fontLabels.size());
+			for (const auto & label : fontLabels) {
+				labelPointers.push_back(label.c_str());
+			}
+
+			ImGui::SetNextItemWidth(ofVlcPlayer4GuiControls::getCompactLabeledControlWidth(compactControlWidth));
+			int selectedFontIndex = customSubtitleSelectedFontIndexCallback();
+			selectedFontIndex = ofClamp(selectedFontIndex, 0, static_cast<int>(fontLabels.size()) - 1);
+			if (ofVlcPlayer4GuiControls::drawComboWithWheel("Font##CustomSubtitle", selectedFontIndex, labelPointers)) {
+				customSubtitleSetFontIndexCallback(selectedFontIndex);
+			}
+		}
+	}
 }
 
 void ofVlcPlayer4GuiMedia::drawDialogsSubMenu(
