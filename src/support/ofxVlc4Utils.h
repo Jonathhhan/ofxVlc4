@@ -121,7 +121,7 @@ inline std::string normalizeOptionalPath(const std::string & value) {
 	return ofFilePath::getAbsolutePath(trimmed);
 }
 
-inline bool hasCurrentGlContext() {
+inline bool hasCurrentGlContext() noexcept {
 	return glfwGetCurrentContext() != nullptr;
 }
 
@@ -135,14 +135,14 @@ inline void clearAllocatedFbo(ofFbo & fbo) {
 	fbo.end();
 }
 
-inline bool isStoppedOrIdleState(libvlc_state_t state) {
+inline bool isStoppedOrIdleState(libvlc_state_t state) noexcept {
 	return state == libvlc_Stopped ||
 		state == libvlc_NothingSpecial;
 }
 
 // "Terminal stop" means a state where teardown can proceed without waiting.
 // VLC 3 exposed libvlc_Ended as a terminal state, while VLC 4 removed it.
-inline bool isTerminalStopState(libvlc_state_t state) {
+inline bool isTerminalStopState(libvlc_state_t state) noexcept {
 #if !defined(LIBVLC_VERSION_MAJOR) || LIBVLC_VERSION_MAJOR < 4
 	return isStoppedOrIdleState(state) || state == libvlc_Ended || state == libvlc_Error;
 #else
@@ -157,7 +157,7 @@ inline bool isTerminalStopState(libvlc_state_t state) {
 inline constexpr int kPlayerStopPollMs = 4;
 inline constexpr int kPlayerStopMaxWaitMs = 4000;
 
-inline bool isTransientPlaybackState(libvlc_state_t state) {
+inline bool isTransientPlaybackState(libvlc_state_t state) noexcept {
 	return state == libvlc_Opening || state == libvlc_Buffering || state == libvlc_Stopping;
 }
 
@@ -180,7 +180,7 @@ inline bool setInputHandlingEnabled(
 	return true;
 }
 
-inline bool nearlyEqual(float a, float b, float epsilon = 0.0001f) {
+inline bool nearlyEqual(float a, float b, float epsilon = 0.0001f) noexcept {
 	return std::abs(a - b) <= epsilon;
 }
 
