@@ -6,10 +6,12 @@ This document provides performance characteristics, optimization strategies, and
 
 The ofxVlc4 recorder captures video textures or windows and audio streams, encodes them through libVLC, and optionally muxes them into common container formats. The recording pipeline uses:
 
-- **Async GPU readback** with multi-buffered PBOs (when GL context available)
+- **Synchronous GL readback** to keep VLC rawvid callbacks supplied with CPU-ready frames (async PBO path is temporarily disabled after starvation issues)
 - **Lock-free audio ring buffer** for audio capture
-- **Configurable readback policies** (drop late frames or wait for freshest)
 - **Post-stop muxing** for combining video and audio streams
+
+Readback policy and buffer-count controls remain in the API but are no-ops while the async PBO path is disabled.
+Latency numbers below reflect the prior async path; expect higher CPU-bound times while synchronous readback is enforced.
 
 Performance characteristics depend on resolution, frame rate, codec choice, GPU capabilities, and system resources.
 
@@ -132,16 +134,16 @@ preset.audioRingBufferSeconds = 6.0f;  // Larger buffer for heavier load
 
 ## GPU Readback Performance
 
-The recorder uses **asynchronous PBO readback** when a GL context is available, enabling multi-buffered GPU-to-CPU transfers without stalling the render pipeline.
+The recorder previously used **asynchronous PBO readback** when a GL context was available. That path is currently disabled to guarantee CPU-ready frames for VLC rawvid callbacks, so the details below are kept as a reference for future re-enablement.
 
 ### PBO Configuration
 
-**Default behavior**:
+**Default behavior (when enabled)**:
 - Multi-buffered (typically 2-3 PBOs)
 - Async mapping with `GL_MAP_READ_BIT`
 - Fence sync for completion detection
 
-**Readback policies**:
+**Readback policies** (currently inactive):
 1. **Drop late frames**: Skip frames that aren't ready (minimize latency)
 2. **Wait for freshest**: Block until newest frame available (maximize quality)
 

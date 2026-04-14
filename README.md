@@ -548,9 +548,10 @@ The addon recorder is still built around libVLC media callbacks, and the current
 
 Current recorder-side optimizations include:
 
-- async GPU readback with multi-buffered PBOs when a GL context is available
-- configurable readback policy for dropping late frames or waiting for the freshest frame
+- synchronous GL readback to keep the rawvid callback fed with a CPU-ready frame (async PBO path is disabled after starvation issues)
 - recorder performance counters for pending frames, latency, drops, and map failures
+
+Readback policy/buffer knobs remain in the API, but they are no-ops while the async PBO path is disabled.
 
 For a focused surface to test that behavior, use `ofxVlc4RecorderExample`.
 

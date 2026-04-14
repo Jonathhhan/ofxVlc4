@@ -1171,6 +1171,8 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 			videoFramesReady = 1;
 			videoSynchronousFrames = 1;
 			publishCapturedFrameLocked();
+			// Leave PBO readback disabled here to keep the rawvid callback fed with
+			// an immediately CPU-ready frame buffer.
 		}
 		recordingReadOffset = 0;
 	}
