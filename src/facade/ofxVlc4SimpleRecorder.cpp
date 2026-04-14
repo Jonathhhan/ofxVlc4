@@ -24,7 +24,7 @@ ofxVlc4RecordingPreset ofxVlc4SimpleRecorder::getPresetForQuality(Quality qualit
 
         case Quality::High: {
             auto preset = ofxVlc4RecordingPreset::makeH264_1080p_30fps();
-            preset.fps = 60;
+            preset.videoFrameRate = 60;
             preset.videoBitrateKbps = 10000;
             return preset;
         }
@@ -32,8 +32,8 @@ ofxVlc4RecordingPreset ofxVlc4SimpleRecorder::getPresetForQuality(Quality qualit
         case Quality::Ultra: {
             auto preset = ofxVlc4RecordingPreset::makeH265_4K_30fps();
             if (width > 0 && height > 0) {
-                preset.width = width;
-                preset.height = height;
+                preset.targetWidth = width;
+                preset.targetHeight = height;
             }
             return preset;
         }
@@ -67,8 +67,8 @@ bool ofxVlc4SimpleRecorder::startRecording(
 
     // Get preset for quality level
     auto preset = getPresetForQuality(quality, recordWidth, recordHeight);
-    preset.width = recordWidth;
-    preset.height = recordHeight;
+    preset.targetWidth = recordWidth;
+    preset.targetHeight = recordHeight;
 
     // Convert to absolute path
     std::string absPath = outputPath;
@@ -78,12 +78,13 @@ bool ofxVlc4SimpleRecorder::startRecording(
 
     m_player.setRecordingPreset(preset);
 
-    // Start texture recording session
-    bool success = m_player.startTextureRecordingSession(
+    // Start texture recording session using the static helper
+    bool success = m_player.startRecordingSession(ofxVlc4::textureRecordingSessionConfig(
         absPath,
+        ofTexture(),  // Placeholder texture - will be updated via recordFrame
         preset,
-        true  // muxOnStop
-    );
+        44100,  // Default sample rate
+        2));    // Default channel count
 
     if (success) {
         m_recording = true;
@@ -114,8 +115,8 @@ bool ofxVlc4SimpleRecorder::startWindowRecording(
 
     // Get preset for quality level
     auto preset = getPresetForQuality(quality, ofGetWidth(), ofGetHeight());
-    preset.width = ofGetWidth();
-    preset.height = ofGetHeight();
+    preset.targetWidth = ofGetWidth();
+    preset.targetHeight = ofGetHeight();
 
     // Convert to absolute path
     std::string absPath = outputPath;
@@ -125,12 +126,12 @@ bool ofxVlc4SimpleRecorder::startWindowRecording(
 
     m_player.setRecordingPreset(preset);
 
-    // Start window recording session
-    bool success = m_player.startWindowRecordingSession(
+    // Start window recording session using the static helper
+    bool success = m_player.startRecordingSession(ofxVlc4::windowRecordingSessionConfig(
         absPath,
         preset,
-        true  // muxOnStop
-    );
+        44100,  // Default sample rate
+        2));    // Default channel count
 
     if (success) {
         m_recording = true;
