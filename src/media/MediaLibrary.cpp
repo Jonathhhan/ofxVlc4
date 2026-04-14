@@ -165,8 +165,12 @@ void appendTrackMetadataFromMediaTracklist(
 	}
 
 	const size_t trackCount = libvlc_media_tracklist_count(tracklist);
-	if (trackCount > 0) {
-		appendTrackMetadata(metadata, prefix, trackType, libvlc_media_tracklist_at(tracklist, 0));
+	for (size_t i = 0; i < trackCount; ++i) {
+		std::string indexedPrefix = prefix;
+		if (trackCount > 1) {
+			indexedPrefix += " " + ofToString(i + 1);
+		}
+		appendTrackMetadata(metadata, indexedPrefix, trackType, libvlc_media_tracklist_at(tracklist, i));
 	}
 
 	libvlc_media_tracklist_delete(tracklist);

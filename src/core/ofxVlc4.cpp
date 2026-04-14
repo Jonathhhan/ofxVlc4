@@ -65,6 +65,10 @@ void configureWindowsLibVlcEnvironment() {
 		const std::string dirStr = exeDir.string();
 		_putenv_s("VLC_DATA_PATH", dirStr.c_str());
 	}
+	if (std::error_code ec; std::filesystem::is_directory(exeDir / L"plugins", ec)) {
+		const std::string pluginsDirStr = (exeDir / L"plugins").string();
+		_putenv_s("VLC_PLUGIN_PATH", pluginsDirStr.c_str());
+	}
 }
 #endif
 constexpr const char * kLogChannel = "ofxVlc4";
@@ -192,7 +196,17 @@ void appendAudioVisualizerInitArgs(
 		initArgs.emplace_back(std::string("--projectm-width=") + ofToString(width));
 		initArgs.emplace_back(std::string("--projectm-height=") + ofToString(height));
 		appendPrefixedInitArg(initArgs, "--projectm-preset-path=", settings.projectMPresetPath);
-		appendPrefixedInitArg(initArgs, "--projectm-texture-path=", settings.projectMTexturePath);
+		if (!settings.projectMTexturePath.empty()) {
+			const char * enableTexturePath = std::getenv("OFXVLC4_ENABLE_PROJECTM_TEXTURE_PATH");
+			const bool texturePathAllowed = enableTexturePath && std::string(enableTexturePath) == "1";
+			if (texturePathAllowed) {
+				appendPrefixedInitArg(initArgs, "--projectm-texture-path=", settings.projectMTexturePath);
+			} else {
+				ofLogWarning(kLogChannel)
+					<< "--projectm-texture-path requires a custom VLC/libprojectM build; "
+					<< "set OFXVLC4_ENABLE_PROJECTM_TEXTURE_PATH=1 to opt-in. Ignoring to avoid libvlc_new failure.";
+			}
+		}
 		initArgs.emplace_back("--projectm-menu-font=Arial");
 		initArgs.emplace_back("--projectm-title-font=Arial");
 		if (settings.projectMTextureSize > 0) {
