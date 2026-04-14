@@ -55,18 +55,18 @@ class Track {
 public:
 	inline Track(TrackType type, const std::string & name);
 
-	inline TrackType type() const;
-	inline const std::string & name() const;
+	inline TrackType type() const noexcept;
+	inline const std::string & name() const noexcept;
 
-	inline bool isLocked() const;
+	inline bool isLocked() const noexcept;
 	inline void setLocked(bool locked);
-	inline bool isMuted() const;
+	inline bool isMuted() const noexcept;
 	inline void setMuted(bool muted);
-	inline bool isSoloed() const;
+	inline bool isSoloed() const noexcept;
 	inline void setSoloed(bool soloed);
 
 	/// All segments on this track (sorted by timelineStart).
-	inline const std::vector<Segment> & segments() const;
+	inline const std::vector<Segment> & segments() const noexcept;
 
 	/// Add a segment.  Returns false if it would overlap an existing segment.
 	inline bool addSegment(const Segment & seg);
@@ -119,17 +119,17 @@ inline Track::Track(TrackType type, const std::string & name)
 	: m_type(type)
 	, m_name(name) {}
 
-inline TrackType Track::type() const { return m_type; }
-inline const std::string & Track::name() const { return m_name; }
+inline TrackType Track::type() const noexcept { return m_type; }
+inline const std::string & Track::name() const noexcept { return m_name; }
 
-inline bool Track::isLocked() const { return m_locked; }
+inline bool Track::isLocked() const noexcept { return m_locked; }
 inline void Track::setLocked(bool locked) { m_locked = locked; }
-inline bool Track::isMuted() const { return m_muted; }
+inline bool Track::isMuted() const noexcept { return m_muted; }
 inline void Track::setMuted(bool muted) { m_muted = muted; }
-inline bool Track::isSoloed() const { return m_soloed; }
+inline bool Track::isSoloed() const noexcept { return m_soloed; }
 inline void Track::setSoloed(bool soloed) { m_soloed = soloed; }
 
-inline const std::vector<Segment> & Track::segments() const {
+inline const std::vector<Segment> & Track::segments() const noexcept {
 	return m_segments;
 }
 
