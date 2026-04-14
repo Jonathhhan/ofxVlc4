@@ -253,6 +253,8 @@ For the examples, also see:
   - `Texture` is the default OF-integrated path, while `NativeWindow / HWND` is where libVLC-native video filters/effects apply
   - see `Backend capability notes` below
 
+**API Documentation**: For comprehensive API organization, usage patterns, and subsystem guides, see [docs/API_GUIDE.md](docs/API_GUIDE.md). To generate full API reference documentation with Doxygen, run `doxygen` in the repository root (output: `docs/api/html/index.html`).
+
 ## Minimal API
 
 For the stable texture-based workflow, the recommended order is:
@@ -551,6 +553,8 @@ Current recorder-side optimizations include:
 - recorder performance counters for pending frames, latency, drops, and map failures
 
 For a focused surface to test that behavior, use `ofxVlc4RecorderExample`.
+
+**Performance Guide**: For detailed performance characteristics, optimization strategies, and configuration recommendations for different recording scenarios (720p, 1080p, 4K, real-time streaming, archival, etc.), see [docs/RECORDING_PERFORMANCE.md](docs/RECORDING_PERFORMANCE.md).
 
 ## Tests
 

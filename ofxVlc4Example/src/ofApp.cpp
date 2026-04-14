@@ -523,19 +523,24 @@ void ofApp::initializePlayer(
 				settingsChanged = true;
 			}
 		}
-		if (visualizerSettings.projectMTexturePath.empty()) {
-			const std::string defaultTexturePath = ofToDataPath("textures", true);
-			if (ofDirectory::doesDirectoryExist(defaultTexturePath, true)) {
-				visualizerSettings.projectMTexturePath = defaultTexturePath;
-				settingsChanged = true;
-			} else {
-				const std::string mirroredTexturePath = ofToDataPath("presets/textures", true);
-				if (ofDirectory::doesDirectoryExist(mirroredTexturePath, true)) {
-					visualizerSettings.projectMTexturePath = mirroredTexturePath;
-					settingsChanged = true;
-				}
-			}
-		}
+		// Note: projectMTexturePath is only supported in custom VLC/libprojectM builds
+		// that expose --projectm-texture-path. Standard VLC 4 builds do not have this
+		// option, so we do not auto-set it here. Users with custom builds can manually
+		// set it via the GUI "Visualizer" panel.
+		//
+		// if (visualizerSettings.projectMTexturePath.empty()) {
+		// 	const std::string defaultTexturePath = ofToDataPath("textures", true);
+		// 	if (ofDirectory::doesDirectoryExist(defaultTexturePath, true)) {
+		// 		visualizerSettings.projectMTexturePath = defaultTexturePath;
+		// 		settingsChanged = true;
+		// 	} else {
+		// 		const std::string mirroredTexturePath = ofToDataPath("presets/textures", true);
+		// 		if (ofDirectory::doesDirectoryExist(mirroredTexturePath, true)) {
+		// 			visualizerSettings.projectMTexturePath = mirroredTexturePath;
+		// 			settingsChanged = true;
+		// 		}
+		// 	}
+		// }
 		if (settingsChanged) {
 			player.setAudioVisualizerSettings(visualizerSettings);
 		}

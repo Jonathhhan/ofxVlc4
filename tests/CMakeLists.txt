@@ -597,3 +597,61 @@ target_include_directories(test_module_state_seams PRIVATE
 )
 
 add_test(NAME module_state_seams COMMAND test_module_state_seams)
+
+# ---------------------------------------------------------------------------
+# test_d3d11_backend
+# Tests D3D11-specific video backend configuration, enumeration labels,
+# and (on Windows) device availability and feature detection.
+# ---------------------------------------------------------------------------
+
+add_executable(test_d3d11_backend
+    test_d3d11_backend.cpp
+)
+
+target_include_directories(test_d3d11_backend PRIVATE
+    "${SRC_DIR}/support"
+)
+
+# Link D3D11 on Windows
+if(WIN32)
+    target_link_libraries(test_d3d11_backend PRIVATE d3d11 dxgi)
+endif()
+
+add_test(NAME d3d11_backend COMMAND test_d3d11_backend)
+
+# ---------------------------------------------------------------------------
+# Windows D3D11-specific configuration
+# ---------------------------------------------------------------------------
+
+if(WIN32)
+    message(STATUS "Configuring Windows D3D11-specific test settings")
+
+    # Add D3D11 libraries for Windows tests that might use video backend
+    find_library(D3D11_LIBRARY d3d11)
+    find_library(DXGI_LIBRARY dxgi)
+
+    if(D3D11_LIBRARY AND DXGI_LIBRARY)
+        message(STATUS "D3D11 libraries found: ${D3D11_LIBRARY}, ${DXGI_LIBRARY}")
+
+        # Link D3D11 libraries to video-related tests
+        target_link_libraries(test_video_helpers PRIVATE ${D3D11_LIBRARY} ${DXGI_LIBRARY})
+        target_link_libraries(test_video_pipeline PRIVATE ${D3D11_LIBRARY} ${DXGI_LIBRARY})
+        target_link_libraries(test_video_output_reinit PRIVATE ${D3D11_LIBRARY} ${DXGI_LIBRARY})
+
+        # Define D3D11 availability for conditional compilation
+        target_compile_definitions(test_video_helpers PRIVATE OFXVLC4_D3D11_AVAILABLE)
+        target_compile_definitions(test_video_pipeline PRIVATE OFXVLC4_D3D11_AVAILABLE)
+        target_compile_definitions(test_video_output_reinit PRIVATE OFXVLC4_D3D11_AVAILABLE)
+    else()
+        message(WARNING "D3D11 libraries not found on Windows system")
+    endif()
+
+    # Set Windows-specific compiler flags for better diagnostics
+    if(MSVC)
+        # Enable more warnings and static analysis
+        add_compile_options(/W4)
+        # Disable specific warnings that are too noisy in stub code
+        add_compile_options(/wd4100)  # unreferenced formal parameter
+        add_compile_options(/wd4189)  # local variable initialized but not referenced
+    endif()
+endif()

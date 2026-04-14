@@ -188,6 +188,9 @@ struct ofxVlc4AudioVisualizerSettings {
 	int goomSpeed = 6;
 	std::string projectMPresetPath;
 	// Optional path for custom VLC/libprojectM builds that expose --projectm-texture-path.
+	// WARNING: Standard VLC 4 releases do NOT support this option. Only set this if you
+	// are using a custom VLC build compiled with projectM texture path support.
+	// Setting this with standard VLC will cause libvlc_new() to fail with "Unknown option".
 	std::string projectMTexturePath;
 	// libprojectM rendering quality settings (passed to VLC's --projectm-* init args).
 	// Set to 0 to omit the option and let VLC use its built-in default.
