@@ -217,7 +217,7 @@ preset.muxTimeoutMs = 30000;  // 30 seconds
 
 **File stability check**: The mux step waits for 3 consecutive stable file-size readings (~150ms) before processing, ensuring VLC has finalized the intermediate files.
 
-**MKV reliability**: When using an MKV mux profile, all non-intraframe codecs (H264/H265/MP4V/VPx/Theora) are forced to emit a keyframe every frame to keep the container mux stable. Expect larger file sizes; MJPG and HAP codecs remain unchanged.
+**Keyframe policy**: All non-intraframe codecs (H264/H265/MP4V/VPx/Theora) are forced to emit a keyframe every frame to keep muxing stable across containers. Expect larger file sizes; MJPG and HAP codecs remain unchanged.
 
 ---
 

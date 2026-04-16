@@ -359,14 +359,12 @@ bool ofxVlc4::startNamedTextureCaptureSession(
 	}
 
 	const ofxVlc4RecordingVideoCodecPreset codecPreset = getVideoRecordingCodecPreset();
-	const ofxVlc4RecordingMuxProfile muxProfile = getRecordingMuxProfile();
-	const std::string muxContainer = ofToLower(recordingMuxContainerForProfile(muxProfile));
 	const bool isIntraOnlyCodec =
 		codecPreset == ofxVlc4RecordingVideoCodecPreset::Mjpg ||
 		codecPreset == ofxVlc4RecordingVideoCodecPreset::Hap ||
 		codecPreset == ofxVlc4RecordingVideoCodecPreset::HapAlpha ||
 		codecPreset == ofxVlc4RecordingVideoCodecPreset::HapQ;
-	const int keyframeInterval = (muxContainer == "mkv" && !isIntraOnlyCodec) ? 1 : 0;
+	const int keyframeInterval = isIntraOnlyCodec ? 0 : 1;
 	{
 		std::string recorderError;
 		if (!m_impl->recordingObjectRuntime.recorder.setVideoCaptureKeyframeInterval(keyframeInterval, recorderError)) {
