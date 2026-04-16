@@ -358,6 +358,21 @@ bool ofxVlc4::startNamedTextureCaptureSession(
 		return false;
 	}
 
+	const ofxVlc4RecordingVideoCodecPreset codecPreset = getVideoRecordingCodecPreset();
+	const bool isIntraOnlyCodec =
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::Mjpg ||
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::Hap ||
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::HapAlpha ||
+		codecPreset == ofxVlc4RecordingVideoCodecPreset::HapQ;
+	const int keyframeInterval = isIntraOnlyCodec ? 0 : 1;
+	{
+		std::string recorderError;
+		if (!m_impl->recordingObjectRuntime.recorder.setVideoCaptureKeyframeInterval(keyframeInterval, recorderError)) {
+			setError(recorderError);
+			return false;
+		}
+	}
+
 	const bool usesPlayerOutputTexture =
 		(m_impl->videoResourceRuntime.exposedTextureFbo.isAllocated() &&
 			texture.getTextureData().textureID == m_impl->videoResourceRuntime.exposedTextureFbo.getTexture().getTextureData().textureID) ||
@@ -1008,6 +1023,21 @@ int ofxVlc4Recorder::getVideoCaptureBitrateKbps() const {
 	return videoBitrateKbps;
 }
 
+bool ofxVlc4Recorder::setVideoCaptureKeyframeInterval(int keyframeInterval, std::string & errorOut) {
+	errorOut.clear();
+	if (keyframeInterval < 0) {
+		errorOut = "Video keyframe interval cannot be negative.";
+		return false;
+	}
+
+	videoKeyframeInterval = keyframeInterval;
+	return true;
+}
+
+int ofxVlc4Recorder::getVideoCaptureKeyframeInterval() const {
+	return videoKeyframeInterval;
+}
+
 bool ofxVlc4Recorder::setVideoCaptureCodec(const std::string & codec, std::string & errorOut) {
 	errorOut.clear();
 	std::string normalizedCodec = ofxVlc4RecordingHelpers::trimRecorderText(codec);
@@ -1231,6 +1261,18 @@ libvlc_media_t * ofxVlc4Recorder::beginVideoCapture(
 		}
 	}
 	streamSpec += "}:standard{access=file" + muxOption + ",dst='" + normalizeSoutPath(videoPath) + "'}";
+
+	const int keyframeInterval = std::max(0, videoKeyframeInterval);
+	if (keyframeInterval > 0) {
+		const std::string avcodecKeyint = "sout-avcodec-keyint=" + std::to_string(keyframeInterval);
+		libvlc_media_add_option(recordingMedia, avcodecKeyint.c_str());
+		if (normalizedVideoCodec == "H264" || normalizedVideoCodec == "X264") {
+			const std::string x264Keyint = "sout-x264-keyint=" + std::to_string(keyframeInterval);
+			const std::string x264MinKeyint = "sout-x264-min-keyint=" + std::to_string(keyframeInterval);
+			libvlc_media_add_option(recordingMedia, x264Keyint.c_str());
+			libvlc_media_add_option(recordingMedia, x264MinKeyint.c_str());
+		}
+	}
 
 	libvlc_media_add_option(recordingMedia, "demux=rawvid");
 	libvlc_media_add_option(recordingMedia, width.c_str());
@@ -1703,6 +1745,7 @@ void ofxVlc4Recorder::clearVideoRecording() {
 	recordingFrameSerial = 0;
 	recordingReadFrameSerial = 0;
 	lastVideoCaptureTimeUs = 0;
+	videoKeyframeInterval = 0;
 	recordingPixels.clear();
 	destroyVideoReadbackBuffersLocked();
 	const bool hasGlContext = hasCurrentGlContext();
